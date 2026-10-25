@@ -77,6 +77,7 @@ func (a *analyzer) solve(fn *ast.Node) {
 		low[v] = index[v]
 		stack = append(stack, v)
 		onStack[v] = true
+		a.connecting[v] = true
 		for _, w := range a.bodyCallees(v) {
 			if _, done := a.effects[w]; done {
 				continue
@@ -137,6 +138,7 @@ func (a *analyzer) solveComponent(component []*ast.Node) {
 	for _, member := range component {
 		a.effects[member] = a.approx[member]
 		delete(a.approx, member)
+		delete(a.connecting, member)
 	}
 }
 
@@ -167,6 +169,9 @@ func checkRecursion(c *checker.Checker, file *ast.SourceFile) {
 	a := analyzerFor(c)
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
+		if a.reentered[node] {
+			a.checkReenteredFunction(node)
+		}
 		if isLowerable(node) && node.Type() == nil && a.isEffect(node) {
 			a.effectOf(node) // solves node's component
 			if a.recursive[node] {
@@ -207,6 +212,23 @@ func (a *analyzer) checkRecursiveFunction(fn *ast.Node) {
 		d := report(c, at, EK2102.With("{0} is on a call cycle that TypeScript typed before the cycle's E and R were known, so its contract must be written."), name)
 		note(d, "Write its contract, such as Effect<A, infer E, infer R>, or write the contract of a function it calls on the cycle.")
 	}
+}
+
+// checkReenteredFunction reports EK2102 at fn, whose E and R TypeScript read
+// while fn's own callees were being found: a call of fn passed by name in
+// fn's body is typed from fn's contract, so where the contract leaves E or R
+// to inference, the call was typed before they were known.
+func (a *analyzer) checkReenteredFunction(fn *ast.Node) {
+	c := a.checker
+	name := functionDisplayName(fn)
+	at := fn
+	if fn.Name() != nil {
+		at = fn.Name()
+	} else if parent := fn.Parent; parent.Kind == ast.KindVariableDeclaration {
+		at = parent.Name()
+	}
+	d := report(c, at, EK2102.With("{0} passes a call of itself by name, which TypeScript typed before {0}'s E and R were known, so its contract must write them."), name)
+	note(d, "Write every channel of its contract, such as number!Failure! (R = never) or Effect<number, Failure, Needs>.")
 }
 
 // checkRecursiveCatch reports EK2102 at clause when the checker typed its

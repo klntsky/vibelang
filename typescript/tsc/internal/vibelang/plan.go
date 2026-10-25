@@ -203,6 +203,8 @@ type analyzer struct {
 	effects       map[*ast.Node]*effectInfo // see effectOf
 	approx        map[*ast.Node]*effectInfo // the E and R found so far of a call cycle being solved (recursion.go)
 	recursive     map[*ast.Node]bool        // functions on a call cycle
+	connecting    map[*ast.Node]bool        // functions solve is discovering the callees of, until their component is solved (recursion.go)
+	reentered     map[*ast.Node]bool        // functions whose E and R were read while their callees were being discovered
 	tryBlocks     map[*ast.Node]*effectInfo // see tryBlockFlow
 	factories     map[factoryKey]fnState
 	factoryActive map[*ast.Node]bool
@@ -242,6 +244,8 @@ func analyzerFor(c *checker.Checker) *analyzer {
 			effects:       map[*ast.Node]*effectInfo{},
 			approx:        map[*ast.Node]*effectInfo{},
 			recursive:     map[*ast.Node]bool{},
+			connecting:    map[*ast.Node]bool{},
+			reentered:     map[*ast.Node]bool{},
 			tryBlocks:     map[*ast.Node]*effectInfo{},
 			contracts:     map[*ast.Node]*contract{},
 			factories:     map[factoryKey]fnState{},

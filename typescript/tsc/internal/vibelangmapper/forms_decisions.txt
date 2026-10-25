@@ -861,6 +861,10 @@ typescript/vibelang/cases/ek2005.fail/main.vibe:32:17 lambda program table
 typescript/vibelang/cases/ek2005.fail/main.vibe:33:5 lambda effectFn table
 typescript/vibelang/cases/ek2005.fail/main.vibe:35:40 lambda program table
 typescript/vibelang/cases/ek2005.fail/main.vibe:36:28 lambda program table
+typescript/vibelang/cases/ek2102-by-name-self-call.fail/main.vibe:13:17 lambda effectFn annotation
+typescript/vibelang/cases/ek2102-by-name-self-call.fail/main.vibe:15:20 byname program annotation
+typescript/vibelang/cases/ek2102-by-name-self-call.fail/main.vibe:23:18 byname program annotation
+typescript/vibelang/cases/ek2102-by-name-self-call.fail/main.vibe:9:18 byname program annotation
 typescript/vibelang/cases/ek2115-factory-runs.fail/main.vibe:5:56 lambda program annotation
 typescript/vibelang/cases/ek2115-factory-runs.fail/main.vibe:6:66 lambda program annotation
 typescript/vibelang/cases/ek2115-factory-runs.fail/main.vibe:7:56 lambda program annotation

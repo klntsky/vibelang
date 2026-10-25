@@ -89,6 +89,15 @@ func (a *analyzer) effectOf(fn *ast.Node) *effectInfo {
 	if info, solving := a.approx[fn]; solving {
 		return info
 	}
+	if a.connecting[fn] {
+		// Discovering fn's callees asked the checker for a type that reads
+		// fn's own E and R, as typing a call of fn passed by name in fn's
+		// body does. Solving fn again here would never end; the read gets
+		// empty channels, and checkRecursion asks for the written contract
+		// that makes the read exact (EK2102).
+		a.reentered[fn] = true
+		return &effectInfo{}
+	}
 	a.solve(fn)
 	return a.effects[fn]
 }
