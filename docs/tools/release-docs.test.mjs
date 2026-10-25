@@ -106,3 +106,13 @@ test("starter prerequisites make Bun conditional on the chosen package manager",
     assert.match(text,/Node 26 or later\. If you use Bun, use Bun 1\.4 or later\./,path)
   }
 })
+
+test("installation explains the exact Effect pin and the 4.0.6 cleanup incompatibility", () => {
+  const root = fileURLToPath(new URL("../../",import.meta.url))
+  for (const path of ["docs/user/src/getting-started/004-installation.md","docs/user/src/setup/existing-project.md"]) {
+    const text = readFileSync(join(root,path),"utf8")
+    assert.match(text,/depends on Effect internals and checks the exact version at load/,path)
+    assert.match(text,/Effect 4\.0\.6 changed how a cleanup failure combines with a body failure/,path)
+    assert.match(text,/projects on 4\.0\.6 must use 4\.0\.5 for now/,path)
+  }
+})

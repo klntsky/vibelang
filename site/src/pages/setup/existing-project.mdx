@@ -11,7 +11,7 @@ Install VibeLang's packages in a project with a `package.json` and check that th
 
 `package.json` must have `"type": "module"`. If not, ask the user before adding it: it changes how Node loads the project's `.js` files.
 
-The VibeLang runtime requires `effect` 4.0.5 exactly. If `package.json` depends on another `effect` version, stop and ask the user.
+The VibeLang runtime requires `effect` 4.0.5 exactly. The runtime depends on Effect internals and checks the exact version at load. Effect 4.0.6 changed how a cleanup failure combines with a body failure in a way VibeLang's failure rules do not accept yet, so projects on 4.0.6 must use 4.0.5 for now. If `package.json` depends on another `effect` version, stop and ask the user.
 
 ## 2. Install the packages
 
@@ -49,7 +49,7 @@ npm install --save-dev --save-exact vibelang@0.0.6 vibelang-vite@0.0.6 vitest@5.
 | `vibelang-vite` | Dev dependency | Compiles `.vibe` modules for Vite and Vitest |
 | `vitest`, `@effect/vitest` | Dev dependency | Vitest 5.0.5 and `@effect/vitest` 4.0.5 for tests |
 
-Keep these versions. `vibelang-runtime` checks Effect's version when it loads, so `effect`, `@effect/platform-node`, and `@effect/vitest` stay at 4.0.5. `vibelang`, `vibelang-runtime`, and `vibelang-vite` release together; keep them at one version.
+Keep `effect`, `@effect/platform-node`, and `@effect/vitest` at 4.0.5. `vibelang`, `vibelang-runtime`, and `vibelang-vite` release together; keep them at one version.
 
 Keep optional dependencies enabled: `vibelang` gets its native compiler from one optional dependency per platform, such as `vibelang-darwin-arm64`. If an install skips them, as `npm install --omit=optional` does, `vibelang` cannot find its binary and exits with an error.
 
