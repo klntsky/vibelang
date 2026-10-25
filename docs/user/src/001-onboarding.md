@@ -57,7 +57,7 @@ VibeLang shares TypeScript's ecosystem in two ways:
 1. **It shares TypeScript's compiler and types.** VibeLang's compiler is TypeScript's, extended, so you use existing Effect code and npm packages through [TypeScript interop](vibelang-features/114-vibelang-for-effect-users.md), and TypeScript calls exported VibeLang functions as ordinary Effect functions.
 2. **You can opt out to plain TypeScript.** `sync`, `try`, and `callback` take a plain TypeScript function, and a `.ts` file can sit beside any `.vibe` file.
 
-A hatch adapts Promise or callback APIs and platform code that VibeLang cannot call directly. Based on [Effect’s Creating Effects](https://effect.website/docs/v3/getting-started/creating-effects#trypromise), this adapter awaits the platform `fetch` API.
+A hatch adapts Promise or callback APIs and platform code that VibeLang cannot call directly. Based on [Effect’s Creating Effects](https://effect.website/docs/v4/getting-started/creating-effects#trypromise), this adapter awaits the platform `fetch` API.
 
 ```vibe
 error TodoFailed { cause: unknown }
