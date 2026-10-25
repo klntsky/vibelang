@@ -189,19 +189,20 @@ func maySplitPlainFunction(file *ast.SourceFile) bool {
 
 // mayLowerToEffect reports whether file has a function that may compile to an
 // Effect though it names no prelude or effect root export: one with a throw
-// (D282), a producer, a function* without a JavaScript iterator annotation,
-// or one that declares `using`. The last two also call the runtime's helpers.
-// Their types name effect's Effect, so the program needs effect's
-// declarations: without them, a function that only throws was declared plain
-// while its JavaScript returned an Effect. A module declaration's body is
-// TypeScript (D283), so it is not read.
+// (D282), one that calls a built-in whose failures are expected (D101), such
+// as JSON.parse, a producer, a function* without a JavaScript iterator
+// annotation, or one that declares `using`. The last two also call the
+// runtime's helpers. Their types name effect's Effect, so the program needs
+// effect's declarations: without them, a function that only throws, or only
+// parses JSON, was declared plain while its JavaScript returned an Effect. A
+// module declaration's body is TypeScript (D283), so it is not read.
 func mayLowerToEffect(file *ast.SourceFile) (effect bool, runtime bool) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
 		switch {
 		case node.Kind == ast.KindModuleDeclaration:
 			return false
-		case node.Kind == ast.KindThrowStatement:
+		case node.Kind == ast.KindThrowStatement, namesParsingBuiltin(node):
 			effect = true
 		case node.Kind == ast.KindVariableDeclarationList && isUsingList(node),
 			(node.Kind == ast.KindFunctionDeclaration || node.Kind == ast.KindFunctionExpression) && node.Body() != nil &&
@@ -216,6 +217,29 @@ func mayLowerToEffect(file *ast.SourceFile) (effect bool, runtime bool) {
 	}
 	file.AsNode().ForEachChild(visit)
 	return effect, runtime
+}
+
+// namesParsingBuiltin reports whether node names a built-in whose failures
+// are expected (builtinContracts, D101): decodeURI, decodeURIComponent, or
+// JSON.parse, globalThis.JSON.parse included. It reads syntax, before binding,
+// so a local of the same name counts too, which only loads a module.
+func namesParsingBuiltin(node *ast.Node) bool {
+	switch {
+	case ast.IsIdentifier(node):
+		_, ok := builtinContracts[node.Text()]
+		return ok
+	case ast.IsPropertyAccessExpression(node):
+		object := node.Expression()
+		if ast.IsPropertyAccessExpression(object) {
+			object = object.Name()
+		}
+		if !ast.IsIdentifier(object) || !ast.IsIdentifier(node.Name()) {
+			return false
+		}
+		_, ok := builtinContracts[object.Text()+"."+node.Name().Text()]
+		return ok
+	}
+	return false
 }
 
 // forEachTopLevelName calls fn with each name that statement, a statement at

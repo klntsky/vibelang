@@ -775,6 +775,9 @@ typescript/vibelang/cases/direct-effect/main.vibe:16:23 lambda effectFn annotati
 typescript/vibelang/cases/direct-effect/main.vibe:19:24 lambda effectFn annotation
 typescript/vibelang/cases/direct-effect/main.vibe:23:22 lambda effectFn annotation
 typescript/vibelang/cases/discarded-effect-call/main.vibe:7:30 byname program table
+typescript/vibelang/cases/effect-loaded-by-parse/lib.vibe:6:21 lambda plain fallback
+typescript/vibelang/cases/effect-loaded-by-parse/lib.vibe:7:26 lambda plain fallback
+typescript/vibelang/cases/effect-loaded-by-parse/lib.vibe:8:23 lambda choice fallback
 typescript/vibelang/cases/effect-loaded-by-throw/lib.vibe:10:21 lambda choice fallback
 typescript/vibelang/cases/effect-loaded-by-throw/lib.vibe:10:53 lambda dual fallback
 typescript/vibelang/cases/effect-loaded-by-throw/lib.vibe:12:22 lambda plain fallback
