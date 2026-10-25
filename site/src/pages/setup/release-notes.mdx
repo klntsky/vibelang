@@ -15,10 +15,10 @@ one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 changes. 0.0.4 was not published either, so from 0.0.3 read the 0.0.4 notes
 too.
 
-### Changes that can break code that compiled on 0.0.4
+### Changes that can break code since 0.0.3
 
-Each one rejects, or changes, a program that compiled on 0.0.4 but ran
-differently from what its types said.
+These fixes are included in the changes since the last published version,
+0.0.3. The comparisons below describe the unreleased 0.0.4 compiler.
 
 - An optional call of a callback without a contract, `f?.(x)`, runs the
   program the callback returns, as `f(x)` does. On 0.0.4 it returned the
