@@ -3,6 +3,7 @@ package vibelang
 import (
 	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/execute/tsc"
+	"github.com/microsoft/TypeScript/tsc/internal/lsp"
 )
 
 // Version is the VibeLang version of this compiler. It matches the
@@ -23,4 +24,6 @@ func init() {
 		Version: "VibeLang " + Version + " (" + base + ")",
 		Icon:    "EK",
 	})
+	// The language server's initialize response names it too.
+	lsp.SetServerInfo("vibelang", Version+" ("+base+")")
 }

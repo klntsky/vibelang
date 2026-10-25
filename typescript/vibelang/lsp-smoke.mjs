@@ -232,6 +232,11 @@ try {
     }
   })
 
+  await check("initialize: the server names itself vibelang, with its version and the TypeScript it is built on", () => {
+    const info = initialized.serverInfo
+    assert(info?.name === "vibelang" && /^\d+\.\d+\.\d+.* \(TypeScript .+\)$/.test(info.version ?? ""), `serverInfo ${JSON.stringify(info)}`)
+  })
+
   await check("initialize: renaming a .vibe file asks the server to update its importers", () => {
     const filters = initialized.capabilities.workspace?.fileOperations?.willRename?.filters ?? []
     assert(filters.some((f) => globMatches(f.pattern.glob, extraFile)), `filters ${JSON.stringify(filters)}`)

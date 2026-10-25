@@ -40,6 +40,17 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// serverName and serverVersion are what the server calls itself in its
+// initialize response's serverInfo. A product built on this compiler, such as
+// vibelang, sets them with SetServerInfo.
+var serverName, serverVersion = "typescript", core.Version()
+
+// SetServerInfo sets the name and version the server reports in serverInfo.
+// Call it only from an init function; it is not synchronized.
+func SetServerInfo(name string, version string) {
+	serverName, serverVersion = name, version
+}
+
 type ServerOptions struct {
 	In  Reader
 	Out Writer
@@ -1587,8 +1598,8 @@ func (s *Server) handleInitialize(ctx context.Context, params *lsproto.Initializ
 
 	response := &lsproto.InitializeResult{
 		ServerInfo: &lsproto.ServerInfo{
-			Name:    "typescript",
-			Version: new(core.Version()),
+			Name:    serverName,
+			Version: new(serverVersion),
 		},
 		Capabilities: &lsproto.ServerCapabilities{
 			PositionEncoding: new(s.positionEncoding),
