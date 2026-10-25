@@ -1,0 +1,24 @@
+// expect-result: [[1,2],"ab",3]
+// An expression body that follows a comment still answers its value: the
+// lowering keeps the expression on the line of its return.
+const later = (n: number): number!! => {
+  sleep("1 millis")
+  return n
+}
+
+const both = (): readonly [number, number]!! =>
+  // Both run at once.
+  Effect.all([later(1), later(2)], { concurrency: "unbounded" })
+
+const joined = (): string!! =>
+  /* the parts, in order */
+  Effect.map(Effect.all([later(1), later(2)]), () => "ab")
+
+const traced = (n: number): number!! =>
+  // first line
+  // second line
+  later(n)
+
+export function main() {
+  return [both(), joined(), traced(3)]
+}

@@ -50,8 +50,25 @@ func (tx *lowering) generatedFunctions(node *ast.Node) *ast.Node {
 // concise body would count as a statement of its own.
 func (tx *lowering) generatedThunk(parameters []*ast.Node, value *ast.Node) *ast.Node {
 	f := tx.Factory()
-	body := f.NewBlock(f.NewNodeList([]*ast.Node{tx.generated(f.NewReturnStatement(value))}), false /*multiLine*/)
+	body := f.NewBlock(f.NewNodeList([]*ast.Node{tx.generated(f.NewReturnStatement(tx.returnedValue(value)))}), false /*multiLine*/)
 	return tx.generated(tx.arrow(parameters, body))
+}
+
+// returnedValue returns value for a return statement the lowering writes.
+// A value from the source keeps its leading comments, which the printer
+// writes after the return keyword; a line comment there would end the
+// statement (a line break after return inserts a semicolon), and the
+// function would return undefined. A partially emitted expression at the
+// value's position lets the printer see those comments and parenthesize the
+// value, as it does for an erased type assertion (emitExpressionNoASI).
+func (tx *lowering) returnedValue(value *ast.Node) *ast.Node {
+	if ast.PositionIsSynthesized(value.Pos()) {
+		return value
+	}
+	partial := tx.Factory().NewPartiallyEmittedExpression(value)
+	tx.EmitContext().SetOriginal(partial, value)
+	partial.Loc = value.Loc
+	return partial
 }
 
 // isProgramArrow reports whether node is an arrow function the parser writes
