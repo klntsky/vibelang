@@ -108,7 +108,7 @@ EK1012, EK2004, EK3205, EK4403, EK4406, EK4409, Effect's language service rules,
 
 ## TypeScript-style Effect code
 
-Effect code written the way Effect's TypeScript writes it compiles in a `.vibe` file, and draws a warning where VibeLang has a form of its own (D284-D290). The warning's quick fix writes that form when it keeps what the program does; otherwise the warning's note says what the form would change, and there is no fix.
+Effect declarations and combinator calls written in TypeScript's style compile in a `.vibe` file, and draw a warning where VibeLang has a form of its own (D284-D290). Rewrite `Effect.gen` bodies as functions using ordinary calls instead of `yield*`. The warning's quick fix writes that form when it keeps what the program does; otherwise the warning's note says what the form would change, and there is no fix.
 
 | Code | TypeScript style | VibeLang form | Quick fix |
 | --- | --- | --- | --- |

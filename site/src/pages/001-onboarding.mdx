@@ -107,7 +107,7 @@ Streams, configuration, and Effect's HTTP, SQL, CLI, and AI packages have no syn
 
 ## Check application code
 
-The compiler tracks each function's expected failures and required services; with a declared contract, it rejects code that adds an unhandled failure or dependency. Type checking does not establish behavior: run focused tests for it, including recovery, cancellation, and cleanup.
+The compiler tracks each function's expected failures and required services. A written failure slot rejects an added unhandled failure. A contract such as `A!E` still infers requirements from the body; write the requirements slot too, as in `A!E!` (no requirements) or `A!E!R`, to reject an added dependency outside that slot. Type checking does not establish behavior: run focused tests for it, including recovery, cancellation, and cleanup.
 
 ## Try it
 
