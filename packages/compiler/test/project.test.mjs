@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert"
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { test } from "node:test"
@@ -382,4 +382,45 @@ test("a project the compiler cannot read reports its diagnostics instead of an e
   const { errors } = projectImports({ project: join(app, "tsconfig.json"), compiler })
   assert.equal(errors.length, 1)
   assert.match(formatDiagnostic(errors[0]), /tsconfig\.json:\d+:\d+ - error TS5023: Unknown compiler option 'notAnOption'/)
+})
+
+// Date.now() truncates milliseconds while filesystem mtimes retain fractions.
+// Model a save just before compilation, in the same integer millisecond.
+test("a fractional mtime in the compile start millisecond does not trigger another compile", { skip }, async (t) => {
+  const { app, compiler, compiles } = workspace(t)
+  const source = join(app, "src/main.vibe")
+  const seconds = (Date.now() - 1000 + 0.5) / 1000
+  utimesSync(source, seconds, seconds)
+  const mtime = statSync(source).mtimeMs
+  assert.ok(mtime > Math.floor(mtime), "fixture needs a fractional mtime")
+  t.mock.method(Date, "now", () => Math.floor(mtime), { times: 1 })
+  const trace = []
+  const modules = projects({ root: app, project: join(app, "tsconfig.json"), compiler, cache: false, debug: (line) => trace.push(line) })
+  const loaded = await modules.load(source)
+  assert.deepEqual(loaded.errors, [])
+  assert.match(loaded.code, /fromApp = "app"/)
+  assert.equal(compiles().length, 1, trace.join("\n"))
+})
+
+test("a source saved after the compiler reads it is compiled again before load returns", { skip }, async (t) => {
+  const { root, app, compiler, compiles } = workspace(t)
+  const source = join(app, "src/main.vibe")
+  writeFileSync(compiler, `import { appendFileSync, readFileSync, writeFileSync } from "node:fs"
+import { spawnSync } from "node:child_process"
+const args = process.argv.slice(2)
+const calls = ${JSON.stringify(join(root, "calls.jsonl"))}
+appendFileSync(calls, JSON.stringify(args[args.indexOf("--project") + 1]) + "\\n")
+const result = spawnSync(${JSON.stringify(native)}, args, { stdio: "inherit" })
+if (readFileSync(calls, "utf8").trim().split("\\n").length === 1) {
+  writeFileSync(${JSON.stringify(source)}, ${JSON.stringify('export const fromApp: string = "saved"\n')})
+}
+process.exit(result.status ?? 1)
+`)
+  const trace = []
+  const modules = projects({ root: app, project: join(app, "tsconfig.json"), compiler, cache: false, debug: (line) => trace.push(line) })
+  const loaded = await modules.load(source)
+  assert.deepEqual(loaded.errors, [])
+  assert.match(loaded.code, /fromApp = "saved"/)
+  assert.equal(compiles().length, 2, trace.join("\n"))
+  assert.ok(trace.some((line) => line.includes("changed during compile 0")), trace.join("\n"))
 })

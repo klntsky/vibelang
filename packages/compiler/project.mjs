@@ -11,6 +11,7 @@ import { spawn, spawnSync } from "node:child_process"
 import { closeSync, existsSync, mkdtempSync, openSync, readFileSync, readSync, realpathSync, rmSync, statSync } from "node:fs"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
+import { performance } from "node:perf_hooks"
 import { dirname, isAbsolute, join, parse, relative, resolve } from "node:path"
 import { projectCache } from "./cache.mjs"
 
@@ -324,13 +325,14 @@ export function workspaceProject(file, root, project) {
 
 // Returns a file modified after time, or one that is gone.
 function changedSince(files, time) {
-  return files.find((file) => {
+  for (const file of files) {
     try {
-      return statSync(file).mtimeMs > time
-    } catch {
-      return true
+      const mtime = statSync(file).mtimeMs
+      if (mtime > time) return { file, mtime }
+    } catch (error) {
+      return { file, error: error.code }
     }
-  })
+  }
 }
 
 // Module code for a failed compile. The bundler reports the real error.
@@ -370,19 +372,21 @@ export function projects({ root, project, compiler, cache, debug = () => {} }) {
     while (state.compiled !== revision) {
       if (!state.pending) {
         const started = revision
-        const time = Date.now()
+        // File mtimes retain fractional milliseconds. An integer Date.now()
+        // can precede a save that already happened in this same millisecond.
+        const time = performance.timeOrigin + performance.now()
         debug(`compile ${state.tsconfig} ${started} started`)
         state.pending = state.backend.compile(state.tsconfig)
           .then((value) => {
             state.result = value
             state.compiled = started
-            debug(`compile ${state.tsconfig} ${started} finished in ${Date.now() - time}ms: ${value.outputs.size} outputs, ${value.errors.length} errors`)
+            debug(`compile ${state.tsconfig} ${started} finished in ${Math.round(performance.timeOrigin + performance.now() - time)}ms: ${value.outputs.size} outputs, ${value.errors.length} errors`)
             // A file saved during the compile may be missing from its output. esbuild records
             // watch files when a load returns, so it would not rebuild for that save. Compile again.
             const changed = changedSince([state.tsconfig, ...value.inputs], time)
             if (changed) {
               revision++
-              debug(`${changed} changed during compile ${started}: revision ${revision}`)
+              debug(`${changed.file} changed during compile ${started}: revision ${revision}; mtime=${changed.mtime ?? changed.error}, started=${time}`)
             }
           })
           .finally(() => { state.pending = undefined })

@@ -33,6 +33,9 @@ function registerUrl(root) {
   throw new Error("vibelang-vite's register option needs the vibelang package: npm install --save-dev vibelang")
 }
 
+// VIBELANG_VITE_DEBUG=1 traces whole-project compiles and invalidations.
+const debug = process.env.VIBELANG_VITE_DEBUG ? (text) => console.error(`vibelang-vite: ${text}`) : () => {}
+
 /** @param {import('./index.d.ts').VibeLangOptions} options */
 export default function vibelang(options = {}) {
   let root, project, logger, backend, modules, current
@@ -42,7 +45,7 @@ export default function vibelang(options = {}) {
   function loaded() {
     modules ??= loadBackend(root).then((value) => {
       backend = value
-      current = backend.projects({ root, project, compiler: backend.findCompiler(root, options.compiler) })
+      current = backend.projects({ root, project, compiler: backend.findCompiler(root, options.compiler), debug })
       return current
     })
     return modules
