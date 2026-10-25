@@ -489,6 +489,39 @@ func preludeUses(c *checker.Checker, file *ast.SourceFile) []string {
 	return names
 }
 
+// requireNamedImports returns declaration, an import the lowering adds, as
+// it must stand in a file emitted as CommonJS. TypeScript's CommonJS
+// transform rewrites each reference to a named import through the checker's
+// binding, which the names the lowering writes have none of, so
+// `import { TaggedError } from "vibelang-runtime"` would leave TaggedError
+// unbound. A named import becomes a destructuring require,
+//
+//	const { TaggedError, pipe } = require("vibelang-runtime")
+//
+// which binds the names themselves; a namespace import, which the transform
+// writes as a const of its own name, stays as it is.
+func requireNamedImports(f *ast.NodeFactory, declaration *ast.Node) *ast.Node {
+	clause := declaration.AsImportDeclaration().ImportClause
+	if clause == nil || clause.AsImportClause().NamedBindings == nil || !ast.IsNamedImports(clause.AsImportClause().NamedBindings) {
+		return declaration
+	}
+	var elements []*ast.Node
+	for _, specifier := range clause.AsImportClause().NamedBindings.Elements() {
+		var property *ast.Node
+		if name := specifier.PropertyName(); name != nil {
+			property = f.NewIdentifier(name.Text())
+		}
+		elements = append(elements, f.NewBindingElement(nil /*dotDotDotToken*/, property, f.NewIdentifier(specifier.Name().Text()), nil /*initializer*/))
+	}
+	module := declaration.AsImportDeclaration().ModuleSpecifier.Text()
+	require := f.NewCallExpression(f.NewIdentifier("require"), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{f.NewStringLiteral(module, ast.TokenFlagsNone)}), ast.NodeFlagsNone)
+	pattern := f.NewBindingPattern(ast.KindObjectBindingPattern, f.NewNodeList(elements))
+	list := f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{f.NewVariableDeclaration(pattern, nil /*exclamationToken*/, nil /*typeNode*/, require)}), ast.NodeFlagsConst)
+	statement := f.NewVariableStatement(nil /*modifiers*/, list)
+	ast.SetParentInChildren(statement)
+	return statement
+}
+
 // preludeImports returns import declarations for names, the prelude names and
 // effect root exports a file uses as values, sorted:
 //
@@ -500,8 +533,8 @@ func preludeUses(c *checker.Checker, file *ast.SourceFile) []string {
 // The checker resolved each use to the runtime's or effect's export, so the
 // declarations bind the names the emitted code already refers to. A root
 // export is imported from its own module, never from effect's root, which
-// would load every module. They are ES module imports; .vibe files compile
-// to ES modules.
+// would load every module. They are ES module imports; for a file emitted
+// as CommonJS, requireNamedImports rewrites the named ones.
 func preludeImports(f *ast.NodeFactory, names []string) []*ast.Node {
 	var imports []*ast.Node
 	named := map[string][]*ast.Node{} // module -> named import specifiers

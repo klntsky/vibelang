@@ -243,6 +243,11 @@ func (tx *lowering) visitSourceFile(file *ast.SourceFile) *ast.Node {
 	if len(imports) == 0 {
 		return visited
 	}
+	if tx.commonJS {
+		for i, declaration := range imports {
+			imports[i] = requireNamedImports(&tx.Factory().NodeFactory, declaration)
+		}
+	}
 	// The list keeps the source range, from whose end the printer emits the
 	// comments after the last statement.
 	statements := tx.Factory().NewNodeList(append(imports, visited.Statements()...))
