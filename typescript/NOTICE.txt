@@ -1,3 +1,10 @@
+VibeLang modifications
+
+The files under typescript/ are a modified version of TypeScript, based on
+upstream commit 257e87406c6a8be277cb8cd5ef8d7b458a650390 of microsoft/TypeScript,
+changed by the VibeLang authors. These changes are licensed under the
+Apache License 2.0. The original Microsoft notices follow.
+
 NOTICES AND INFORMATION
 Do Not Translate or Localize
 

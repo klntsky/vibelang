@@ -1,1 +1,5 @@
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+# Community guidelines
+
+For contributions to this fork, start with [VibeLang's contributing guide](../CONTRIBUTING.md).
+
+The upstream community follows [Microsoft TypeScript's code of conduct](https://github.com/microsoft/TypeScript/blob/main/CODE_OF_CONDUCT.md).
