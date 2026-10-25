@@ -131,20 +131,46 @@ func init() {
 }
 
 // checkProgramStarts reports EK1001 for each call at file's top level that runs a
-// program, and EK1005 for each runner that code a fiber runs calls.
+// program, and for each in code that runs as plain JavaScript wherever it
+// stands (D282): a class field's initializer, a default parameter value, a
+// constructor, an accessor or a static block. It reports EK1005 for each
+// runner that code a fiber runs calls.
 func checkProgramStarts(c *checker.Checker, file *ast.SourceFile) {
 	a := analyzerFor(c)
-	var visit func(node *ast.Node, topLevel bool) bool
-	visit = func(node *ast.Node, topLevel bool) bool {
-		if ast.IsFunctionLike(node) && node.Body() != nil {
-			topLevel = false
+	var visit func(node *ast.Node, topLevel bool, plain *ast.Node) bool
+	visit = func(node *ast.Node, topLevel bool, plain *ast.Node) bool {
+		switch {
+		case node.Kind == ast.KindConstructor || node.Kind == ast.KindGetAccessor || node.Kind == ast.KindSetAccessor || node.Kind == ast.KindClassStaticBlockDeclaration:
+			topLevel, plain = false, node
+		case ast.IsFunctionLike(node) && node.Body() != nil:
+			topLevel, plain = false, nil
+		case ast.IsPropertyDeclaration(node) && node.Parent != nil && ast.IsClassLike(node.Parent) && node.Initializer() != nil,
+			node.Kind == ast.KindParameter && node.Initializer() != nil:
+			// One declared with an Effect type holds the program its
+			// initializer builds, as a const does (D269).
+			if node.Type() == nil || !isEffectType(c, c.GetTypeFromTypeNode(node.Type())) {
+				plain = node
+			}
 		}
 		if ast.IsTaggedTemplateExpression(node) && topLevel && !a.passedAsProgram(node) && a.runs(node) {
 			report(c, node, EK1001, nodeText(file, node))
 			return false
 		}
 		if ast.IsCallExpression(node) {
-			if topLevel && !a.passedAsProgram(node) {
+			if plain != nil && !a.passedAsProgram(node) && !discarded(node) {
+				// At the top level a class field's program was EK1001 already.
+				// Elsewhere such a call builds a program, which plain code may
+				// keep; it is reported only where its value is misused, which
+				// TypeScript reports without saying why.
+				if runs, explains := runsAtTopLevel(c, a, node); runs && (topLevel || explains || misused(c, node)) {
+					reportPlainCodeRun(c, file, node, plain)
+					if explains {
+						cover(c, node)
+					}
+					return false
+				}
+			}
+			if topLevel && plain == nil && !a.passedAsProgram(node) {
 				if runs, explains := runsAtTopLevel(c, a, node); runs {
 					reportTopLevelRun(c, file, node)
 					if explains {
@@ -157,9 +183,67 @@ func checkProgramStarts(c *checker.Checker, file *ast.SourceFile) {
 				reportNestedRunner(c, file, node, kind)
 			}
 		}
-		return node.ForEachChild(func(child *ast.Node) bool { return visit(child, topLevel) })
+		return node.ForEachChild(func(child *ast.Node) bool { return visit(child, topLevel, plain) })
 	}
-	file.AsNode().ForEachChild(func(child *ast.Node) bool { return visit(child, true) })
+	file.AsNode().ForEachChild(func(child *ast.Node) bool { return visit(child, true, nil) })
+}
+
+// misused reports whether call's Effect value stands where TypeScript requires
+// another type, so TypeScript reports an error there: an operand of
+// arithmetic or a comparison, or a position whose contextual type, such as a
+// parameter's declared type, the Effect does not fit.
+func misused(c *checker.Checker, call *ast.Node) bool {
+	node := ast.WalkUpParenthesizedExpressions(call)
+	switch parent := node.Parent; {
+	case ast.IsBinaryExpression(parent):
+		switch parent.AsBinaryExpression().OperatorToken.Kind {
+		case ast.KindMinusToken, ast.KindAsteriskToken, ast.KindSlashToken, ast.KindPercentToken, ast.KindAsteriskAsteriskToken,
+			ast.KindLessThanLessThanToken, ast.KindGreaterThanGreaterThanToken, ast.KindGreaterThanGreaterThanGreaterThanToken,
+			ast.KindAmpersandToken, ast.KindBarToken, ast.KindCaretToken,
+			ast.KindLessThanToken, ast.KindGreaterThanToken, ast.KindLessThanEqualsToken, ast.KindGreaterThanEqualsToken:
+			return parent.Flags&ast.NodeFlagsVibeLang == 0 // not a pipe, whose operator is a bar
+		}
+	case parent != nil && parent.Kind == ast.KindPrefixUnaryExpression:
+		switch parent.AsPrefixUnaryExpression().Operator {
+		case ast.KindMinusToken, ast.KindPlusToken, ast.KindTildeToken:
+			return true
+		}
+	}
+	contextual := c.GetContextualType(node, checker.ContextFlagsNone)
+	return contextual != nil && !c.IsTypeAssignableTo(c.GetTypeAtLocation(call), contextual)
+}
+
+// discarded reports whether call is a whole expression statement, whose
+// Effect value EK4801 reports as discarded.
+func discarded(call *ast.Node) bool {
+	return ast.IsExpressionStatement(ast.WalkUpParenthesizedExpressions(call).Parent)
+}
+
+// reportPlainCodeRun reports EK1001 for call, which would run a program in
+// plain, code that runs as plain JavaScript outside any program, as a module's
+// top level does (D282): a class field's initializer, a default parameter
+// value, a constructor, an accessor or a static block.
+func reportPlainCodeRun(c *checker.Checker, file *ast.SourceFile, call *ast.Node, plain *ast.Node) {
+	text := nodeText(file, call.Expression()) + "()"
+	switch plain.Kind {
+	case ast.KindPropertyDeclaration:
+		d := report(c, call, EK1001.With("{0} runs a program, but a class field's initializer runs as plain JavaScript, outside any program."), text)
+		note(d, "Compute the value in an Effect function and pass it to the constructor, or make {0} a method.", nodeText(file, plain.Name()))
+	case ast.KindParameter:
+		d := report(c, call, EK1001.With("{0} runs a program, but a default parameter value is plain JavaScript, so the call does not run."), text)
+		note(d, "Make {0} optional and compute the default in the body: {0} ?? {1}.", nodeText(file, plain.Name()), nodeText(file, call))
+		cover(c, plain) // TypeScript's error that the program does not fit the parameter's type
+	default:
+		d := report(c, call, EK1001.With("{0} runs a program, but {1} runs as plain JavaScript, outside any program."), text, plainCodeName(plain))
+		switch plain.Kind {
+		case ast.KindGetAccessor, ast.KindSetAccessor:
+			note(d, "Write a method instead, which runs as an Effect: {0}() { … }.", nodeText(file, plain.Name()))
+		case ast.KindConstructor:
+			note(d, "Run it in an Effect function before constructing, and pass the result to the constructor.")
+		default:
+			note(d, "Run it inside a function that a program runs, such as main.")
+		}
+	}
 }
 
 // runsAtTopLevel reports whether call, at a module's top level, would run a

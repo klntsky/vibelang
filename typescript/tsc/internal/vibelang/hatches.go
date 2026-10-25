@@ -129,14 +129,36 @@ func checkHatches(c *checker.Checker, file *ast.SourceFile) {
 					return node.ForEachChild(visit)
 				}
 			}
-			for _, reference := range outsideReferences(c, hatchIsland(node)) {
+			references := outsideReferences(c, hatchIsland(node))
+			for _, reference := range references {
 				d := report(c, reference, EK4405, reference.Text(), name)
 				note(d, "Add a parameter for it and pass the value after the function, as in {0}(({1}) => …, {1}).", name, reference.Text())
+			}
+			if len(references) > 0 && takesFewerInputs(node, name) {
+				// TypeScript then reports that the function fits no overload,
+				// naming one it was never meant for; EK4405 explains the call.
+				coverArgument(c, hatchIsland(node))
 			}
 		}
 		return node.ForEachChild(visit)
 	}
 	file.AsNode().ForEachChild(visit)
+}
+
+// takesFewerInputs reports whether call, a hatch named name, passes more
+// inputs after its function than the function has parameters for: try's
+// mapper stays its second argument (D231), so its inputs follow that.
+func takesFewerInputs(call *ast.Node, name string) bool {
+	arguments := call.Arguments()
+	island := hatchIsland(call)
+	if island == nil || !ast.IsFunctionLike(island) {
+		return false
+	}
+	inputs := len(arguments) - 1
+	if name == "try" && len(arguments) > 1 && ast.IsFunctionLike(ast.SkipParentheses(arguments[1])) {
+		inputs--
+	}
+	return len(island.Parameters()) < inputs
 }
 
 // hatchIsland returns the TypeScript of call, a hatch: its first argument, or

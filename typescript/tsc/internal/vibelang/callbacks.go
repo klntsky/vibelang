@@ -1,6 +1,8 @@
 package vibelang
 
 import (
+	"strings"
+
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
@@ -53,7 +55,7 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 					call, _ := ownerCall(node)
 					if !reportTracedCallback(c, file, call, node) {
 						d := report(c, node, pausingCallback, pause, calleeName(c, file, call))
-						note(d, "Use {0} or a for...of loop.", forEachFix(c, file, call, node))
+						note(d, pausingCallbackFix(c, file, call, node))
 						if call != nil && !ast.IsExpressionStatement(ast.WalkUpParenthesizedExpressions(call).Parent) {
 							if sig := a.candidateOf(call); sig != nil {
 								_, path := ownerCall(node)
@@ -189,6 +191,30 @@ func calleeName(c *checker.Checker, file *ast.SourceFile, call *ast.Node) string
 		}
 	}
 	return nodeText(file, call.Expression())
+}
+
+// pausingCallbackFix writes EK4301's fix for callback, a lambda that can
+// pause, passed to call: a comparator for sort or toSorted cannot run an
+// Effect at all, so its Effects run first; a VibeLang function that calls its
+// callback synchronously needs a contract that runs it as a program (D12);
+// any other callee's elements go through Effect.forEach or a loop.
+func pausingCallbackFix(c *checker.Checker, file *ast.SourceFile, call *ast.Node, callback *ast.Node) string {
+	name := calleeName(c, file, call)
+	if strings.HasSuffix(name, ".prototype.sort") || strings.HasSuffix(name, ".prototype.toSorted") {
+		return "Run the Effects the comparator needs first, with Effect.forEach or a for...of loop, then sort by their results with a plain comparator."
+	}
+	if call != nil {
+		if signature := c.GetResolvedSignature(call); signature != nil {
+			if fn := implementationOf(signature.Declaration()); fn != nil && isLowerable(fn) {
+				parameter := "its callback"
+				if _, path := ownerCall(callback); len(path) == 1 && path[0].argument < len(fn.Parameters()) {
+					parameter = nodeText(file, fn.Parameters()[path[0].argument].Name())
+				}
+				return format("{0} calls {1} as a plain function. Give {0} a contract that runs {1}: {1}: () => A!E!R, with E and R added to {0}'s return type, as in …!E!R.", []any{nodeText(file, call.Expression()), parameter})
+			}
+		}
+	}
+	return format("Use {0} or a for...of loop.", []any{forEachFix(c, file, call, callback)})
 }
 
 // forEachFix writes the Effect.forEach call that replaces call, a call such

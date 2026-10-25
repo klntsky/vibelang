@@ -1154,6 +1154,7 @@ typescript/vibelang/cases/handlers/main.vibe:93:6 lambda effectFn table
 typescript/vibelang/cases/handlers/main.vibe:98:17 lambda program table
 typescript/vibelang/cases/handlers/main.vibe:99:5 lambda effectFn table
 typescript/vibelang/cases/hatch-destructuring-property-name/main.vibe:10:33 lambda plain table
+typescript/vibelang/cases/hatch-input-without-parameter.fail/main.vibe:6:15 lambda plain table
 typescript/vibelang/cases/hatch-inputs-vibelang.fail/main.vibe:10:23 lambda plain table
 typescript/vibelang/cases/hatch-inputs-vibelang.fail/main.vibe:11:24 lambda plain table
 typescript/vibelang/cases/hatch-inputs-vibelang.fail/main.vibe:9:23 lambda plain table
@@ -1490,6 +1491,9 @@ typescript/vibelang/cases/overload-program-ranking/main.vibe:92:35 byname progra
 typescript/vibelang/cases/overload-program-ranking/main.vibe:92:50 byname program table
 typescript/vibelang/cases/overload-program-ranking/main.vibe:97:23 byname program annotation
 typescript/vibelang/cases/overload-program-ranking/main.vibe:97:31 byname program annotation
+typescript/vibelang/cases/pausing-callback-fixes.fail/main.vibe:11:33 lambda plain table
+typescript/vibelang/cases/pausing-callback-fixes.fail/main.vibe:12:37 lambda plain table
+typescript/vibelang/cases/pausing-callback-fixes.fail/main.vibe:13:22 lambda plain annotation
 typescript/vibelang/cases/pipe-asserted-program.fail/main.vibe:5:59 byname program table
 typescript/vibelang/cases/pipe-asserted-program.fail/main.vibe:5:62 byname program table
 typescript/vibelang/cases/pipe-asserted-program/main.vibe:10:59 byname program table

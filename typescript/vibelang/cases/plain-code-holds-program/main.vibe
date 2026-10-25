@@ -1,0 +1,25 @@
+// A call in code that runs as plain JavaScript (D282), such as a getter, a
+// default parameter value or a class field, builds a program without running
+// it. Kept as the program, it runs where it is called later; only a use of it
+// as the success value is EK1001 (plain-code-runs-program.fail).
+function seven(): number!! { sleep("0 millis"); return 7 }
+
+class Counter {
+  get next() { return seven() }
+}
+
+function later(program = seven()) {
+  return program()
+}
+
+function typed(program: number!! = seven()) {
+  return program()
+}
+
+// expect-result: [7,7,7,7]
+export function main() {
+  class Job {
+    program = seven()
+  }
+  return [new Counter().next(), later(), typed(), new Job().program()]
+}

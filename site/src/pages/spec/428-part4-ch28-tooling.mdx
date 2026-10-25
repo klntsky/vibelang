@@ -231,7 +231,7 @@ coverage. Repairs are suggestions, not shipped code actions:
 
 | Code | What it reports | Suggested repair | Chapter |
 | --- | --- | --- | --- |
-| EK1001 | Except for an explicitly Effect-typed top-level `const` initializer (D262), a module's top level runs a program, or a throw can escape it (D282) | Export a function instead | 13 |
+| EK1001 | Except for an explicitly Effect-typed top-level `const` initializer (D262), a module's top level runs a program, or a throw can escape it; a class field's initializer, a default parameter value, a constructor, an accessor or a static block runs a program, since each runs as plain JavaScript (D282) | Export a function instead; compute the value in an Effect function | 13 |
 | EK1002 | A `function*` passed to an API whose parameter returns a library Generator or Iterator, such as `Effect.gen` (D64) | Convert the function | 10 |
 | EK1003 | `async`, `for await`, or `await using`, and `await` inside an `async` function outside a hatch: a call already waits | Remove them; `await` in VibeLang code waits for fibers (EK4601-EK4604) | 10 |
 | EK1004 | `using` at a module's top level or in a class static block | Move it into a function | 6 |

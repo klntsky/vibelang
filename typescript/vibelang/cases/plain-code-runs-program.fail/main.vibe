@@ -1,0 +1,22 @@
+// expect: EK1001 EK1001 EK1001 EK1001 EK1001 TS2362 TS2362 TS2365
+// A class field's initializer, a default parameter value, a constructor, an
+// accessor and a static block run as plain JavaScript wherever they stand,
+// outside any program (D282). A call there builds a program instead of running
+// it, so where its value is used as the program's success, which TypeScript
+// reports as a type error, EK1001 names the code; a module-level class field's
+// program was EK1001 already, which named the module's top level.
+function now(): number!! { return Clock.currentTimeMillis() }
+
+class Box {
+  created = now()
+  readonly size: number
+  constructor() { this.size = now() * 2 }
+  get age() { return now() - 1 }
+  static { const late: boolean = now() > 0 }
+}
+
+function label(id: number = now()) { return `#${id}` }
+
+export function main() {
+  return [new Box().size, label()]
+}
