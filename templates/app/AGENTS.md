@@ -1,6 +1,8 @@
 # VibeLang project
 
-`bun run build` compiles `.vibe` files to `dist/`; `bun run test` runs `src/**/*.test.vibe`. Docs: https://vibelang.sh/llms.txt
+`bun run build`; `bun run test`. https://vibelang.sh/llms.txt
+
+Read `node_modules/vibelang/skills/vibelang/SKILL.md` before .vibe edits.
 
 ## Essentials
 
@@ -35,4 +37,4 @@ export function names(ids: ReadonlyArray<string>) {
 - A plain TypeScript call needs `sync((x) => f(x), x)`, or `try((x) => f(x), (error: unknown) => new E(), x)` if it can throw.
 - Tests: `it.effect("name") { assert.strictEqual(a, b) }` from `@effect/vitest` uses a test clock (`sleep` stalls); `it.live` uses real time. Vitest hides `console.log` under agents; assert instead.
 
-<!-- 602 tokens (o200k_base, js-tiktoken 1.0.21). Generated: smithersai/vibelang .smithers/flows/docs/flow.ts -->
+<!-- 603 tokens (o200k_base, js-tiktoken 1.0.21). Generated: smithersai/vibelang .smithers/flows/docs/flow.ts -->

@@ -14,7 +14,7 @@ export const facts = {
   newBug: `${repo}/issues/new?template=bug.yml`,
   newIdea: `${repo}/issues/new?template=idea.yml`,
   newQuestion: `${repo}/issues/new?template=question.yml`,
-  // The starter's docs link. Swap this one line for the packaged skill's path when 0.0.3 ships it.
+  // The starter's docs index complements the packaged skill.
   languageRules: "https://vibelang.sh/llms.txt",
   skill: "packages/compiler/skills/vibelang/SKILL.md",
   setup: "sh scripts/setup.sh",
@@ -211,5 +211,5 @@ Specification: \`docs/design/src/\`. Process: CONTRIBUTING.md.
 /** templates/app/AGENTS.md, copied into every new app. It carries docs/user/llms-essentials.md verbatim and stays under 2 KB. */
 export const starterAgents = {
   title: "{{name}} project",
-  intro: "`bun run build` compiles `.vibe` files to `dist/`; `bun run test` runs `src/**/*.test.vibe`. Docs: {{languageRules}}"
+  intro: "`bun run build`; `bun run test`. {{languageRules}}\n\nRead `node_modules/vibelang/skills/vibelang/SKILL.md` before .vibe edits."
 } as const;

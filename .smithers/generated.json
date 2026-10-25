@@ -2,11 +2,11 @@
   "version": 2,
   "flow": "docs",
   "source": ".smithers/flows/docs/flow.ts",
-  "digest": "afc74f048aa035c7162ee6cf73dcdd1ac150746eb93af530551207699339d040",
+  "digest": "ec1d37ab241f32c189254bbbf5277e29df733731cd3230d82f199e62152994cd",
   "inputs": [
     {
       "path": ".smithers/flows/docs/project.ts",
-      "sha256": "8214ab911056b59d4dcdf1b8cebf362b7d0638af7b88ed2fe45dd74cdf448192"
+      "sha256": "c47dba62065aefee6df746f8c9ce37d4c08ba902d7919e222661e9d57c9469e4"
     },
     {
       "path": ".smithers/flows/docs/render.ts",
@@ -55,7 +55,7 @@
       "sha256": "d3c1ab21df1ffbd2d8ef96117f43ce7f76aa123f60e7a6dc0d5f58722636368a"
     },
     "templates/app/AGENTS.md": {
-      "sha256": "e5b8fbb2365f04d7ba240e0272d22d85718d8e7e8aa4404ebe68ec1e555a135a"
+      "sha256": "c734fb9d2195c3b516c4656bee7fd91a16d4c9a954b9c54f99a2e659886e28c6"
     }
   }
 }
