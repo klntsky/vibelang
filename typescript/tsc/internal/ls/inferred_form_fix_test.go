@@ -224,23 +224,30 @@ func TestInferredFormFix(t *testing.T) {
 			if normalizeEffectHelper(before.JS) != normalizeEffectHelper(after.JS) {
 				t.Fatalf("JavaScript changed: before %s after %s", before.JS, after.JS)
 			}
-			if strings.HasPrefix(test.name, "symlinked ") && !strings.Contains(after.DTS, `import("effect/Effect"`) {
-				t.Fatalf("declaration exposes the symlink target: %s", after.DTS)
+			// A written bang contract may import the prelude Effect namespace
+			// (chapter 27; TestDeclarationImportsRecycledAnnotation), whereas
+			// an inferred contract uses an inline effect/Effect import. Compare
+			// their public types below, rather than their import spellings.
+			for _, dts := range []string{before.DTS, after.DTS} {
+				if strings.Contains(dts, "/external/") {
+					t.Fatalf("declaration exposes the symlink target: %s", dts)
+				}
 			}
-			if before.DTS != after.DTS {
-				t.Fatalf("declaration changed: before %s after %s", before.DTS, after.DTS)
-			}
-			// Declarations are consumed with skipLibCheck=false, so a raw
-			// prelude namespace cannot silently escape into a public API.
+			// Check both declarations with skipLibCheck=false and require their
+			// exported values to be assignable in both directions, so a changed
+			// success, failure, requirement or function form cannot pass merely
+			// because each declaration is independently valid TypeScript.
 			consumer := map[string]string{}
 			for k, v := range files {
 				consumer[k] = v
 			}
-			consumer["/Users/x/src/emitted.d.ts"] = after.DTS
-			consumer["/Users/x/src/consumer.ts"] = `import * as value from "./emitted"; export {value}`
+			consumer["/Users/x/src/before.d.ts"] = before.DTS
+			consumer["/Users/x/src/after.d.ts"] = after.DTS
+			consumer["/Users/x/src/consumer.ts"] = `import * as before from "./before"; import * as after from "./after"; const beforeContract: typeof before = after; const afterContract: typeof after = before; export { beforeContract, afterContract }`
 			consumer["/Users/x/src/tsconfig.json"] = `{"compilerOptions":{"strict":true,"skipLibCheck":false},"files":["consumer.ts"]}`
 			if strings.HasPrefix(test.name, "symlinked ") {
-				consumer["/Users/x/src/consumer.ts"] = `import * as value from "./emitted.js"; export {value}`
+				consumer["/Users/x/src/consumer.ts"] = strings.ReplaceAll(consumer["/Users/x/src/consumer.ts"], `"./before"`, `"./before.js"`)
+				consumer["/Users/x/src/consumer.ts"] = strings.ReplaceAll(consumer["/Users/x/src/consumer.ts"], `"./after"`, `"./after.js"`)
 				consumer["/Users/x/src/tsconfig.json"] = `{"compilerOptions":{"strict":true,"skipLibCheck":false,"module":"NodeNext"},"files":["consumer.ts"]}`
 			}
 			fs := inferredFileSystem(consumer)
