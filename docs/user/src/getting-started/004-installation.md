@@ -99,7 +99,9 @@ Add a `tsconfig.json` that selects `.vibe` sources and emits Node ESM to `dist/`
     "skipLibCheck": true,
     "types": []
   },
-  "include": ["src/**/*.vibe"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.vibe"],
+  "vibelang": { "diagnostics": { "EK3205": "error" } }
 }
 ```
 
@@ -116,6 +118,15 @@ Add scripts to `package.json`, which must have `"type": "module"`:
 }
 ```
 
+Keep source tests out of the build output. Add `tsconfig.test.json` so Vitest also checks and compiles those files:
+
+```json
+{
+  "extends": "./tsconfig.json",
+  "exclude": []
+}
+```
+
 Test `.vibe` files through the Vite plugin:
 
 ```ts
@@ -125,7 +136,7 @@ import { defineConfig } from "vitest/config"
 import vibelang from "vibelang-vite"
 
 export default defineConfig({
-  plugins: [vibelang()],
+  plugins: [vibelang({ project: "tsconfig.test.json" })],
   test: { include: ["src/**/*.test.vibe"] }
 })
 ```
@@ -166,7 +177,7 @@ bun run test
 bun x --no-install vibelang --noEmit
 ```
 
-The starter's `tsconfig.json` selects `.vibe` files under `src/`, emits Node ESM to `dist/`, enables strict checking and source maps, and prevents emit on errors. Local source imports use `.vibe`; generated JavaScript and declaration files import `.js`, so a TypeScript project that installs your package resolves each module's declarations. `vibelang` accepts TypeScript compiler flags such as `--noEmit`, `--watch`, and `-b`.
+The starter's `tsconfig.json` selects `.vibe` and TypeScript files under `src/`, excludes `*.test.vibe` from the build, treats a missing entry provider (EK3205) as an error, emits Node ESM to `dist/`, enables strict checking and source maps, and prevents emit on errors. Local source imports use `.vibe`; generated JavaScript and declaration files import `.js`, so a TypeScript project that installs your package resolves each module's declarations. `vibelang` accepts TypeScript compiler flags such as `--noEmit`, `--watch`, and `-b`.
 
 ## Coming from Effect
 
