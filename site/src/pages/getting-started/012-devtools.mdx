@@ -141,7 +141,7 @@ function discard(program: Effect.Effect<number>) {
 // Output: 0
 ```
 
-`// @vibelang-diagnostics EK4818:warning` applies from its line to the end of the file; `*` names every adjustable code. EK4801, EK4819, and EK4820 also report in the `.ts` files the program checks; for Effect's other rules in `.ts` files, use Effect's own TypeScript 7 server, `@effect/tsgo`.
+`// @vibelang-diagnostics EK4818:warning` applies from its line to the end of the file; `*` names every adjustable code. EK diagnostics report only in `.vibe` files; a `.ts` file keeps TypeScript's verdict. For Effect's rules in `.ts` files, use Effect's own TypeScript 7 server, `@effect/tsgo`.
 
 | Group | Effect's rule or feature | In VibeLang | Example |
 | --- | --- | --- | --- |
@@ -149,13 +149,13 @@ function discard(program: Effect.Effect<number>) {
 | Correctness | `classSelfMismatch` | Not needed: a `service` has no `Self` parameter | `service Users { find(id: string): User!NotFound }` |
 | Correctness | `duplicatePackage` | EK4803, warning | two versions of `effect` in one program |
 | Correctness | `effectFnImplicitAny` | Not needed: parameters are TypeScript's, so `strict` reports TS7006 | `function load(id) { … }` |
-| Correctness | `floatingEffect` | EK4801, error, with a quick fix; also in `.ts` files | `program` alone on a line; the fix writes `program()` |
+| Correctness | `floatingEffect` | EK4801, error, with a quick fix | `program` alone on a line; the fix writes `program()` |
 | Correctness | `genericEffectServices` | Covered: EK3005 | `service Repo<T> { … }` |
 | Correctness | `missingEffectContext` | Covered: EK2002 at a contract, EK3201 at a runner | `function f(): User!NotFound! { return Users.find(id) }` is EK2002 |
 | Correctness | `missingEffectError` | Covered: EK2001 | `function f(): User!! { return Users.find(id) }` |
 | Correctness | `missingLayerContext` | Covered: EK2002 and EK3201; `wire` places providers | `provide UsersLive { … }` without the database layer is EK3201 at the runner |
-| Correctness | `missingReturnYieldStar` | Not needed in `.vibe`: `throw` ends the function. EK4820 in `.ts` files | `throw new NotFound({ id })` |
-| Correctness | `missingStarInYieldEffectGen` | Not needed in `.vibe`: a call runs, and `Effect.gen` with `function*` is EK1002. EK4819 in `.ts` files | `const user = Users.find(id)` |
+| Correctness | `missingReturnYieldStar` | Not needed in `.vibe`: `throw` ends the function | `throw new NotFound({ id })` |
+| Correctness | `missingStarInYieldEffectGen` | Not needed in `.vibe`: a call runs, and `Effect.gen` with `function*` is EK1002 | `const user = Users.find(id)` |
 | Correctness | `nonObjectEffectServiceType` | Effect 3 only, and a `service` declares members | `service Port { value: number }` |
 | Correctness | `outdatedApi` | EK4813, error, in place of TS2339, with a quick fix; the same fix on TS2339 in `.ts` files | `Effect.catchAll`; the fix writes `Effect.catch` |
 | Correctness | `outdatedEffectCodegen` | Not adopted: no codegen comments | None |

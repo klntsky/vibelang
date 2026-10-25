@@ -480,11 +480,13 @@ try {
     assert(renameEdits.length === 1 && renameEdits[0].newText === "catch", `edits ${JSON.stringify(renameEdits)}`)
   })
 
-  await check("code action: in a .ts file, yield without * is EK4819, whose quick fix writes yield*, and TS2339 on an Effect 3 name renames it", async () => {
+  // D266: a .ts file keeps TypeScript's verdict, so yield without * draws no
+  // EK4819 there; TS2339 on an Effect 3 name still offers EK4813's rename.
+  await check("code action: in a .ts file, yield without * draws no EK diagnostic (D266), and TS2339 on an Effect 3 name renames it", async () => {
     open("src/lsrules-gen.ts", "typescript")
     const items = await diagnostics("src/lsrules-gen.ts")
     const codes = items.map((d) => `${d.source ?? "ts"}${d.code}`).sort()
-    assert(JSON.stringify(codes) === JSON.stringify(["EK4819", "ts2339"]), `codes ${JSON.stringify(codes)}`)
+    assert(JSON.stringify(codes) === JSON.stringify(["ts2339"]), `codes ${JSON.stringify(codes)}`)
     const uri = fileUri("src/lsrules-gen.ts")
     const fixFor = async (item, title) => {
       const actions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: item.range, context: { diagnostics: [item], only: ["quickfix"] } })) ?? []
@@ -492,9 +494,6 @@ try {
       assert(fix, `no quick fix ${title} among ${JSON.stringify(actions.map((a) => a.title))}`)
       return fix.edit?.changes?.[uri] ?? []
     }
-    const yieldEdits = await fixFor(items.find((d) => d.code === 4819), "Write yield*")
-    const yieldAt = at("src/lsrules-gen.ts", "yield Effect")
-    assert(yieldEdits.length === 1 && yieldEdits[0].newText === "*" && yieldEdits[0].range.start.line === yieldAt.line && yieldEdits[0].range.start.character === yieldAt.character + "yield".length, `edits ${JSON.stringify(yieldEdits)}`)
     const renameEdits = await fixFor(items.find((d) => d.code === 2339), "Write Effect.catch")
     assert(renameEdits.length === 1 && renameEdits[0].newText === "catch", `edits ${JSON.stringify(renameEdits)}`)
   })
