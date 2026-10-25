@@ -9,7 +9,11 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
-## 0.0.5
+## 0.0.6
+
+0.0.5 was not published: 0.0.6 replaces it, and these notes include its
+changes. 0.0.4 was not published either, so from 0.0.3 read the 0.0.4 notes
+too.
 
 ### Changes that can break code that compiled on 0.0.4
 
@@ -20,13 +24,22 @@ differently from what its types said.
   program the callback returns, as `f(x)` does. On 0.0.4 it returned the
   program unrun. The callback's failures and requirements now reach the
   caller's contract, so a contract that leaves them out is EK2001 or EK2002.
-- A file whose functions are Effects only because they throw, produce, or
-  declare `using` loads effect. On 0.0.4 such a function was typed and
-  declared plain while its JavaScript returned an Effect. Where effect does
-  not resolve, each such function is the new error EK1011.
+- A file whose functions are Effects only because they throw, produce,
+  declare `using`, or call `JSON.parse`, `decodeURI` or `decodeURIComponent`
+  loads effect. On 0.0.4 such a function was typed and declared plain while
+  its JavaScript returned an Effect. Where effect does not resolve, each such
+  function is the new error EK1011.
 
 ### Compiler
 
+- A comment before an expression that the compiler writes after a `return`,
+  `throw` or `yield` stays a comment. A `match` arm whose value follows a
+  comment, or whose pattern begins with a comment on its line, as in
+  `when [ // first`, returned `undefined`.
+- `uninterruptible { ... }` stays uninterruptible when it declares a `using`
+  resource, and releases the resource when the block ends. On 0.0.4 such a
+  block compiled without its mask, and an interruption reached its
+  statements.
 - The compiler no longer overflows the stack on a function that passes a
   call of itself by name, as `guard(healthy(index - 1))` does. It reports
   EK2102 at the function: write its failures and requirements in its
@@ -39,17 +52,30 @@ differently from what its types said.
 
 ### New warnings
 
-Neither warning changes the emitted JavaScript.
+None of these warnings changes the emitted JavaScript.
 
 - EK4409: a call of an `any`-typed value is a program's value or what an
   Effect function returns. The call returns its value, so a program the callee
   returns never runs. Give the callee a type. EK4409 is adjustable, like
   EK2004.
 - EK4802 also reports an Effect value in a returned conditional's arm, in an
-  operand of `??` or `||`, or on the right side of `&&`, and an Effect value
-  or program literal returned where the success type names no value: `void`,
-  `unknown`, `any`, or a type parameter the call infers. Its quick fixes call
-  the value to run it, or write its type as the success type to return it.
+  operand of `??` or `||`, or on the right side of `&&`. Where the success
+  type names no value (`void`, `unknown`, `any`, or a type parameter the call
+  infers), it reports a returned Effect value or program literal, a program
+  returned by name (a `const`, field or parameter), and a returned value whose
+  type is a union with an Effect value or a program among its members. Its
+  quick fixes call the value to run it, or write its type as the success type
+  to return it; a union with a member that is no program gets only the second.
+- EK2004 also reports where a plain function's `catch` lets an exception
+  through: the first call in the `try` block of an untrusted function, a
+  declaration without `@throws`, or a trusted package's export whose name
+  ends in `Sync` or contains `OrThrow`. A plain `catch` receives expected
+  failures only; `Result.try` or a `module` block catches the exception.
+- EK1012: a call that never succeeds, stored by a variable's initializer, an
+  object literal's field, an array element or an assignment. The call runs
+  there, so `const missing = Effect.fail(new Missing())` fails at the
+  `const`. To keep the program, write a function or the declared Effect
+  type. EK1012 is adjustable, like EK4409.
 
 ### Tools and integrations
 
@@ -67,8 +93,10 @@ Neither warning changes the emitted JavaScript.
 
 ### Known limitations
 
-- A returned Effect value or program literal where the success type names no
-  value is the success value, not a program to run. EK4802 warns.
+- A returned Effect value, program literal or program named by reference
+  where the success type names no value is the success value, not a program
+  to run. EK4802 warns.
+- A stored call that never succeeds runs where it stands. EK1012 warns.
 - `using` does not release a value whose acquisition ends in an
   uninterruptible section when an interruption arrives during that section.
 - A class method annotated with a plain return type whose body runs an

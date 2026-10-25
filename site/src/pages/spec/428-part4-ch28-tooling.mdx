@@ -14,7 +14,7 @@ bun run dev
 bun x --no-install vibelang --noEmit
 ```
 
-VibeLang 0.0.5 installs from npm as unscoped packages: `vibelang`,
+VibeLang 0.0.6 installs from npm as unscoped packages: `vibelang`,
 `vibelang-runtime`, `vibelang-vite`, `vibelang-unplugin`, `create-vibelang`,
 and one `vibelang-<os>-<cpu>` package per platform. `create-vibelang` copies
 the starter, pins the VibeLang packages to its own version, and installs
@@ -23,14 +23,14 @@ Bun 1.4. The compiler is a native binary: `vibelang` lists each platform's packa
 as an optional dependency, and the package manager installs the one that
 matches the machine (the per-platform distribution D30 planned):
 
-| Platform | Package | Rehearsed for 0.0.5 |
+| Platform | Package | Rehearsed for 0.0.6 |
 | --- | --- | --- |
 | macOS on Apple silicon | `vibelang-darwin-arm64` | No |
 | macOS on Intel | `vibelang-darwin-x64` | No |
 | Linux on x64 | `vibelang-linux-x64` | Yes |
 | Linux on arm64 | `vibelang-linux-arm64` | No |
 
-Version 0.0.5 publishes four native packages for macOS and Linux on arm64 and x64. Native Windows binaries are not available yet. Use WSL and follow the Linux instructions.
+Version 0.0.6 publishes four native packages for macOS and Linux on arm64 and x64. Native Windows binaries are not available yet. Use WSL and follow the Linux instructions.
 
 To work on VibeLang itself, install from a checkout. `sh scripts/setup.sh`
 needs Go, Bun, and Node on PATH (tested: Go 1.26 with Go 1.27 downloaded
@@ -144,7 +144,7 @@ the `project` and `compiler` overrides.
 
 The server is the fork's own, `vibelang --lsp --stdio` from the project's
 compiler (D32). With `--version` the same binary identifies as
-`VibeLang 0.0.5 (TypeScript 7.1.0-dev)`; there is no separate compiler entry
+`VibeLang 0.0.6 (TypeScript 7.1.0-dev)`; there is no separate compiler entry
 point (D75). Install the extension, which `vibelang` ships as
 `editor/vibelang.vsix`, from a project:
 
