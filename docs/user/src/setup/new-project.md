@@ -19,7 +19,7 @@ npm create vibelang@latest my-app
 The starter prints:
 
 ```out
-Created my-app with VibeLang 0.0.4.
+Created my-app with VibeLang 0.0.5.
 Installing dependencies with bun...
 ```
 

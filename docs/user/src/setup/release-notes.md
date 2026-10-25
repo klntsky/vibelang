@@ -4,6 +4,72 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
+## 0.0.5
+
+### Changes that can break code that compiled on 0.0.4
+
+Each one rejects, or changes, a program that compiled on 0.0.4 but ran
+differently from what its types said.
+
+- An optional call of a callback without a contract, `f?.(x)`, runs the
+  program the callback returns, as `f(x)` does. On 0.0.4 it returned the
+  program unrun. The callback's failures and requirements now reach the
+  caller's contract, so a contract that leaves them out is EK2001 or EK2002.
+- A file whose functions are Effects only because they throw, produce, or
+  declare `using` loads effect. On 0.0.4 such a function was typed and
+  declared plain while its JavaScript returned an Effect. Where effect does
+  not resolve, each such function is the new error EK1011.
+
+### Compiler
+
+- The compiler no longer overflows the stack on a function that passes a
+  call of itself by name, as `guard(healthy(index - 1))` does. It reports
+  EK2102 at the function: write its failures and requirements in its
+  contract.
+- The failures and requirements of a callback without a contract default to
+  `never`, so a call that omits an optional callback adds none.
+- A call that runs no longer takes type arguments from its contextual type,
+  which types its success value, not the Effect: `return late()` under
+  `Late!!`, where `late` returns a `Late` error instance, compiles.
+
+### New warnings
+
+Neither warning changes the emitted JavaScript.
+
+- EK4409: a call of an `any`-typed value is a program's value or what an
+  Effect function returns. The call returns its value, so a program the callee
+  returns never runs. Give the callee a type. EK4409 is adjustable, like
+  EK2004.
+- EK4802 also reports an Effect value in a returned conditional's arm, in an
+  operand of `??` or `||`, or on the right side of `&&`, and an Effect value
+  or program literal returned where the success type names no value: `void`,
+  `unknown`, `any`, or a type parameter the call infers. Its quick fixes call
+  the value to run it, or write its type as the success type to return it.
+
+### Tools and integrations
+
+- Coverage: V8 coverage tools such as `@vitest/coverage-v8` and c8 count the
+  functions and statements the author wrote, not the thunks and wrappers the
+  compiler adds. Stack traces and breakpoints are unchanged.
+- `vibelang-vite`: a Vitest rerun recompiles a `.vibe` module after its
+  imports or the compiler change. The plugin keeps `.vibe` modules out of
+  Vitest's on-disk module cache.
+- Formatter: a `module` block formats to itself under a dprint host without a
+  TypeScript plugin, where each pass added a blank line, and a statement that
+  starts with a parenthesis formats with dprint's `;` guard instead of
+  failing.
+- The setup page's Bun check expects Bun 1.4.0 or later again.
+
+### Known limitations
+
+- A returned Effect value or program literal where the success type names no
+  value is the success value, not a program to run. EK4802 warns.
+- `using` does not release a value whose acquisition ends in an
+  uninterruptible section when an interruption arrives during that section.
+- A class method annotated with a plain return type whose body runs an
+  Effect keeps its plain type; called through an interface, it returns the
+  Effect instead of running it.
+
 ## 0.0.4
 
 ### Changes that can break code that compiled on 0.0.3

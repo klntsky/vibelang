@@ -1,6 +1,6 @@
 {
   "name": "vibelang-app",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,13 +12,13 @@
   "dependencies": {
     "effect": "4.0.5",
     "@effect/platform-node": "4.0.5",
-    "vibelang-runtime": "0.0.4"
+    "vibelang-runtime": "0.0.5"
   },
   "devDependencies": {
-    "vibelang": "0.0.4",
+    "vibelang": "0.0.5",
     "vitest": "5.0.5",
     "@effect/vitest": "4.0.5",
-    "vibelang-vite": "0.0.4"
+    "vibelang-vite": "0.0.5"
   },
   "engines": {
     "node": ">=26"

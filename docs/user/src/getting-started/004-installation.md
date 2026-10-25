@@ -6,7 +6,7 @@ cd my-app
 bun run start
 ```
 
-The native `vibelang` compiler compiles `.vibe` sources to JavaScript. Version 0.0.4 installs from npm.
+The native `vibelang` compiler compiles `.vibe` sources to JavaScript. Version 0.0.5 installs from npm.
 
 > **For agents.** To set up VibeLang with a coding agent, give it this prompt:
 >
@@ -20,14 +20,14 @@ The native `vibelang` compiler compiles `.vibe` sources to JavaScript. Version 0
 
 Install Node 26 or later and Bun 1.4 or later. The compiler is a native binary: `vibelang` lists one package per platform as an optional dependency, and your package manager installs only the one that matches your machine:
 
-| Platform | Package | Rehearsed for 0.0.4 |
+| Platform | Package | Rehearsed for 0.0.5 |
 | --- | --- | --- |
 | macOS on Apple silicon | `vibelang-darwin-arm64` | No |
 | macOS on Intel | `vibelang-darwin-x64` | No |
 | Linux on x64 | `vibelang-linux-x64` | Yes |
 | Linux on arm64 | `vibelang-linux-arm64` | No |
 
-Version 0.0.4 publishes four native packages for macOS and Linux on arm64 and x64. Native Windows binaries are not available yet. Use WSL and follow the Linux instructions. The end-to-end npm and Bun rehearsal runs on Linux x64.
+Version 0.0.5 publishes four native packages for macOS and Linux on arm64 and x64. Native Windows binaries are not available yet. Use WSL and follow the Linux instructions. The end-to-end npm and Bun rehearsal runs on Linux x64.
 
 Keep optional dependencies enabled: if an install skips them, as `npm install --omit=optional` does, `vibelang` cannot find its binary and exits with an error.
 
@@ -54,8 +54,8 @@ See [Getting Started](../013-getting-started.md) for the starter's files and [Ru
 ## Add VibeLang to an existing project
 
 ```sh
-bun add vibelang-runtime@0.0.4 effect@4.0.5 @effect/platform-node@4.0.5
-bun add -d vibelang@0.0.4 vibelang-vite@0.0.4 vitest@5.0.5 @effect/vitest@4.0.5
+bun add vibelang-runtime@0.0.5 effect@4.0.5 @effect/platform-node@4.0.5
+bun add -d vibelang@0.0.5 vibelang-vite@0.0.5 vitest@5.0.5 @effect/vitest@4.0.5
 ```
 
 With npm, run `npm install --save-exact` for the first line and `npm install --save-dev --save-exact` for the second.
