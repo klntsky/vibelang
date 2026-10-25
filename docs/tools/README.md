@@ -47,7 +47,7 @@ Use a header comment before the code:
   sketch. The compiler still checks the block.
 - `// compiler-gap: <reason>` keeps the intended language example while the
   compiler disagrees. Record the page, first code line, diagnostics, and rule
-  in `docs/user/notes/compiler-gaps.md`. A marker becomes stale when the block
+  in `docs/user/compiler-gaps.md`. A marker becomes stale when the block
   has no unexpected substantive error and every expected code occurs. Stale
   markers fail, so resolved gaps cannot silently accumulate.
 

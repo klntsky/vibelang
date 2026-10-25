@@ -59,7 +59,7 @@ Many modules work exactly as in Effect: `Option`, `Chunk`, `HashMap`, `Duration`
 
 ## When the spec has no answer
 
-Write the answer most consistent with the rules above, and mark it with a block quote: `> **Proposed.** …`. If no consistent answer exists, write `> **Not designed yet.** <the precise question>`. List every such case, with the page path, in your batch's notes file under `docs/user/notes/`.
+Write the answer most consistent with the rules above, and mark it with a block quote: `> **Proposed.** …`. If no consistent answer exists, write `> **Not designed yet.** <the precise question>`. Record unresolved questions with the page path in the issue or review. Keep drafting and process history outside the public source tree.
 
 ## Token counts
 

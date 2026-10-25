@@ -65,7 +65,6 @@ export const EXEMPT_PATHS = [
   ["artifacts/", "artifact docs: snapshots, never edited (doc-lifecycle doctrine)"],
   ["docs/reviews/", "dated review artifacts, never edited"],
   ["docs/research/", "research reports are artifacts, never edited"],
-  ["docs/user/notes/", "batch work notes are artifacts, never edited"],
 ]
 /** A file whose name carries a date is an artifact (doc-lifecycle doctrine, rule 3). */
 const DATED = /(^|\/)[^/]*\d{4}-\d{2}-\d{2}[^/]*$/
