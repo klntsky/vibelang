@@ -61,6 +61,34 @@ test("a scaffold installs, tests source without a build, builds, starts, and rep
   const greeting = readFileSync(join(app, "dist/greeting.js"), "utf8")
   assert.doesNotMatch(greeting, /\.vibe["']/)
 
+  // A TypeScript entry point need not be imported by any .vibe file.
+  writeFileSync(join(app, "src/t5.vibe"), `export function clampAll(values: ReadonlyArray<number>) {
+  return forEach(values, (value) => Math.min(10, Math.max(0, value)))
+}
+export function later() { sleep("1 millis"); return 7 }
+export function plain(value: number): number { return value + 1 }
+`)
+  const caller = join(app, "src/use.ts")
+  const source = `import { Effect } from "effect"
+import { clampAll, later, plain } from "./t5.vibe"
+console.log(JSON.stringify(Effect.runSync(clampAll([-2, 4, 15]))))
+console.log(await Effect.runPromise(later()))
+console.log(plain(4))
+`
+  writeFileSync(caller, source)
+  const mixed = run("bun", ["run", "build"], app)
+  assert.equal(mixed.status, 0, mixed.output)
+  assert.ok(existsSync(join(app, "dist/use.js")), "build must emit an unreferenced TypeScript entry point")
+  assert.match(readFileSync(join(app, "dist/use.js"), "utf8"), /from "\.\/t5\.js"/)
+  const called = run(process.execPath, ["dist/use.js"], app)
+  assert.equal(called.status, 0, called.output)
+  assert.equal(called.stdout.trim(), "[0,4,10]\n7\n5")
+  writeFileSync(caller, source + '\nconst invalid: number = "a string"\n')
+  const rejected = run("bun", ["run", "build"], app)
+  assert.equal(rejected.status, 1, rejected.output)
+  assert.match(rejected.output, /use\.ts.*TS2322/)
+  writeFileSync(caller, source)
+
   const testFile = join(app, "src/greeting.test.vibe")
   writeFileSync(testFile, readFileSync(testFile, "utf8").replace('"Hello, Ada!"', '"deliberately wrong"'))
   const failed = run("bun", ["run", "test"], app)

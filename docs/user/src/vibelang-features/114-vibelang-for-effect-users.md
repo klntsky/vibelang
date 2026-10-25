@@ -20,6 +20,53 @@ function main() {
 
 Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.retry`, whose parameter expects a program, the same call is passed by name, and retry runs it on each attempt. Use `async` and plain `await` only inside a boundary hatch; `await.all`, `await.allSettled`, `await.any`, and `await.race` are VibeLang's concurrent forms.
 
+
+## Call VibeLang from TypeScript
+
+Compile both files with `vibelang`, rather than ordinary `tsc`. In a `.ts` source, import the relative `.vibe` path **with its extension**:
+
+```vibe
+// t5.vibe
+export function clampAll(values: ReadonlyArray<number>) {
+  return forEach(values, (value) => Math.min(10, Math.max(0, value)))
+}
+```
+
+```ts
+// use.ts
+import { Effect } from "effect"
+import { clampAll } from "./t5.vibe"
+
+console.log(JSON.stringify(Effect.runSync(clampAll([-2, 4, 15]))))
+// Output: [0,4,10]
+```
+
+To TypeScript, `clampAll(...)` returns an `Effect.Effect<number[], never, never>`. Run that program at the application boundary: `Effect.runSync` works when execution stays synchronous; `await Effect.runPromise(clampAll(...))` also supports asynchronous work. Import runners from `effect` as above, or `runSync` / `runPromise` from `vibelang-runtime`. Supply any required services with `Effect.provide` before running. A function whose plain return annotation makes it compile to plain JavaScript, such as `function addOne(n: number): number`, returns its value directly and takes no runner. Inside `.vibe`, call the function directly; see [Running Effects](../getting-started/009-running-effects.md).
+
+For `src/t5.vibe` and `src/use.ts`, keep these settings in `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "src",
+    "outDir": "dist",
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src/**/*.vibe", "src/**/*.ts"]
+}
+```
+
+Keep the starter's other compiler options. `include` must cover a standalone `.ts` entry point: a `.ts` file imported by an included file is already part of the project, but an unreferenced `src/use.ts` is otherwise neither built nor typechecked. The 0.0.6 starter includes only `.vibe`; add `"src/**/*.ts"` there. New starters include both. `rewriteRelativeImportExtensions` rewrites `"./t5.vibe"` to `"./t5.js"` in emitted JavaScript. Build, then run the emitted caller:
+
+```sh
+bun run build
+node dist/use.js
+```
+
+Node runs the JavaScript output; importing the `.vibe` source directly with Node does not compile it.
+
 ## Translate the idioms
 
 | In Effect TypeScript | In VibeLang |

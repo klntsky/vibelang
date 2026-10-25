@@ -12,5 +12,8 @@
     "skipLibCheck": true,
     "types": []
   },
-  "include": ["src/**/*.vibe"]
+  "include": [
+    "src/**/*.vibe",
+    "src/**/*.ts"
+  ]
 }
