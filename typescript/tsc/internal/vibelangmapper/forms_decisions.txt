@@ -932,6 +932,7 @@ typescript/vibelang/cases/ek2115-factory-runs.fail/main.vibe:6:66 lambda program
 typescript/vibelang/cases/ek2115-factory-runs.fail/main.vibe:7:56 lambda program annotation
 typescript/vibelang/cases/ek2116-factory-paths.fail/main.vibe:3:67 lambda program annotation
 typescript/vibelang/cases/ek2116-factory-paths.fail/main.vibe:4:69 lambda program annotation
+typescript/vibelang/cases/ek3201-any-program.fail/main.vibe:11:25 lambda plain table
 typescript/vibelang/cases/ek3201-runner-services.fail/main.vibe:18:48 lambda effectFn service
 typescript/vibelang/cases/ek3201-runner-services.fail/main.vibe:28:21 lambda program table
 typescript/vibelang/cases/ek3201-runner-services.fail/main.vibe:32:19 lambda program table

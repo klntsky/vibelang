@@ -27,6 +27,14 @@ const layerTypeID = "~effect/Layer"
 
 func init() { fileChecks = append(fileChecks, checkWires, checkRunners) }
 
+// anyProgram and anyMain are EK3201's and EK3205's text for a program whose
+// type is any, such as an Effect.gen program after EK1002, whose services
+// TypeScript's type cannot name. {0} is the program.
+var (
+	anyProgram = EK3201.With("{0} has type any, so the services it needs are unknown.")
+	anyMain    = EK3205.With("{0} has type any, so the services it needs are unknown.")
+)
+
 // wireArgument is what one argument of a wire call provides and needs.
 type wireArgument struct {
 	node    *ast.Node
@@ -433,6 +441,18 @@ func checkTest(c *checker.Checker, call *ast.Node) {
 func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type, site runnerSite) {
 	needed := runnerRequirements(c, c.GetTypeAtLocation(program))
 	if needed == nil {
+		return
+	}
+	if needed.Flags()&checker.TypeFlagsAny != 0 {
+		m := anyProgram
+		if site == runnerEntry {
+			m = anyMain
+		}
+		d := report(c, program, m, scanner.GetTextOfNode(program))
+		note(d, "TypeScript gives a program type any where it cannot type it, as after an error in its declaration: fix that error, or write the program's type, A!E!R.")
+		if site != runnerEntry {
+			coverArgument(c, program)
+		}
 		return
 	}
 	var names, paths []string

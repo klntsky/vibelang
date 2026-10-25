@@ -1,0 +1,16 @@
+// expect: EK1001 EK1002 EK3201
+// An Effect TypeScript program pasted into a .vibe file: Effect.gen takes a
+// producer here (EK1002), so main has type any, and EK3201 at the runner says
+// its services are unknown rather than "no provider for any".
+import { Context, Effect } from "effect"
+
+class Greeter extends Context.Service<Greeter, {
+  readonly greet: (name: string) => Effect.Effect<string>
+}>()("app/Greeter") {}
+
+const main = Effect.gen(function* () {
+  const greeter = yield* Greeter
+  yield* Effect.log(yield* greeter.greet("VibeLang"))
+})
+
+Effect.runPromise(main)
