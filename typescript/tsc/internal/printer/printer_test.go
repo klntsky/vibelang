@@ -2506,6 +2506,57 @@ func TestTrailingCommaAfterTransform(t *testing.T) {
 	emittestutil.CheckEmit(t, emitContext, file.AsSourceFile(), "[a,];")
 }
 
+// A return, throw or yield that a transform writes before a source expression
+// writes the expression's leading comments after its keyword. Comments that
+// end in a line break, or start on a later line, would end the statement
+// (ASI), so the printer parenthesizes the expression. Comments written
+// before the statement, because the statement takes the expression's
+// position, need no parentheses.
+func TestParenthesizeMovedExpressionForNoAsi(t *testing.T) {
+	t.Parallel()
+
+	ret := func(f *printer.NodeFactory, e *ast.Node) *ast.Node { return f.NewReturnStatement(e) }
+	throw := func(f *printer.NodeFactory, e *ast.Node) *ast.Node { return f.NewThrowStatement(e) }
+	yield := func(f *printer.NodeFactory, e *ast.Node) *ast.Node {
+		return f.NewExpressionStatement(f.NewYieldExpression(nil /*asteriskToken*/, e))
+	}
+	tests := []struct {
+		title   string
+		input   string
+		keyword func(*printer.NodeFactory, *ast.Node) *ast.Node
+		atValue bool
+		output  string
+	}{
+		{title: "ReturnLineComment", input: "function f() {\n    // line\n    a.b;\n}", keyword: ret, output: "function f() {\n    return (\n    // line\n    a.b);\n}"},
+		{title: "ReturnBlockComment", input: "function f() {\n    /* block */\n    a();\n}", keyword: ret, output: "function f() {\n    return (\n    /* block */\n    a());\n}"},
+		{title: "ThrowLineComment", input: "function f() {\n    // line\n    a;\n}", keyword: throw, output: "function f() {\n    throw (\n    // line\n    a);\n}"},
+		{title: "YieldBlockComment", input: "function* f() {\n    /* block */\n    a;\n}", keyword: yield, output: "function* f() {\n    yield (\n    /* block */\n    a);\n}"},
+		{title: "ReturnBlockCommentOnLaterLine", input: "function f() {\n    /* later line */ a;\n}", keyword: ret, output: "function f() {\n    return (\n    /* later line */ a);\n}"},
+		{title: "ReturnNoComment", input: "function f() {\n    a;\n}", keyword: ret, output: "function f() {\n    return a;\n}"},
+		{title: "ReturnAtValue", input: "function f() {\n    // line\n    a;\n}", keyword: ret, atValue: true, output: "function f() {\n    // line\n    return a;\n}"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.title, func(t *testing.T) {
+			t.Parallel()
+			file := parsetestutil.ParseTypeScript(tt.input, false /*jsx*/)
+			emitContext := printer.NewEmitContext()
+			var visitor *ast.NodeVisitor
+			visitor = emitContext.NewNodeVisitor(func(node *ast.Node) *ast.Node {
+				if node.Kind != ast.KindExpressionStatement {
+					return node.VisitEachChild(visitor)
+				}
+				statement := tt.keyword(emitContext.Factory, node.Expression())
+				if tt.atValue {
+					statement.Loc = node.Loc
+				}
+				return statement
+			})
+			file = visitor.VisitSourceFile(file)
+			emittestutil.CheckEmit(t, emitContext, file.AsSourceFile(), tt.output)
+		})
+	}
+}
+
 func TestPartiallyEmittedExpression(t *testing.T) {
 	t.Parallel()
 
@@ -2522,6 +2573,36 @@ func TestPartiallyEmittedExpression(t *testing.T) {
     .left
     .expression
     .expression;`)
+}
+
+// An erased assertion whose operand's comments start on a later line than
+// the assertion is parenthesized after a return: the printer writes a line
+// break before such comments, and a line break after return ends it (ASI).
+func TestPartiallyEmittedExpressionCommentOnLaterLine(t *testing.T) {
+	t.Parallel()
+
+	compilerOptions := &core.CompilerOptions{}
+	file := parsetestutil.ParseTypeScript("function f() {\n    return <any>\n        /* later line */ a;\n}", false /*jsx*/)
+	emitContext := printer.NewEmitContext()
+	file = tstransforms.NewTypeEraserTransformer(&transformers.TransformOptions{CompilerOptions: compilerOptions, Context: emitContext}).TransformSourceFile(file)
+	emittestutil.CheckEmit(t, emitContext, file.AsSourceFile(), "function f() {\n    return (\n    /* later line */ a);\n}")
+}
+
+// A statement that stands for a parse-tree statement but starts where the
+// source holds other text writes its keyword without the comments around
+// that text: after return, a line comment would end the statement (ASI).
+func TestTokenCommentsOnlyWhereTheSourceHoldsTheToken(t *testing.T) {
+	t.Parallel()
+
+	file := parsetestutil.ParseTypeScript("function f() {\n    return a;\n}\nfn(b, // trailing\n    c);", false /*jsx*/)
+	emitContext := printer.NewEmitContext()
+	source := file.Statements.Nodes[0].Body().Statements()[0]
+	call := file.Statements.Nodes[1]
+	statement := emitContext.Factory.NewReturnStatement(call.Expression().Arguments()[1])
+	emitContext.SetOriginal(statement, source)
+	statement.Loc = call.Loc
+	file = emitContext.Factory.UpdateSourceFile(file, emitContext.Factory.NewNodeList([]*ast.Node{statement}), file.EndOfFileToken).AsSourceFile()
+	emittestutil.CheckEmit(t, emitContext, file, "return c;")
 }
 
 func TestParenthesizeBinaryExpressionMixingNullishCoalescing(t *testing.T) {

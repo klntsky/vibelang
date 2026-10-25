@@ -3091,6 +3091,9 @@ func (p *Printer) willEmitLeadingNewLine(node *ast.Expression) bool {
 	hasLeadingCommentRanges := false
 	hasNewLineComment := false
 	for comment := range scanner.GetLeadingCommentRanges(p.emitContext.Factory.AsNodeFactory(), p.currentSourceFile.Text(), node.Pos()) {
+		if !hasLeadingCommentRanges && p.shouldEmitNewLineBeforeLeadingCommentOfPosition(node.Pos(), comment.Pos()) {
+			hasNewLineComment = true // emitLeadingComments starts the comments on a new line
+		}
 		hasLeadingCommentRanges = true
 		if p.commentWillEmitNewLine(comment) {
 			hasNewLineComment = true
@@ -3122,10 +3125,50 @@ func (p *Printer) willEmitLeadingNewLine(node *ast.Expression) bool {
 	return false
 }
 
+// willEmitMovedLeadingNewLine reports whether node itself writes a leading
+// comment that ends in a line break. A source expression keeps its leading
+// comments when the parser or a transform writes it after a keyword it did
+// not follow in the source, as VibeLang writes a match arm's value or a
+// thunk's body after a return. Those comments, at node's position, are
+// written after the keyword unless an enclosing node wrote them first (the
+// container position), and a line break there ends a return, throw or yield
+// (ASI): a line comment, a comment followed by a line break, or the line
+// break emitLeadingComments writes before comments that start on a later
+// line than node. willEmitLeadingNewLine covers the comments of the
+// expressions a partially emitted expression stands for, such as an erased
+// assertion.
+func (p *Printer) willEmitMovedLeadingNewLine(node *ast.Expression) bool {
+	if !p.shouldEmitComments(node) || !p.shouldEmitLeadingComments(node) {
+		return false
+	}
+	if slices.ContainsFunc(p.emitContext.GetSyntheticLeadingComments(node), p.syntheticCommentWillEmitNewLine) {
+		return true
+	}
+	commentRange := p.emitContext.CommentRange(node)
+	pos := commentRange.Pos()
+	if ast.PositionIsSynthesized(pos) || pos == commentRange.End() || pos == p.containerPos {
+		return false
+	}
+	first := true
+	for comment := range scanner.GetLeadingCommentRanges(p.emitContext.Factory.AsNodeFactory(), p.currentSourceFile.Text(), pos) {
+		if !p.shouldWriteComment(comment) {
+			continue
+		}
+		if first && p.shouldEmitNewLineBeforeLeadingCommentOfPosition(pos, comment.Pos()) || p.commentWillEmitNewLine(comment) {
+			return true
+		}
+		first = false
+	}
+	return false
+}
+
 // parenthesizeExpressionForNoAsi wraps an expression in parens if we would emit a leading comment
 // that would introduce a line separator between the node and its parent.
 func (p *Printer) parenthesizeExpressionForNoAsi(node *ast.Expression) *ast.Expression {
 	if !p.commentsDisabled {
+		if node.Kind != ast.KindPartiallyEmittedExpression && p.willEmitMovedLeadingNewLine(node) {
+			return p.emitContext.Factory.NewParenthesizedExpression(node)
+		}
 		switch node.Kind {
 		case ast.KindPartiallyEmittedExpression:
 			if p.willEmitLeadingNewLine(node) {
@@ -5384,7 +5427,7 @@ func (p *Printer) emitCommentsBeforeToken(token ast.Kind, pos int, contextNode *
 
 	node := p.emitContext.ParseNode(contextNode)
 	isSimilarNode := node != nil && node.Kind == contextNode.Kind
-	if !isSimilarNode {
+	if !isSimilarNode || !p.sourceHasTokenAt(token, pos) {
 		return nil, pos
 	}
 
@@ -5397,6 +5440,20 @@ func (p *Printer) emitCommentsBeforeToken(token ast.Kind, pos int, contextNode *
 	}
 
 	return p.commentStateArena.New(), pos
+}
+
+// sourceHasTokenAt reports whether the source text holds token at pos. A node
+// the parser writes for a form of its own, such as the return statement of a
+// VibeLang match arm, which starts at the arm's `when`, has tokens the source
+// does not have where the node starts. The comments around such a position
+// belong to other code, and written after a keyword, a line comment would end
+// its statement (ASI): `when [ // first\n x ]: v` printed `return // first`.
+func (p *Printer) sourceHasTokenAt(token ast.Kind, pos int) bool {
+	if p.currentSourceFile == nil || ast.PositionIsSynthesized(pos) {
+		return true
+	}
+	text := p.currentSourceFile.Text()
+	return pos <= len(text) && strings.HasPrefix(text[pos:], scanner.TokenToString(token))
 }
 
 func (p *Printer) emitCommentsAfterToken(token ast.Kind, pos int, contextNode *ast.Node, state *commentState) {

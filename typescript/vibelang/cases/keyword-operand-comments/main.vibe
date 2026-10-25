@@ -1,0 +1,274 @@
+// expect-result: {"arrowLine":1,"arrowBlock":2,"blockArrow":3,"expression":4,"method":5,"classMethod":6,"handlerLine":"line failed","handlerBlock":"block failed","topicLine":8,"topicBlock":9,"parsed":[1],"stepped":9,"matchEffect":[10,11],"matchPlain":[12,13],"doValue":14,"throwLine":"throw line","throwBlock":["kept","throw block"],"produced":[15,16],"generated":[17,18],"awaited":20,"jumps":3,"counted":307,"sum":21,"byName":22}
+// A comment before an expression stays a comment wherever the compiler
+// writes the expression: after a return it adds (an arrow's body, a
+// handler's value, a match arm), after throw or yield, and in labeled
+// jumps, increments and arrow parameters. A line break after return, throw
+// or yield, or before ++, -- or =>, would change the program (ASI).
+error Bad { message: string }
+
+const later = (n: number): number!! => {
+  sleep("1 millis")
+  return n
+}
+
+const failing = (): string!Bad => {
+  sleep("1 millis")
+  throw new Bad({ message: "failed" })
+}
+
+// return: an arrow's concise body, a direct Effect
+const arrowLine = (): number!! =>
+  // line
+  later(1)
+
+const arrowBlock = (): number!! =>
+  /* block */
+  later(2)
+
+// return: a parenthesized value of a block-bodied arrow, a function
+// expression and methods
+const blockArrow = (): number!! => {
+  return (
+    // line
+    later(3)
+  )
+}
+
+const expression = function (): number!! {
+  return (
+    /* block */
+    later(4)
+  )
+}
+
+const box = {
+  read(): number!! {
+    return (
+      // line
+      later(5)
+    )
+  }
+}
+
+class Holder {
+  read(): number!! {
+    return (
+      /* block */
+      later(6)
+    )
+  }
+}
+
+// return: a catch handler's value
+function handlerLine(): string!! {
+  return failing() catch (e) =>
+    // line
+    "line " + e.message
+}
+
+function handlerBlock(): string!! {
+  return failing() catch (e) =>
+    /* block */
+    "block " + e.message
+}
+
+// return: a closure in a pipe stage that reads the topic
+function topicLine(): number!! {
+  return later(1) |> Effect.map(Effect.succeed(7),
+    // line
+    (n) => n + %)
+}
+
+function topicBlock(): number!! {
+  return later(1) |> Effect.map(Effect.succeed(8),
+    /* block */
+    (n) => n + %)
+}
+
+// return: hatches as an arrow's body
+const parsed = (text: string) =>
+  // line
+  try((text) => JSON.parse(text) as unknown, (cause) => new Bad({ message: String(cause) }), text)
+
+const stepped = (n: number) =>
+  /* block */
+  sync((n) => n + 1, n)
+
+// return: match arms, in an Effect function and a plain function
+function matchEffect(x: string): number!! {
+  later(0)
+  return match (x) {
+    when "a":
+      // line
+      10;
+    default:
+      /* block */
+      11;
+  }
+}
+
+function matchPlain(x: string): number {
+  return match (x) {
+    when "a":
+      // line
+      12;
+    default:
+      /* block */
+      13;
+  }
+}
+
+// return: a do block's value
+function doValue(): number!! {
+  const v = do {
+    const a = later(13)
+    // line
+    a + 1
+  }
+  return v
+}
+
+// throw: a statement and an expression
+function throwLine(): string!Bad {
+  later(0)
+  throw (
+    // line
+    new Bad({ message: "throw line" })
+  )
+}
+
+function throwBlock(flag: boolean): string!Bad {
+  const v = flag ? "kept" : throw (
+    /* block */
+    new Bad({ message: "throw block" })
+  )
+  return v
+}
+
+// yield: a producer and a JavaScript generator
+function* produced() {
+  yield (
+    // line
+    later(15)
+  )
+  yield (
+    /* block */
+    16
+  )
+}
+
+function produce(): number[]!! {
+  const values: number[] = []
+  for (const x of produced()) values.push(x)
+  return values
+}
+
+function* generated(): Generator<number> {
+  yield (
+    // line
+    17
+  )
+  yield (
+    /* block */
+    18
+  )
+}
+
+// await: in a module body
+module text {
+  export async function loaded(): Promise<number> {
+    const a = await (
+      // line
+      Promise.resolve(19)
+    )
+    return a + await (
+      /* block */
+      Promise.resolve(1)
+    )
+  }
+}
+
+import { loaded } from text
+
+function awaited(): number!! {
+  return sync(async () => loaded())
+}
+
+// break and continue with a label, across a finally region
+function jumps(): number!! {
+  let total = 0
+  outer: for (const i of [1, 2, 3]) {
+    for (const j of [1, 2, 3]) {
+      try {
+        later(0)
+        // line
+        if (j === 2) continue outer
+        if (i === 3) break /* block */ outer
+        total += i * j
+      } finally {
+        later(0)
+      }
+    }
+  }
+  return total
+}
+
+// postfix ++ and --
+function counted(): number!! {
+  let up = 0
+  let down = 10
+  for (const x of [1, 2, 3]) {
+    later(x)
+    // line
+    up++
+    down /* block */ --
+  }
+  return up * 100 + down
+}
+
+// =>: arrow parameters with comments
+const sum = (
+  // line
+  a: number,
+  /* block */
+  b: number
+): number!! => later(a + b)
+
+// by-name arguments
+function byName(): number!! {
+  return retry(
+    // line
+    later(22),
+    /* block */
+    { times: 1 }
+  )
+}
+
+export function main() {
+  return {
+    arrowLine: arrowLine(),
+    arrowBlock: arrowBlock(),
+    blockArrow: blockArrow(),
+    expression: expression(),
+    method: box.read(),
+    classMethod: new Holder().read(),
+    handlerLine: handlerLine(),
+    handlerBlock: handlerBlock(),
+    topicLine: topicLine(),
+    topicBlock: topicBlock(),
+    parsed: parsed("[1]"),
+    stepped: stepped(8),
+    matchEffect: [matchEffect("a"), matchEffect("b")],
+    matchPlain: [matchPlain("a"), matchPlain("b")],
+    doValue: doValue(),
+    throwLine: throwLine() catch (e) => e.message,
+    throwBlock: [throwBlock(true), throwBlock(false) catch (e) => e.message],
+    produced: produce(),
+    generated: [...generated()],
+    awaited: awaited(),
+    jumps: jumps(),
+    counted: counted(),
+    sum: sum(20, 1),
+    byName: byName()
+  }
+}
