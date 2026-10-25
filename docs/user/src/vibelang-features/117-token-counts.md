@@ -18,9 +18,9 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 | Load | Tokens |
 | --- | ---: |
 | The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,528 |
-| The skill and the [cheat sheet](115-cheat-sheet.md) | 13,063 |
-| The skill and the user guide (131 pages) | 199,573 |
-| The user guide alone | 195,045 |
+| The skill and the [cheat sheet](115-cheat-sheet.md) | 13,062 |
+| The skill and the user guide (131 pages) | 199,558 |
+| The user guide alone | 195,030 |
 | The specification (33 chapters) | 103,189 |
 | The decision log, `docs/design/DECISIONS.md` | 60,384 |
 
@@ -91,13 +91,13 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Creating Effects](../getting-started/005-creating-effects.md) | 2,557 |
 | [Two Types of Errors](../error-management/006-two-error-types.md) | 646 |
 | [Basic Concurrency](../concurrency/007-basic-concurrency.md) | 1,441 |
-| **Core Concepts** | **13,346** |
+| **Core Concepts** | **13,339** |
 | [Effect's Modules](../getting-started/008-importing-effect.md) | 1,087 |
 | [Running Effects](../getting-started/009-running-effects.md) | 1,511 |
 | [Sequencing Effects](../getting-started/010-using-generators.md) | 1,184 |
 | [Building Pipelines](../getting-started/011-building-pipelines.md) | 1,807 |
-| [Devtools](../getting-started/012-devtools.md) | 7,757 |
-| **All 12 pages** | **23,583** |
+| [Devtools](../getting-started/012-devtools.md) | 7,750 |
+| **All 12 pages** | **23,576** |
 
 ### Setup
 
@@ -131,13 +131,13 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | Page | Tokens |
 | --- | ---: |
 | [Getting Started](../013-getting-started.md) | 919 |
-| **Error Management** | **13,168** |
+| **Error Management** | **13,161** |
 | [Expected Errors](../error-management/014-expected-errors.md) | 4,086 |
 | [Unexpected Errors](../error-management/015-unexpected-errors.md) | 1,293 |
 | [Fallback](../error-management/016-fallback.md) | 989 |
 | [Matching](../error-management/017-matching.md) | 741 |
 | [Retrying](../error-management/018-retrying.md) | 764 |
-| [Timing Out](../error-management/019-timing-out.md) | 844 |
+| [Timing Out](../error-management/019-timing-out.md) | 837 |
 | [Sandboxing](../error-management/020-sandboxing.md) | 698 |
 | [Error Accumulation](../error-management/021-error-accumulation.md) | 605 |
 | [Error Channel Operations](../error-management/022-error-channel-operations.md) | 1,334 |
@@ -245,7 +245,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [PlatformLogger](../platform/108-platformlogger.md) | 758 |
 | [Runtime](../platform/109-runtime.md) | 1,219 |
 | [Terminal](../platform/110-terminal.md) | 1,511 |
-| **All 98 pages** | **131,716** |
+| **All 98 pages** | **131,709** |
 
 ### VibeLang features
 
@@ -255,9 +255,9 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Producers](112-producers.md) | 1,246 |
 | [Building an HTTP API](113-building-an-http-api.md) | 1,392 |
 | [VibeLang for Effect users](114-vibelang-for-effect-users.md) | 3,718 |
-| [Cheat sheet](115-cheat-sheet.md) | 8,535 |
+| [Cheat sheet](115-cheat-sheet.md) | 8,534 |
 | [Pattern matching with match and is](116-match-and-is.md) | 2,939 |
-| **All 6 pages** | **19,749** |
+| **All 6 pages** | **19,748** |
 
 ### Specification
 

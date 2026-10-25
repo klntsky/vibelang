@@ -71,7 +71,7 @@ schema Delivery = { status: Status; shipments: ReadonlyArray<Shipment> }
 false
 ```
 
-`schema Status = ...` declares the schema `Status`, here `Schema.Literals(["pending", "delivered", "returned"])`, and the type `Status`, `typeof Status.Type`, in one declaration (D280). The type after `=` maps to a schema as a struct field's type does: a union of literals is `Schema.Literals`, another union is `Schema.Union`, and arrays, tuples, records, object types, and the names of other schemas map as they do in a field. Refinements and transformations such as `Schema.NonEmptyString` and `Schema.FiniteFromString` stay `Schema` constants, as `Shipment` shows. A type outside the mapping, such as a function type, is EK2109.
+`schema Status = ...` declares the schema `Status`, here `Schema.Literals(["pending", "delivered", "returned"])`, and the type `Status`, `typeof Status.Type`, in one declaration. The type after `=` maps to a schema as a struct field's type does: a union of literals is `Schema.Literals`, another union is `Schema.Union`, and arrays, tuples, records, object types, and the names of other schemas map as they do in a field. Refinements and transformations such as `Schema.NonEmptyString` and `Schema.FiniteFromString` stay `Schema` constants, as `Shipment` shows. A type outside the mapping, such as a function type, is EK2109.
 
 ## Choosing synchronous, result, or effect decoding
 
@@ -106,7 +106,7 @@ Missing key
 
 Prefer `decodeUnknownEffect`: it can pause, requires the codec's decoding services, and fails with `Schema.SchemaError`. `decodeUnknownResult` returns success or failure as data and needs a synchronous, service-free decoding path. An unexpected exception from a synchronous callback is a defect, which ordinary `catch` does not handle.
 
-`decodeUnknownSync` throws on invalid input. Called directly, that exception is a defect; the example instead maps `decodeUnknownEffect`’s expected failure to `InvalidShipment` with ordinary `catch`. A plain function's catch also ignores defects (D282); EK2004 warns at a catch whose try block has E = `never`, and says defects pass through it. The `Exit` and `Option` variants give other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant decodes asynchronously without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even with no services.
+`decodeUnknownSync` throws on invalid input. Called directly, that exception is a defect; the example instead maps `decodeUnknownEffect`’s expected failure to `InvalidShipment` with ordinary `catch`. A plain function's catch also ignores defects; EK2004 warns at a catch whose try block has E = `never`, and says defects pass through it. The `Exit` and `Option` variants give other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant decodes asynchronously without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even with no services.
 
 ## Encoding values
 

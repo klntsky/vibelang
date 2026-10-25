@@ -109,7 +109,7 @@ Node runs the JavaScript output; importing the `.vibe` source directly with Node
 | `Effect.runPromise(program)` in TypeScript | `runPromise(main())` in a `.ts` file or a hatch's body |
 | `Stream.fromIterable` or a generator-based source | A producer: `function*` with `yield value` |
 
-`await.allSettled` captures typed failures as `Result.fail` and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"` (D258).
+`await.allSettled` captures typed failures as `Result.fail` and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"`.
 
 Use Effect's operators for retries, timeouts, concurrency, and Stream transformations. Statements replace operators that only sequence ordinary work.
 
@@ -142,7 +142,7 @@ A held Effect value runs when called with no arguments. Data that Effect can als
 
 ## Preserve a factory's call-time work
 
-When TypeScript captures configuration before returning an Effect, keep that phase in a function with a declared Effect return and return a parameterless program (D269):
+When TypeScript captures configuration before returning an Effect, keep that phase in a function with a declared Effect return and return a parameterless program:
 
 ```vibe
 export const capture = (input: { mutable value: number }): Effect.Effect<number, never, never> => {
@@ -151,7 +151,7 @@ export const capture = (input: { mutable value: number }): Effect.Effect<number,
 }
 ```
 
-A TypeScript caller can build `capture(input)`, mutate `input`, then run the program, and still get the snapshot. The outer body runs synchronously at the call and can compute or copy plain data; every path returns a program. **Where TypeScript returned Effect.fail(e), write return () => \{ throw e \}**; the outer body never fails, so a throw there is EK2115 (D282). Put Effects and service lookups inside the returned program.
+A TypeScript caller can build `capture(input)`, mutate `input`, then run the program, and still get the snapshot. The outer body runs synchronously at the call and can compute or copy plain data; every path returns a program. **Where TypeScript returned Effect.fail(e), write return () => \{ throw e \}**; the outer body never fails, so a throw there is EK2115. Put Effects and service lookups inside the returned program.
 
 A forwarding member keeps its delegate's call phase with `const program: Effect.Effect<number, never, never> = base.read(path); return program`. A const with a declared Effect type holds its initializer in any scope: `const built: Made = make(config)` calls the factory now and runs none of the result. For a Registry layer, build that local before `Layer.effect(Registry)(built)`; snapshot only what TypeScript snapshots, keeping later reads such as `config.snapshots` in the returned program.
 
@@ -170,7 +170,7 @@ export function main() {
 // Output: started
 ```
 
-Declare functions, services, schemas, and layers at module scope, but run no program there: `const answer = Effect.succeed(1)` is EK1001. An explicitly Effect-typed const, such as `const answer: Effect.Effect<number, never, never> = Effect.succeed(1)`, stores a cold program and runs nothing at import (D262). Export a parameterless `main` instead: the module runs it with `NodeRuntime.runMain` when node starts the module, and importing it runs nothing. To provide layers or runner options, call the runner at the top level yourself, `NodeRuntime.runMain(() => Effect.provide(() => main(), AppLive))`; the module then runs only that.
+Declare functions, services, schemas, and layers at module scope, but run no program there: `const answer = Effect.succeed(1)` is EK1001. An explicitly Effect-typed const, such as `const answer: Effect.Effect<number, never, never> = Effect.succeed(1)`, stores a cold program and runs nothing at import. Export a parameterless `main` instead: the module runs it with `NodeRuntime.runMain` when node starts the module, and importing it runs nothing. To provide layers or runner options, call the runner at the top level yourself, `NodeRuntime.runMain(() => Effect.provide(() => main(), AppLive))`; the module then runs only that.
 
 Every export of Effect's root, including `Console`, `Clock`, `Option`, `Schedule`, and `Stream`, is in scope without an import, along with VibeLang's runtime helpers. JavaScript globals such as `Array` keep their meaning; import Effect's conflicting modules under another name. Subpaths such as `effect/http` still need imports.
 
@@ -188,7 +188,7 @@ function reportTime() {
 
 `console.log`, `fetch`, timers, and `Date.now()` are errors in `.vibe`; use `Console`, `Clock`, `Effect.sleep`, and Effect's HTTP modules. You can import a Node function or pass it as a value; running it directly is a platform API error. [Building an HTTP API](/vibelang-features/113-building-an-http-api) passes `createServer` to a server layer.
 
-Inside an Effect function, a plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a `.vibe` value, such as `text`, only as an input: an argument after the function, bound to its first parameter. To trust workspace or other TypeScript packages, set `"vibelang": { "trustedPackages": ["@smthrs/*"] }` at the top level of `tsconfig.json` (D261, D275). Exceptions from a matching package's synchronous plain calls are defects, its Effects run, and EK4401 does not fire. `trusted(impl, [Errors])` declares a function's expected failures. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
+Inside an Effect function, a plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a `.vibe` value, such as `text`, only as an input: an argument after the function, bound to its first parameter. To trust workspace or other TypeScript packages, set `"vibelang": { "trustedPackages": ["@smthrs/*"] }` at the top level of `tsconfig.json`. Exceptions from a matching package's synchronous plain calls are defects, its Effects run, and EK4401 does not fire. `trusted(impl, [Errors])` declares a function's expected failures. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
 
 ## Catch expected failures only
 

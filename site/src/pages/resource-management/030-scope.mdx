@@ -95,7 +95,7 @@ delivered as the mask ends, before `using` registers the release, so
 [`scopes-using-pending-interrupt` case](https://github.com/smithersai/vibelang/tree/main/typescript/vibelang/cases/scopes-using-pending-interrupt)
 records `["acquired"]` instead of `["acquired","disposed"]`. This is the
 acquisition-to-registration window, not an interruption during the resource's
-later use. `using` itself does not mask acquisition (D25).
+later use. `using` itself does not mask acquisition.
 
 Wrap acquisition and cleanup together with `Effect.acquireRelease`, keeping its
 default protected acquisition. Use `using h = Effect.acquireRelease(...)` to

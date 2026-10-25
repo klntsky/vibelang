@@ -82,7 +82,7 @@ function roll(): number!! {
 // Output: 4
 ```
 
-`provide Key = value` provides one service to a block (D173). `Random`, `Clock`, and `Scheduler` are references: each has a default, so none appears in a contract's dependencies, and a provide block replaces the default for its statements and the fibers they start. An effect module stands for its same-named key (D174): `provide Random = seeded` provides `Random.Random`, `provide Clock = testClock` replaces the clock `sleep` reads, and `provide Scheduler = fifo` runs the block's fibers on another scheduler. Layers and services share one list: `provide Logger.layer([]), Random = seeded { ... }`.
+`provide Key = value` provides one service to a block. `Random`, `Clock`, and `Scheduler` are references: each has a default, so none appears in a contract's dependencies, and a provide block replaces the default for its statements and the fibers they start. An effect module stands for its same-named key: `provide Random = seeded` provides `Random.Random`, `provide Clock = testClock` replaces the clock `sleep` reads, and `provide Scheduler = fifo` runs the block's fibers on another scheduler. Layers and services share one list: `provide Logger.layer([]), Random = seeded { ... }`.
 
 ## Build and dispose managed runtimes
 

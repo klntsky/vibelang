@@ -47,7 +47,7 @@ function accepted(value: number) {
 
 Inspect `A`, `E`, and `R` when changing a function. A local call returns the success value; the function's complete contract also records escaping failures and unmet services, and generated declarations expose it to TypeScript consumers.
 
-Hover over a function to see its inferred `Effect<A, E, R>`, and over a call to see its success value's type. Separate control-class hover text is a D33 design target, not shipped.
+Hover over a function to see its inferred `Effect<A, E, R>`, and over a call to see its success value's type. Separate control-class hover text is planned but not shipped.
 
 ## Diagnostics, completions, and refactors
 
@@ -65,7 +65,7 @@ Inside functions, plain foreign calls need a boundary hatch such as `try` or `sy
 
 EK1010 refuses an unparenthesized throw expression on the left of a binary operator (except comma), as a conditional's condition, or before `as` or `satisfies`. Write `throw (…)` to throw the whole expression; `value ?? throw e` and throw statements keep their meaning.
 
-The server exposes TypeScript completions through the VibeLang checker, service member types included. Quick fixes repair retired spellings and the mechanical cases of Effect's language service rules (below); refactors write a function's inferred contract, convert an `async` function or an interface, and convert between calls and pipes (D245). D33's catch-specific completions are not implemented. Other diagnostic messages suggest repairs as text. Do not apply a TypeScript refactor that introduces `Effect.gen` or `yield*` inside `.vibe`.
+The server exposes TypeScript completions through the VibeLang checker, service member types included. Quick fixes repair retired spellings and the mechanical cases of Effect's language service rules (below); refactors write a function's inferred contract, convert an `async` function or an interface, and convert between calls and pipes (D245). Catch-specific completions are not implemented. Other diagnostic messages suggest repairs as text. Do not apply a TypeScript refactor that introduces `Effect.gen` or `yield*` inside `.vibe`.
 
 ## Configure compiler checks
 

@@ -84,7 +84,7 @@ function checkedConversion(amount: number, currency: string): Effect<number, inf
 
 In a return annotation on a function with a body, `infer` followed by any name infers that channel from the body; the other slots are promises the compiler checks. The name is documentation only, not in scope in the body or other slots. `infer _` is allowed, as in `Effect<infer _, infer _, infer _>`, which infers all three channels.
 
-Write all three slots. `Effect<number>` here reports EK2003: "Did you mean never or inferred?" It suggests `number!!`, to check for no failures or requirements, or removing the annotation to infer them. A plain return annotation such as `: number` is EK2003 on a function whose body runs an Effect or throws past its own `catch`; a function that compiles to plain JavaScript keeps it (D282).
+Write all three slots. `Effect<number>` here reports EK2003: "Did you mean never or inferred?" It suggests `number!!`, to check for no failures or requirements, or removing the annotation to infer them. A plain return annotation such as `: number` is EK2003 on a function whose body runs an Effect or throws past its own `catch`; a function that compiles to plain JavaScript keeps it.
 
 This applies only to return annotations of `.vibe` functions with bodies. In parameter types, aliases, abstract members, and `.ts` files, `Effect<number>` keeps TypeScript's defaults, `Effect<number, never, never>`, and channel inference is unsupported. A callback parameter without an Effect contract, such as `(n: number) => string`, still accepts any contract.
 

@@ -580,7 +580,7 @@ function hot() {
 // Output: ["25 C","30 C"]
 ```
 
-A method is a data-first overload: its first parameter is named `self`, ends in `OrOptions`, or is one of the few others D295 lists, such as `Cause.findErrorOption(input)`.
+A method is a data-first overload: its first parameter is named `self`, ends in `OrOptions`, or is another supported receiver parameter, such as the one in `Cause.findErrorOption(input)`.
 
 **The pipe operator** (D154). `%` is the value on the left; where it lands in a program parameter, the left side is passed as a program.
 

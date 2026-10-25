@@ -34,7 +34,7 @@ function release(version: string) {
 
 ## Types
 
-**Effect types** (D127). An empty slot is `never`. Omitted dependencies are inferred from a function's body, and are `never` elsewhere.
+**Effect types**. An empty slot is `never`. Omitted dependencies are inferred from a function's body, and are `never` elsewhere.
 
 :::code-group
 
@@ -60,7 +60,7 @@ const hello = (id: string): Effect.Effect<string, NotFound> =>
 
 ## Declarations
 
-**Errors** (D126).
+**Errors**.
 
 :::code-group
 
@@ -76,7 +76,7 @@ class Timeout extends Data.TaggedError("Timeout") {}
 
 :::
 
-**Errors are classes** (D278, D304). Constructors, methods, accessors, statics, `abstract`, `implements` and `extends` keep their TypeScript meaning, and each subclass is tagged with its own name. A family's base declares `_tag: string` so its subclasses' tags fit. Effect has no subclass with its own tag, so the left column writes the tag by hand.
+**Errors are classes**. Constructors, methods, accessors, statics, `abstract`, `implements` and `extends` keep their TypeScript meaning, and each subclass is tagged with its own name. A family's base declares `_tag: string` so its subclasses' tags fit. Effect has no subclass with its own tag, so the left column writes the tag by hand.
 
 :::code-group
 
@@ -112,7 +112,7 @@ class Refused extends Failure {
 
 :::
 
-**Errors that encode** (D279). Fields map to schemas as a `schema` declaration's do.
+**Errors that encode**. Fields map to schemas as a `schema` declaration's do.
 
 :::code-group
 
@@ -126,7 +126,7 @@ class Stored extends Schema.TaggedError<Stored>()("Stored", { key: Schema.String
 
 :::
 
-**Services** (D128, D223). Members have no bodies; value members are readonly.
+**Services**. Members have no bodies; value members are readonly.
 
 :::code-group
 
@@ -146,7 +146,7 @@ class Users extends Context.Service<Users, {
 
 :::
 
-**Services of any shape** (D281). The shape is any type: an interface, a primitive, a function type. A body is optional and holds only static members.
+**Services of any shape**. The shape is any type: an interface, a primitive, a function type. A body is optional and holds only static members.
 
 :::code-group
 
@@ -168,7 +168,7 @@ class Prefix extends Context.Service<Prefix, string>()("app/Prefix") {}
 
 :::
 
-**Control operations** (D128, D223). Effect has none; the left column is VibeLang's long form.
+**Control operations**. Effect has none; the left column is VibeLang's long form.
 
 :::code-group
 
@@ -186,7 +186,7 @@ abstract class Review extends Control {
 
 :::
 
-**Layers** (D221). A layer is Effect's own call: the block after `Layer.effect(Users)` is its effect (block params, D188), runs once when the layer builds, and returns members typed by the service. Without setup, write `Layer.succeed(Users, { ... })`.
+**Layers**. A layer is Effect's own call: the block after `Layer.effect(Users)` is its effect (block params), runs once when the layer builds, and returns members typed by the service. Without setup, write `Layer.succeed(Users, { ... })`.
 
 :::code-group
 
@@ -211,7 +211,7 @@ const UsersLive = Layer.effect(Users, Effect.gen(function* () {
 
 :::
 
-**Schemas** (D133). One declaration gives the schema and its type.
+**Schemas**. One declaration gives the schema and its type.
 
 :::code-group
 
@@ -235,7 +235,7 @@ interface Account extends Schema.Schema.Type<typeof Account> {}
 
 :::
 
-**Schema aliases** (D280). A schema of any type the struct form maps, and the type, under one name.
+**Schema aliases**. A schema of any type the struct form maps, and the type, under one name.
 
 :::code-group
 
@@ -252,7 +252,7 @@ type Role = typeof Role.Type
 
 :::
 
-**Readonly by default** (D134). Write `mutable` for a member you assign.
+**Readonly by default**. Write `mutable` for a member you assign.
 
 :::code-group
 
@@ -296,7 +296,7 @@ const greetUser = Effect.fn("greetUser")(function* (id: string) {
 
 `Effect.fn("name")(body)` adds a named tracing span; a bare function declaration uses `Effect.fnUntraced` by default and loses it. Keep the span with `function f(...) { return withSpan("name") { ... } }`, or `const f = (...) => withSpan("name") { ... }` for an object field or arrow. Put the function's work inside the `withSpan` block; its return value, failures, and requirements flow through.
 
-**Programs passed by name** (D147). A call runs where it stands, and is passed as a program where a parameter expects one.
+**Programs passed by name**. A call runs where it stands, and is passed as a program where a parameter expects one.
 
 :::code-group
 
@@ -315,7 +315,7 @@ const first = yield* Effect.race(getUser("1"), getUser("2"))
 
 :::
 
-**Providing layers** (D130). `return` inside the block returns from the function.
+**Providing layers**. `return` inside the block returns from the function.
 
 :::code-group
 
@@ -337,7 +337,7 @@ const program = Effect.gen(function* () {
 
 :::
 
-**Providing one service** (D173, D174). `provide Key = value` provides one implementation without a layer; layers and services mix in one list, and an effect module such as `Random` stands for its key, `Random.Random`.
+**Providing one service**. `provide Key = value` provides one implementation without a layer; layers and services mix in one list, and an effect module such as `Random` stands for its key, `Random.Random`.
 
 :::code-group
 
@@ -362,7 +362,7 @@ const roll = Random.nextInt.pipe(
 
 :::
 
-**Catching by tag** (D216). Catch the failure and `match` on it. A match naming every failure needs no rethrow; `default: throw e` passes on the rest.
+**Catching by tag**. Catch the failure and `match` on it. A match naming every failure needs no rethrow; `default: throw e` passes on the rest.
 
 :::code-group
 
@@ -388,7 +388,7 @@ const describe = (id: string) =>
 
 :::
 
-**Falling back in an expression** (D236). `x catch fallback` runs the fallback only after an expected failure; defects and interrupts pass through. Both sides take the expression's contextual type, as a conditional's branches do (D293).
+**Falling back in an expression**. `x catch fallback` runs the fallback only after an expected failure; defects and interrupts pass through. Both sides take the expression's contextual type, as a conditional's branches do.
 
 :::code-group
 
@@ -408,7 +408,7 @@ const nameOrGuest = (id: string) =>
 
 :::
 
-**Catching in an expression** (D236). `x catch (e) => …` passes the failure to a handler, which can `match` on it; a match naming every failure removes them all.
+**Catching in an expression**. `x catch (e) => …` passes the failure to a handler, which can `match` on it; a match naming every failure removes them all.
 
 :::code-group
 
@@ -430,7 +430,7 @@ const nameOrReason = (id: string) =>
 
 :::
 
-**Handling control operations** (D132). Effect has none; the left column is VibeLang's long form.
+**Handling control operations**. Effect has none; the left column is VibeLang's long form.
 
 :::code-group
 
@@ -458,7 +458,7 @@ function auto(version: string) {
 
 :::
 
-**Entry point** (D135). An exported `main` runs when Node starts its module, not when a test imports it.
+**Entry point**. An exported `main` runs when Node starts its module, not when a test imports it.
 
 :::code-group
 
@@ -480,7 +480,7 @@ NodeRuntime.runMain(main)
 
 ## Causes, exits, and interruption
 
-**Catch every cause** (D217). `match` on `exit(…)`: a `Failure` exit's cause also holds defects and interrupts.
+**Catch every cause**. `match` on `exit(…)`: a `Failure` exit's cause also holds defects and interrupts.
 
 :::code-group
 
@@ -504,7 +504,7 @@ const safe = (id: string) =>
 
 :::
 
-**Rethrow a cause** (D177). `throw` with a `Cause` fails with every reason it holds.
+**Rethrow a cause**. `throw` with a `Cause` fails with every reason it holds.
 
 :::code-group
 
@@ -528,7 +528,7 @@ const logged = getUser("1").pipe(
 
 :::
 
-**Run on every exit** (D178). The block runs without interruption; a success carries no value.
+**Run on every exit**. The block runs without interruption; a success carries no value.
 
 :::code-group
 
@@ -552,7 +552,7 @@ const tracked = getUser("1").pipe(
 
 :::
 
-**Exit, yield, and interrupt** (D179). `exit` takes its program by name.
+**Exit, yield, and interrupt**. `exit` takes its program by name.
 
 :::code-group
 
@@ -574,7 +574,7 @@ if (result._tag === "Failure") yield* Effect.interrupt
 
 :::
 
-**Interruption** (D180). In the blocks, `return` and `break` keep their meaning in the function; `uninterruptible(program)` also works.
+**Interruption**. In the blocks, `return` and `break` keep their meaning in the function; `uninterruptible(program)` also works.
 
 :::code-group
 
@@ -611,9 +611,9 @@ const cancellable = Effect.interruptible(getOrders("1"))
 
 ## Calls
 
-A tagged template is a call of its tag (D267). If `sql` returns an Effect, the statement ``sql`CREATE TABLE example (id TEXT)` `` runs it, and ``const rows = sql`SELECT * FROM example` `` gets its success value. Plain tags keep JavaScript behavior. Discarding a structured Effect subtype, such as SQL Statement, is EK4301: call the result explicitly, or annotate the tag as returning `Effect<A, E, R>`. A program parameter takes an Effectful template by name, as it takes a call (D147).
+A tagged template is a call of its tag. If `sql` returns an Effect, the statement ``sql`CREATE TABLE example (id TEXT)` `` runs it, and ``const rows = sql`SELECT * FROM example` `` gets its success value. Plain tags keep JavaScript behavior. Discarding a structured Effect subtype, such as SQL Statement, is EK4301: call the result explicitly, or annotate the tag as returning `Effect<A, E, R>`. A program parameter takes an Effectful template by name, as it takes a call.
 
-**No imports from `effect`** (D146).
+**No imports from `effect`**.
 
 :::code-group
 
@@ -632,7 +632,7 @@ const ready = Console.log("ready")
 
 :::
 
-**Common functions without the `Effect.` prefix** (D151): `sleep`, `log`, `retry`, `repeat`, `timeout`, `race`, `all`, `forEach`, `die`, `withSpan`, and the `log` levels.
+**Common functions without the `Effect.` prefix**: `sleep`, `log`, `retry`, `repeat`, `timeout`, `race`, `all`, `forEach`, `die`, `withSpan`, and the `log` levels.
 
 :::code-group
 
@@ -653,7 +653,7 @@ const patient = Effect.gen(function* () {
 
 :::
 
-**Methods on Effect's data types** (D152).
+**Methods on Effect's data types**.
 
 :::code-group
 
@@ -673,9 +673,9 @@ const hot = Stream.take(
 
 :::
 
-A method is a data-first overload: its first parameter is named `self`, ends in `OrOptions`, or is one of the few others D295 lists, such as `Cause.findErrorOption(input)`.
+A method is a data-first overload: its first parameter is named `self`, ends in `OrOptions`, or is another supported receiver parameter, such as the one in `Cause.findErrorOption(input)`.
 
-**The pipe operator** (D154). `%` is the value on the left; where it lands in a program parameter, the left side is passed as a program.
+**The pipe operator**. `%` is the value on the left; where it lands in a program parameter, the left side is passed as a program.
 
 :::code-group
 
@@ -697,7 +697,7 @@ const piped = getUser("1").pipe(
 
 ## TC39 forms
 
-**Throw in an expression** (D186, [throw expressions](https://github.com/tc39/proposal-throw-expressions)).
+**Throw in an expression** ([throw expressions](https://github.com/tc39/proposal-throw-expressions)).
 
 :::code-group
 
@@ -716,9 +716,9 @@ const findUser = (users: Map<string, User>, id: string) =>
 
 :::
 
-In expression position, `throw` takes a unary operand (D186), so it binds more tightly than `===`, `??`, and `?:`: `throw failure.code === "unknown" ? a : b` would throw only `failure.code`. EK1010 refuses an unparenthesized throw expression on the left of a binary operator (except comma), as the condition of `?:`, or before `as` or `satisfies`. To throw the selected value, write `throw (failure.code === "unknown" ? a : b)`, or in a catch handler `load() catch (failure) => throw (cond ? a : b)`. Right-hand forms such as `value ?? throw e` and `ok ? value : throw e` stay legal. A **throw statement** still takes the whole expression: `throw cond ? a : b;` at the start of a statement throws the selected value, as in TypeScript.
+In expression position, `throw` takes a unary operand, so it binds more tightly than `===`, `??`, and `?:`: `throw failure.code === "unknown" ? a : b` would throw only `failure.code`. EK1010 refuses an unparenthesized throw expression on the left of a binary operator (except comma), as the condition of `?:`, or before `as` or `satisfies`. To throw the selected value, write `throw (failure.code === "unknown" ? a : b)`, or in a catch handler `load() catch (failure) => throw (cond ? a : b)`. Right-hand forms such as `value ?? throw e` and `ok ? value : throw e` stay legal. A **throw statement** still takes the whole expression: `throw cond ? a : b;` at the start of a statement throws the selected value, as in TypeScript.
 
-**Blocks as values** (D187, [do expressions](https://github.com/tc39/proposal-do-expressions)). The value is the last statement's.
+**Blocks as values** ([do expressions](https://github.com/tc39/proposal-do-expressions)). The value is the last statement's.
 
 :::code-group
 
@@ -741,7 +741,7 @@ const label = (id: string) =>
 
 :::
 
-**Blocks after calls** (D188, [block params](https://github.com/samuelgoto/proposal-block-params)). The block is the call's program; it needs `return` for a value.
+**Blocks after calls** ([block params](https://github.com/samuelgoto/proposal-block-params)). The block is the call's program; it needs `return` for a value.
 
 :::code-group
 
@@ -791,7 +791,7 @@ it.live("finds a user") {
 
 From the TC39 [pattern matching](https://github.com/tc39/proposal-pattern-matching) proposal (stage 1). See [Pattern matching with match and is](/vibelang-features/116-match-and-is).
 
-**Match a value** (D206, D209). Without `default`, a missing case of a finite union is EK4701, as with `Match.exhaustive`.
+**Match a value**. Without `default`, a missing case of a finite union is EK4701, as with `Match.exhaustive`.
 
 :::code-group
 
@@ -816,7 +816,7 @@ const phaseLabel = (phase: "draft" | "published") =>
 
 :::
 
-**Match errors by class** (D215). An `error` class is a pattern; `and { let id }` binds a property.
+**Match errors by class**. An `error` class is a pattern; `and { let id }` binds a property.
 
 :::code-group
 
@@ -841,7 +841,7 @@ const describeFailure = (failure: NotFound | Timeout) =>
 
 :::
 
-**Option, Exit, and Result** (D208). Arms can run Effect functions.
+**Option, Exit, and Result**. Arms can run Effect functions.
 
 :::code-group
 
@@ -870,7 +870,7 @@ const failed = (outcome: Exit.Exit<User, NotFound>) => Exit.isFailure(outcome)
 
 :::
 
-**Test and bind** (D211). Bindings in an `is` work in an `if` or `while` condition.
+**Test and bind**. Bindings in an `is` work in an `if` or `while` condition.
 
 :::code-group
 
@@ -892,9 +892,9 @@ const firstFailure = (outcome: Exit.Exit<User, NotFound>) =>
 
 ## Escape hatches
 
-**Plain, self-contained TypeScript inside `sync`, `try`, and `callback`** (D148, D229-D232). A throw in `sync` is a defect; in `try` it is an expected failure. Async bodies are `Effect.promise` and `Effect.tryPromise`. A hatch's function reads `.vibe` values only as inputs, the arguments after it, which fill its first parameters; `try`'s error mapper stays second (EK4405). `runPromise` leads back in from a hatch's body or a `.ts` file.
+**Plain, self-contained TypeScript inside `sync`, `try`, and `callback`**. A throw in `sync` is a defect; in `try` it is an expected failure. Async bodies are `Effect.promise` and `Effect.tryPromise`. A hatch's function reads `.vibe` values only as inputs, the arguments after it, which fill its first parameters; `try`'s error mapper stays second (EK4405). `runPromise` leads back in from a hatch's body or a `.ts` file.
 
-**Built-in exceptions (D101).** In an Effect function, `JSON.parse(text)` has a shipped contract: its `SyntaxError` is an expected failure that joins E and reaches `catch`. `decodeURI` and `decodeURIComponent` list `URIError`. Other built-ins' exceptions are defects. In a plain function `JSON.parse` is a JavaScript call, unless a `try` of that function whose `catch` handles the `SyntaxError` encloses it (D282); an exception that escapes into an Effect caller becomes a defect. Inside TypeScript's `Effect.gen`, by contrast, a plain `JSON.parse` throw is a defect.
+**Built-in exceptions.** In an Effect function, `JSON.parse(text)` has a shipped contract: its `SyntaxError` is an expected failure that joins E and reaches `catch`. `decodeURI` and `decodeURIComponent` list `URIError`. Other built-ins' exceptions are defects. In a plain function `JSON.parse` is a JavaScript call, unless a `try` of that function whose `catch` handles the `SyntaxError` encloses it; an exception that escapes into an Effect caller becomes a defect. Inside TypeScript's `Effect.gen`, by contrast, a plain `JSON.parse` throw is a defect.
 
 Use ordinary `catch` to map a built-in’s expected failure; reserve hatches for foreign or platform operations.
 
@@ -936,7 +936,7 @@ const name = await Effect.runPromise(greetUser("1"))
 
 :::
 
-**TypeScript modules inline** (D283, [module declarations](https://github.com/tc39/proposal-module-declarations)). A module's body is TypeScript, compiled as a `.ts` file would be, so JavaScript's `throw` and `catch` and `async` keep their meaning there. It is self-contained: it imports what it needs, and the file reaches it only through imports.
+**TypeScript modules inline** ([module declarations](https://github.com/tc39/proposal-module-declarations)). A module's body is TypeScript, compiled as a `.ts` file would be, so JavaScript's `throw` and `catch` and `async` keep their meaning there. It is self-contained: it imports what it needs, and the file reaches it only through imports.
 
 :::code-group
 
@@ -969,7 +969,7 @@ const requestId = Effect.sync(() => randomId())
 
 ## Fibers
 
-**Fork and join** (D166, D225). A fiber belongs to the block that forks it. `join [a, b]` joins several and interrupts the rest on a failure.
+**Fork and join**. A fiber belongs to the block that forks it. `join [a, b]` joins several and interrupts the rest on a failure.
 
 :::code-group
 
@@ -990,7 +990,7 @@ return [yield* Fiber.join(user), yield* Fiber.join(orders)]
 
 :::
 
-**Wait for several** (D196). `await.all` behaves like `Promise.all`: it starts each element in its own fiber, keeps the shape, and a failure interrupts the rest.
+**Wait for several**. `await.all` behaves like `Promise.all`: it starts each element in its own fiber, keeps the shape, and a failure interrupts the rest.
 
 :::code-group
 
@@ -1010,7 +1010,7 @@ const pair = yield* Effect.all({ user: getUser("1"), orders: getOrders("1") }, {
 
 :::
 
-**First success, expected outcomes** (D196, D258). `await.any` waits for the first success. `await.allSettled` returns successes and typed failures as `Result` values, not JavaScript's settlement objects, and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"`; a cause with no typed failure still propagates. To make every cause data, wrap each element in `exit(...)`.
+**First success, expected outcomes**. `await.any` waits for the first success. `await.allSettled` returns successes and typed failures as `Result` values, not JavaScript's settlement objects, and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"`; a cause with no typed failure still propagates. To make every cause data, wrap each element in `exit(...)`.
 
 :::code-group
 
@@ -1033,7 +1033,7 @@ const outcomes = yield* Effect.all([getUser("1"), getOrders("1")], { concurrency
 
 :::
 
-**Fork a block** (D166). The loop stops when the enclosing block exits.
+**Fork a block**. The loop stops when the enclosing block exits.
 
 :::code-group
 
@@ -1059,7 +1059,7 @@ const withHeartbeat = Effect.scoped(Effect.gen(function* () {
 
 :::
 
-**Detached and scoped fibers** (D170).
+**Detached and scoped fibers**.
 
 :::code-group
 
@@ -1082,7 +1082,7 @@ const fiber = yield* Effect.forkIn(getUser("2"), scope)
 
 :::
 
-**Wait for a Deferred** (D227). `await` waits for promises in JavaScript, so a Deferred uses its method.
+**Wait for a Deferred**. `await` waits for promises in JavaScript, so a Deferred uses its method.
 
 :::code-group
 
@@ -1103,7 +1103,7 @@ const value = yield* Deferred.await(ready)
 
 :::
 
-**Race** (D196, D197). `await.race` behaves like `Promise.race`: the first to finish wins, success or failure, and the rest are interrupted. It replaced `select` (EK4607); poll with `Queue.poll` and an `if`.
+**Race**. `await.race` behaves like `Promise.race`: the first to finish wins, success or failure, and the rest are interrupted. It replaced `select` (EK4607); poll with `Queue.poll` and an `if`.
 
 :::code-group
 
@@ -1131,7 +1131,7 @@ const next = yield* Effect.raceFirst(
 
 :::
 
-**A concurrent loop** (D169). At most `n` items run at once, and all finish before the loop ends.
+**A concurrent loop**. At most `n` items run at once, and all finish before the loop ends.
 
 :::code-group
 

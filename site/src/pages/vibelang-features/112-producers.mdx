@@ -112,7 +112,7 @@ function* countdown(from: number): Generator<number> {
 // Output: 3,2,1
 ```
 
-A `function*` annotated with a JavaScript iterator type, such as `Generator`, `Iterator`, `Iterable`, or their async forms, compiles to the generator TypeScript would write, for APIs that call `.next()` (D271). It is plain JavaScript, so it never fails (D296): a `throw` that can escape it is EK2003, and its `catch` receives typed failures only, so an exception a caller passes in with `generator.throw()` passes through. Remove the annotation to make it a producer, whose throws fail the Stream. Write a generator that speaks a JavaScript protocol by throwing in a `module` block or a `.ts` file.
+A `function*` annotated with a JavaScript iterator type, such as `Generator`, `Iterator`, `Iterable`, or their async forms, compiles to the generator TypeScript would write, for APIs that call `.next()`. It is plain JavaScript, so it never fails: a `throw` that can escape it is EK2003, and its `catch` receives typed failures only, so an exception a caller passes in with `generator.throw()` passes through. Remove the annotation to make it a producer, whose throws fail the Stream. Write a generator that speaks a JavaScript protocol by throwing in a `module` block or a `.ts` file.
 
 ## Coming from Effect
 

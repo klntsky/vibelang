@@ -84,7 +84,7 @@ function lookup(): Lookup!! {
 {"_tag":"Offline"}
 ```
 
-Both sides of a catch expression take the expression's contextual type, as both branches of a conditional do (D293). Here that is `Lookup`, so each `_tag` stays a literal and the result checks as a `Lookup`. Without a contextual type, each side keeps its own type and the value is their union.
+Both sides of a catch expression take the expression's contextual type, as both branches of a conditional do. Here that is `Lookup`, so each `_tag` stays a literal and the result checks as a `Lookup`. Without a contextual type, each side keeps its own type and the value is their union.
 
 ## Trying alternatives until one succeeds
 

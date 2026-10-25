@@ -9,7 +9,7 @@ Runners start a program at an application boundary. Inside a running VibeLang fu
 
 Call a runner at module top level, or in a plain callback registered there with a TypeScript function, such as a `describe` body or framework route handler. A runner inside code a fiber runs is EK1005; call the program or use `fork` instead. Tests in `.vibe` use `it.effect` from `@effect/vitest`; Promise-style tests stay in `.ts`.
 
-An explicitly Effect-typed top-level `const` stores a cold program (D262):
+An explicitly Effect-typed top-level `const` stores a cold program:
 
 ```vibe
 export const migrate: Effect.Effect<void, never, never> = Effect.suspend(() => {

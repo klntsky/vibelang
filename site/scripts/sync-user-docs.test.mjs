@@ -34,3 +34,23 @@ test('rendered user docs hide harness directives in paired and single examples, 
   assert.match(page, /const text = "\/\/ run: literal"/)
   assert.match(page, /The prose marker \/\/ run: is ordinary text/)
 })
+
+test('user prose drops decision annotations without damaging diagnostics, proposal links, or code', () => {
+  const page = render([
+    '# Example', '', 'Examples (D126).',
+    '**Classes** (D278, D304). Block params (block params, D188).',
+    'A warning (`EK4402`, D108). Range (D284-D290).',
+    '**Throw** (D186, [proposal](https://example.com/throw)).',
+    'Keep inline `D126` and version D3D12.', '',
+    '```ts', 'const D126 = "(D126)"', '// Output: D126', '```', ''
+  ].join('\n'))
+  assert.match(page, /Examples\./)
+  assert.match(page, /\*\*Classes\*\*\./)
+  assert.match(page, /\(block params\)/)
+  assert.match(page, /\(`EK4402`\)/)
+  assert.match(page, /Range\./)
+  assert.match(page, /\[proposal\]\(https:\/\/example.com\/throw\)/)
+  assert.match(page, /Keep inline `D126` and version D3D12/)
+  assert.match(page, /const D126 = "\(D126\)"/)
+  assert.doesNotMatch(page, /D278|D304|D188|D108|D284|D290|D186/)
+})
