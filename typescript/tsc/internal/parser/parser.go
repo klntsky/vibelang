@@ -101,6 +101,8 @@ type Parser struct {
 
 	vibelangMutableMember       bool                     // the type member being parsed was written with mutable (vibelang.go)
 	vibelangAbstractMembers     bool                     // bodiless class members become abstract: a service or control body (vibelang.go)
+	vibelangFieldBody           bool                     // the class body is an error, service, or control body, whose fields a comma cannot separate (vibelang_errors.go)
+	vibelangFieldComma          bool                     // a comma follows the field just parsed in such a body (vibelang_errors.go)
 	vibelangSelects             int                      // select statements parsed so far, which number their labels (vibelang_fibers.go)
 	vibelangNoBlockParams       bool                     // a { after an expression is not a block param here: heritage clauses and provide's providers (vibelang_blocks.go)
 	vibelangMatchTemps          int                      // names written for match and is, numbered per file (vibelang_match.go)
@@ -856,7 +858,8 @@ func (p *Parser) isListElement(parsingContext ParsingContext, inErrorRecovery bo
 		// not in error recovery.  If we're in error recovery, we don't want an errant
 		// semicolon to be treated as a class member (since they're almost always used
 		// for statements.
-		return p.lookAhead((*Parser).scanClassMemberStart) || p.token == ast.KindSemicolonToken && !inErrorRecovery
+		return p.vibelangFieldComma && p.token == ast.KindCommaToken || // vibelang_errors.go
+			p.lookAhead((*Parser).scanClassMemberStart) || p.token == ast.KindSemicolonToken && !inErrorRecovery
 	case PCEnumMembers:
 		// Include open bracket computed properties. This technically also lets in indexers,
 		// which would be a candidate for improved error reporting.
@@ -1831,10 +1834,10 @@ func (p *Parser) parseClassDeclarationOrExpression(pos int, jsdoc jsdocScannerIn
 	if p.parseExpected(ast.KindOpenBraceToken) {
 		// ClassTail[Yield,Await] : (Modified) See 14.5
 		//      ClassHeritage[?Yield,?Await]opt { ClassBody[?Yield,?Await]opt }
-		saveAbstract := p.vibelangAbstractMembers // a class inside a service body is not one (vibelang.go)
-		p.vibelangAbstractMembers = false
+		saveAbstract, saveFieldBody := p.vibelangAbstractMembers, p.vibelangFieldBody // a class inside a service body is not one (vibelang.go)
+		p.vibelangAbstractMembers, p.vibelangFieldBody = false, false
 		members = p.parseList(PCClassMembers, (*Parser).parseClassElement)
-		p.vibelangAbstractMembers = saveAbstract
+		p.vibelangAbstractMembers, p.vibelangFieldBody = saveAbstract, saveFieldBody
 		p.parseExpected(ast.KindCloseBraceToken)
 	} else {
 		members = p.createMissingList()
@@ -1967,6 +1970,9 @@ func (p *Parser) parseExpressionWithTypeArguments() *ast.Node {
 }
 
 func (p *Parser) parseClassElement() *ast.Node {
+	if p.vibelangFieldComma && p.token == ast.KindCommaToken {
+		return p.parseVibeLangFieldComma() // vibelang_errors.go
+	}
 	pos := p.nodePos()
 	jsdoc := p.jsdocScannerInfo()
 	if p.token == ast.KindSemicolonToken {
@@ -2097,7 +2103,11 @@ func (p *Parser) parsePropertyDeclaration(pos int, jsdoc jsdocScannerInfo, modif
 	}
 	typeNode := p.parseTypeAnnotation()
 	initializer := p.doInContext(ast.NodeFlagsYieldContext|ast.NodeFlagsAwaitContext|ast.NodeFlagsDisallowInContext, false, (*Parser).parseInitializer)
-	p.parseSemicolonAfterPropertyName(name, typeNode, initializer)
+	if p.isVibeLangFieldComma(typeNode, initializer) {
+		p.vibelangFieldComma = true // the comma is the next class element (vibelang_errors.go)
+	} else {
+		p.parseSemicolonAfterPropertyName(name, typeNode, initializer)
+	}
 	if initializer == nil {
 		modifiers = p.vibelangAbstractMember(modifiers, name, true /*property*/)
 	}

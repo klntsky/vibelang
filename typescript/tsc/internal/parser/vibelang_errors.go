@@ -132,8 +132,8 @@ func (p *Parser) parseErrorDeclaration(pos int, jsdoc jsdocScannerInfo, modifier
 		form.Open = p.tokenRange()
 		p.nextToken()
 		d.mutable = map[*ast.Node]bool{}
-		saveAbstract := p.vibelangAbstractMembers // an error inside a service body is not one of its members
-		p.vibelangAbstractMembers = false
+		saveAbstract, saveFieldBody := p.vibelangAbstractMembers, p.vibelangFieldBody // an error inside a service body is not one of its members
+		p.vibelangAbstractMembers, p.vibelangFieldBody = false, true
 		list := p.parseList(PCClassMembers, func(p *Parser) *ast.Node {
 			start := p.nodePos()
 			mutable := p.parseVibeLangMutable()
@@ -145,7 +145,7 @@ func (p *Parser) parseErrorDeclaration(pos int, jsdoc jsdocScannerInfo, modifier
 			}
 			return element
 		})
-		p.vibelangAbstractMembers = saveAbstract
+		p.vibelangAbstractMembers, p.vibelangFieldBody = saveAbstract, saveFieldBody
 		elements = list.Nodes
 		if p.token == ast.KindCloseBraceToken {
 			form.Close = p.tokenRange()
@@ -226,6 +226,32 @@ func (p *Parser) parseVibeLangErrorHeritage() []*ast.Node {
 		clauses = append(clauses, p.finishNode(p.factory.NewHeritageClause(kind, list), pos))
 	}
 	return clauses
+}
+
+// The body of an error, schema error, service, or control declaration is a
+// class body (D278, D128), so ; or a new line separates its fields, never a
+// comma: error OutOfStock { sku: string, available: number } is EK1013. The
+// parser takes a comma after a field there for the next class element, an
+// empty member flagged NodeFlagsVibeLang, rather than report TypeScript's
+// "Expected '=' for property initializer.", and the checker reports it
+// (fieldcommas.go in package vibelang). The comma keeps its TypeScript
+// meaning everywhere else, including after a method or an initializer.
+
+// isVibeLangFieldComma reports whether the current token is a comma after a
+// field, a property with a type and no initializer, of such a body.
+func (p *Parser) isVibeLangFieldComma(typeNode *ast.Node, initializer *ast.Node) bool {
+	return p.vibelangFieldBody && p.token == ast.KindCommaToken && typeNode != nil && initializer == nil
+}
+
+// parseVibeLangFieldComma parses the comma after a field of such a body as an
+// empty class member flagged NodeFlagsVibeLang, for EK1013.
+func (p *Parser) parseVibeLangFieldComma() *ast.Node {
+	pos := p.nodePos()
+	p.vibelangFieldComma = false
+	p.nextToken()
+	result := p.finishNode(p.factory.NewSemicolonClassElement(), pos)
+	result.Flags |= ast.NodeFlagsVibeLang
+	return result
 }
 
 // isVibeLangErrorField reports whether element, a member of an error

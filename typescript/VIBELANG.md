@@ -661,6 +661,7 @@ The checks so far:
 | EK1004 | `using` that no function encloses, including in a class static block | `syntax.go` |
 | EK1005 | The callee of a runner in code a fiber runs | `runners.go` |
 | EK1012 | A call that runs and never succeeds where a variable, a field, an element or an assignment stores it (D147); a warning, adjustable | `neverstored.go` |
+| EK1013 | The comma after a field of an `error`, `schema error`, `service`, or `control` body, which the parser reads as an empty class member flagged `NodeFlagsVibeLang` instead of reporting TypeScript's TS1442; with a quick fix that writes `;` | `fieldcommas.go` |
 | EK2001 | The call or `throw` that adds an expected failure the function's contract does not allow | `contracts.go` |
 | EK2002 | The call that adds a requirement the function's contract does not allow | `contracts.go` |
 | EK2003 | A return annotation that leaves a contract channel out, a plain return annotation on a function whose body runs an Effect, or one on a function whose throw can escape, with a quick fix that writes `A!E!` (D282); a JavaScript iterator annotation on a generator whose throw can escape (D296) | `contracts.go`, `plain_failures.go`, `plain_generators.go` |

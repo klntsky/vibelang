@@ -355,10 +355,10 @@ func (p *Parser) parseServiceDeclaration(pos int, jsdoc jsdocScannerInfo, modifi
 		form.Open = p.tokenRange()
 	}
 	if p.parseExpected(ast.KindOpenBraceToken) {
-		saveAbstract := p.vibelangAbstractMembers
-		p.vibelangAbstractMembers = true
+		saveAbstract, saveFieldBody := p.vibelangAbstractMembers, p.vibelangFieldBody
+		p.vibelangAbstractMembers, p.vibelangFieldBody = true, true
 		members = p.parseList(PCClassMembers, (*Parser).parseClassElement)
-		p.vibelangAbstractMembers = saveAbstract
+		p.vibelangAbstractMembers, p.vibelangFieldBody = saveAbstract, saveFieldBody
 		if p.token == ast.KindCloseBraceToken {
 			form.Close = p.tokenRange()
 		}

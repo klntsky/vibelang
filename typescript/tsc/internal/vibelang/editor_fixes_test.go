@@ -30,6 +30,9 @@ func TestEditorQuickFixGoldens(t *testing.T) {
 		{"empty pipe", "// @vibelang-diagnostics EK4824:warning\nexport const value = pipe(1)", "Remove the pipe", "// @vibelang-diagnostics EK4824:warning\nexport const value = 1", 4824},
 		{"arrow expression", "// @vibelang-diagnostics EK4823:warning\nexport const add = (x: number) => { return x + 1 }", "Write the value as the body", "// @vibelang-diagnostics EK4823:warning\nexport const add = (x: number) => x + 1", 4823},
 		{"arrow object", "// @vibelang-diagnostics EK4823:warning\nexport const box = (x: number) => { return { value: x } }", "Write the value as the body", "// @vibelang-diagnostics EK4823:warning\nexport const box = (x: number) => ({ value: x })", 4823},
+		{"error field comma", "error OutOfStock { sku: string, available: number }", "Write ; for the comma", "error OutOfStock { sku: string; available: number }", 1013},
+		{"schema error field comma", "schema error Bad { sku: string,\n  reason: string }", "Write ; for the comma", "schema error Bad { sku: string;\n  reason: string }", 1013},
+		{"service field comma", "service Stock { region: string, count(): number!! }", "Write ; for the comma", "service Stock { region: string; count(): number!! }", 1013},
 		{"tagged schema", `// @vibelang-diagnostics EK4821:warning
 export const Person = Schema.Struct({ _tag: Schema.Literal("Person"), name: Schema.String })`, "Write Schema.TaggedStruct", `// @vibelang-diagnostics EK4821:warning
 export const Person = Schema.TaggedStruct("Person", { name: Schema.String })`, 4821},
