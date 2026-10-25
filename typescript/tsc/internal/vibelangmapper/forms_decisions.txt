@@ -666,6 +666,8 @@ typescript/vibelang/cases/contract-lambdas-plain/main.vibe:23:13 lambda plain ta
 typescript/vibelang/cases/contract-lambdas-plain/main.vibe:24:13 lambda plain table
 typescript/vibelang/cases/contract-wider-callers/main.vibe:24:3 lambda effectFn annotation
 typescript/vibelang/cases/contracts/main.vibe:60:22 lambda plain annotation
+typescript/vibelang/cases/control-boundary-for-concurrent/main.vibe:10:28 lambda effectFn table
+typescript/vibelang/cases/control-boundary-for-concurrent/main.vibe:22:25 lambda effectFn table
 typescript/vibelang/cases/coverage-generated-functions/main.vibe:12:3 lambda effectFn service
 typescript/vibelang/cases/coverage-generated-functions/main.vibe:27:24 lambda plain fallback
 typescript/vibelang/cases/coverage-generated-functions/main.vibe:27:42 lambda plain fallback

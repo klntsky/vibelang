@@ -355,8 +355,10 @@ func isAwaitable(c *checker.Checker, t *checker.Type, depth int) bool {
 }
 
 // checkConcurrentBody reports a break that would leave a for concurrent loop
-// (the parser flags it) and a return the body writes; the parser's own
-// returns, which stand for a continue, are synthesized.
+// (the parser flags it) and a return the body writes. The parser's own
+// returns are not the body's: those that stand for a continue are
+// synthesized, and the return it writes for a tail resume in a handle clause
+// (parser/vibelang.go) is flagged NodeFlagsVibeLang and ends the clause.
 func checkConcurrentBody(c *checker.Checker, body *ast.Node) {
 	if body == nil {
 		return
@@ -368,7 +370,7 @@ func checkConcurrentBody(c *checker.Checker, body *ast.Node) {
 			note(report(c, node, EK4605), "Use continue to end this item, or throw to stop every item.")
 			cover(c, node)
 			return false
-		case node.Kind == ast.KindReturnStatement && node.Flags&ast.NodeFlagsReparsed == 0:
+		case node.Kind == ast.KindReturnStatement && node.Flags&(ast.NodeFlagsReparsed|ast.NodeFlagsVibeLang) == 0:
 			note(report(c, node, EK4606), "Use continue to end this item.")
 			return false
 		case isFunctionBoundary(node):

@@ -1,0 +1,38 @@
+// expect-result: {"limited":6,"unlimited":["a1","b2"]}
+// A for concurrent loop runs each item in its own fiber, so a body that
+// performs a control operation handles it inside (chapter 9, "Handlers and
+// concurrency"). A handle clause's tail resume is the clause's own return,
+// not a return that leaves the loop (EK4606).
+control Ask { ask(name: string): number!! }
+
+function limited() {
+  let total = 0
+  for concurrent(2) (const n of [1, 2, 3]) {
+    try {
+      total += Ask.ask(`item ${n}`)
+    } handle Ask.ask(name) {
+      resume(n)
+    }
+  }
+  return total
+}
+
+function unlimited() {
+  const seen: Array<string> = []
+  for concurrent (const name of ["a", "b"]) {
+    try {
+      seen.push(`${name}${Ask.ask(name)}`)
+    } handle Ask.ask(asked) {
+      if (asked === "a") {
+        resume(1)
+      } else {
+        resume(2)
+      }
+    }
+  }
+  return seen.sort()
+}
+
+export function main() {
+  return { limited: limited(), unlimited: unlimited() }
+}
