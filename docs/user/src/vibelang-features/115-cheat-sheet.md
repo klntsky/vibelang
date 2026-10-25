@@ -1,6 +1,6 @@
 # Cheat sheet
 
-Every VibeLang change beside the Effect code it replaces: Effect 4 TypeScript in the left column, VibeLang in the right. The [specification](../../../design/src/000-intro.md) states the rules behind each. In a `.vibe` file, the left column's error classes, services, schemas, Effect types, `Effect.succeed` and `Effect.fail`, catch combinators, and `withSpan` and `provide` calls draw warnings whose quick fixes, and `vibelang --fix`, write the right column where it keeps the program's meaning ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). The examples share these declarations:
+Every VibeLang change beside the Effect code it replaces: VibeLang and Effect 4 TypeScript in labeled tabs. The [specification](../../../design/src/000-intro.md) states the rules behind each. In a `.vibe` file, the Effect tab's error classes, services, schemas, Effect types, `Effect.succeed` and `Effect.fail`, catch combinators, and `withSpan` and `provide` calls draw warnings whose quick fixes, and `vibelang --fix`, write the VibeLang tab where it keeps the program's meaning ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). The examples share these declarations:
 
 ```vibe es
 // run: Console.log(JSON.stringify([getUser("1"), getOrders("1"), handle(() => release("v1"), Approval, { approve: (_request, k) => resume(k, true) })]))
@@ -65,7 +65,7 @@ error Missing { id: string }
 error Timeout
 ```
 
-**Errors are classes** (D278, D304). Constructors, methods, accessors, statics, `abstract`, `implements` and `extends` keep their TypeScript meaning, and each subclass is tagged with its own name. A family's base declares `_tag: string` so its subclasses' tags fit. Effect has no subclass with its own tag, so the left column writes the tag by hand.
+**Errors are classes** (D278, D304). Constructors, methods, accessors, statics, `abstract`, `implements` and `extends` keep their TypeScript meaning, and each subclass is tagged with its own name. A family's base declares `_tag: string` so its subclasses' tags fit. Effect has no subclass with its own tag, so the Effect tab writes the tag by hand.
 
 ```ts effect
 class Invalid extends Data.TaggedError("Invalid")<{ readonly code: string }> {
@@ -142,7 +142,7 @@ service Search: SearchApi
 service Prefix: string
 ```
 
-**Control operations** (D128, D223). Effect has none; the left column is VibeLang's long form.
+**Control operations** (D128, D223). Effect has none; the VibeLang long form tab shows the expanded spelling.
 
 ```vibe long
 abstract class Review extends Control {
@@ -366,7 +366,7 @@ function nameOrReason(id: string) {
 // Output: ["Ada","no user missing"]
 ```
 
-**Handling control operations** (D132). Effect has none; the left column is VibeLang's long form.
+**Handling control operations** (D132). Effect has none; the VibeLang long form tab shows the expanded spelling.
 
 ```vibe long
 // run: Console.log(auto("v1"))

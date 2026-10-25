@@ -1,11 +1,11 @@
 ---
 title: "Cheat sheet"
-description: "Every VibeLang change beside the Effect code it replaces: Effect 4 TypeScript in the left column, VibeLang in the right. The specification states the rules behind each. In a .vibe file, the left..."
+description: "Every VibeLang change beside the Effect code it replaces: VibeLang and Effect 4 TypeScript in labeled tabs. The specification states the rules behind each. In a .vibe file, the Effect tab's error..."
 ---
 
 # Cheat sheet
 
-Every VibeLang change beside the Effect code it replaces: Effect 4 TypeScript in the left column, VibeLang in the right. The [specification](/spec/000-intro) states the rules behind each. In a `.vibe` file, the left column's error classes, services, schemas, Effect types, `Effect.succeed` and `Effect.fail`, catch combinators, and `withSpan` and `provide` calls draw warnings whose quick fixes, and `vibelang --fix`, write the right column where it keeps the program's meaning ([TypeScript-style Effect code](/getting-started/012-devtools#typescript-style-effect-code)). The examples share these declarations:
+Every VibeLang change beside the Effect code it replaces: VibeLang and Effect 4 TypeScript in labeled tabs. The [specification](/spec/000-intro) states the rules behind each. In a `.vibe` file, the Effect tab's error classes, services, schemas, Effect types, `Effect.succeed` and `Effect.fail`, catch combinators, and `withSpan` and `provide` calls draw warnings whose quick fixes, and `vibelang --fix`, write the VibeLang tab where it keeps the program's meaning ([TypeScript-style Effect code](/getting-started/012-devtools#typescript-style-effect-code)). The examples share these declarations:
 
 ```vibe [VibeLang]
 error NotFound { id: string }
@@ -76,7 +76,7 @@ class Timeout extends Data.TaggedError("Timeout") {}
 
 :::
 
-**Errors are classes**. Constructors, methods, accessors, statics, `abstract`, `implements` and `extends` keep their TypeScript meaning, and each subclass is tagged with its own name. A family's base declares `_tag: string` so its subclasses' tags fit. Effect has no subclass with its own tag, so the left column writes the tag by hand.
+**Errors are classes**. Constructors, methods, accessors, statics, `abstract`, `implements` and `extends` keep their TypeScript meaning, and each subclass is tagged with its own name. A family's base declares `_tag: string` so its subclasses' tags fit. Effect has no subclass with its own tag, so the Effect tab writes the tag by hand.
 
 :::code-group
 
@@ -168,7 +168,7 @@ class Prefix extends Context.Service<Prefix, string>()("app/Prefix") {}
 
 :::
 
-**Control operations**. Effect has none; the left column is VibeLang's long form.
+**Control operations**. Effect has none; the VibeLang long form tab shows the expanded spelling.
 
 :::code-group
 
@@ -430,7 +430,7 @@ const nameOrReason = (id: string) =>
 
 :::
 
-**Handling control operations**. Effect has none; the left column is VibeLang's long form.
+**Handling control operations**. Effect has none; the VibeLang long form tab shows the expanded spelling.
 
 :::code-group
 
