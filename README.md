@@ -70,7 +70,7 @@ const main = Effect.gen(function* () {
 Effect.runPromise(main)
 ```
 
-**116 tokens vs 202 tokens: 42.6% fewer** (o200k_base). Both print `Ada Guest`. The counts cover the complete source files, including TypeScript's imports and runner, which VibeLang supplies. It is one example, not a general ratio. [Reproduce the counts and both runs](.smithers/token-compare/README.md). [Token counts](docs/user/src/vibelang-features/117-token-counts.md) measures the skill agents load, the docs and every cheat-sheet pair.
+**116 tokens vs 202 tokens: 42.6% on this program; [11.4% across the 44 cheat-sheet pairs](docs/user/src/vibelang-features/117-token-counts.md)** (fewer tokens, o200k_base). Both print `Ada Guest`. The counts cover the complete source files, including TypeScript's imports and runner, which VibeLang supplies. It is one example, not a general ratio. [Reproduce the counts and both runs](.smithers/token-compare/README.md). [Token counts](docs/user/src/vibelang-features/117-token-counts.md) measures the skill agents load, the docs and every cheat-sheet pair.
 
 `service` declares a dependency and `provide` supplies it. `await.all` runs calls concurrently, and `catch` handles the declared failure. `Console` and `Layer` are in scope without imports. A contract reads `Result!Error!Services`, and the compiler infers the parts you leave out.
 
@@ -140,4 +140,4 @@ Report a bug with a minimal reproduction, or propose an idea, in [Issues](https:
 
 [MIT](LICENSE), except the TypeScript fork in [`typescript/`](typescript/) and the compiler packages built from it, `vibelang` and `vibelang-<platform>`, which use the [Apache License 2.0](typescript/LICENSE.txt) and keep its [notices](typescript/NOTICE.txt).
 
-<sub>1,486 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
+<sub>1,520 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
