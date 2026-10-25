@@ -188,8 +188,9 @@ func isDiscardingForm(expression *ast.Node) bool {
 // arm is the success value, so emit(0) succeeded with the interruption.
 //
 // Where fn's success type names no value (successNamesNoValue), every value
-// is accepted as the success value, so a returned Effect value or program
-// literal returns as data (D24, D269) where Effect code would run it. EK4802
+// is accepted as the success value, so a returned Effect value, program
+// literal or program named by reference returns as data (D24, D269) where
+// Effect code would run it. EK4802
 // reports that too, with the two spellings that say which was meant; a
 // written contract counts then as well.
 func (r *ruleCheck) checkReturnedEffect(fn *ast.Node, value *ast.Node) {
@@ -222,6 +223,18 @@ func (r *ruleCheck) checkReturnedValue(fn *ast.Node, value *ast.Node) {
 		return
 	}
 	if !isEffectType(r.c, valueType) {
+		if r.a.programOf(valueType) != nil {
+			// A program named by reference, such as a module-level
+			// `const list = () => { ... }` or a parameter, returns as data
+			// where the success type names no value, as a program literal
+			// does: a handler `() => list` under a void!! contract succeeded
+			// with the function and ran none of it.
+			if success := r.a.successNamesNoValue(fn); success != nil {
+				d := report(r.c, value, returnedProgramAsValue, messageText(value, "This value"), functionDisplayName(fn), r.c.TypeToString(success))
+				note(d, "Call it to run it: {0}. To return the function itself, write its type as the success type: ({1})!E!R.", callText(value), bangTypes(r.c.TypeToString(valueType)))
+			}
+			return
+		}
 		if isEffectSubtype(r.c, valueType) {
 			r.checkReturnedSubtype(fn, value, valueType)
 			return
@@ -285,6 +298,7 @@ func isEffectSubtype(c *checker.Checker, t *checker.Type) bool {
 var (
 	returnedEffectAsValue  = EK4802.With("{0} is an Effect value, and {1}'s success type, {2}, names no value, so {1} succeeds with this program instead of running it.")
 	returnedLiteralAsValue = EK4802.With("{0} is a program literal, and {1}'s success type, {2}, names no value, so {1} succeeds with the function instead of running it.")
+	returnedProgramAsValue = EK4802.With("{0} is a program, and {1}'s success type, {2}, names no value, so {1} succeeds with the function instead of running it.")
 )
 
 // successNamesNoValue returns the success type of fn's Effect when it names
