@@ -1,0 +1,2 @@
+this catch receives expected failures only, so an exception that identity throws passes through it as a defect.
+To catch it here, call it through Result.try, or move this code into a module block, whose catch is TypeScript's.

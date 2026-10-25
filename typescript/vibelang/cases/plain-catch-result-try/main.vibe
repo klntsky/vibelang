@@ -1,0 +1,14 @@
+// expect-result: [true,"caught",true,"caught"]
+// The spelling EK2004 names where a plain function's catch does not receive a
+// TypeScript exception: Result.try catches it.
+import { identity } from "./identity.ts"
+
+const document = (schema: unknown): unknown =>
+  Result.try(() => JSON.parse(JSON.stringify(identity(schema)))).getOrElse(() => "caught")
+
+const decoded = (text: string): unknown =>
+  Result.try(() => Schema.decodeUnknownSync(Schema.String)(JSON.parse(text))).getOrElse(() => "caught")
+
+export function main() {
+  return [document("ok") === "ok", document("bad"), decoded("\"x\"") === "x", decoded("{}")]
+}

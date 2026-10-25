@@ -2,6 +2,7 @@ package vibelang
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
@@ -247,9 +248,99 @@ func checkDeadCatches(c *checker.Checker, file *ast.SourceFile) {
 					note(d, "Use a form that can fail, such as Option.getOrElse or Schema.decodeUnknownEffect, or bound the call with try.")
 					cover(c, try.CatchClause)
 				}
+			} else if fn := ast.GetContainingFunction(node); fn != nil && a.compilesPlain(fn) {
+				// The try block can fail, so the catch runs, but only for
+				// those failures: an exception that TypeScript code in the
+				// block throws passes through it, where TypeScript's catch
+				// received it.
+				if call := a.passingCall(try.TryBlock); call != nil {
+					d := report(c, call, passingCatch, messageText(call.Expression(), "this call"))
+					note(d, "To catch it here, call it through Result.try, or move this code into a module block, whose catch is TypeScript's.")
+				}
 			}
 		}
 		return node.ForEachChild(visit)
 	}
 	file.AsNode().ForEachChild(visit)
+}
+
+// passingCatch is EK2004's text for a call in a plain function's try block
+// whose exception passes through the catch (passingCall). {0} is the callee.
+var passingCatch = EK2004.With("this catch receives expected failures only, so an exception that {0} throws passes through it as a defect.")
+
+// compilesPlain reports whether fn compiles to plain JavaScript, where a catch
+// written in TypeScript received every exception its try block threw.
+func (a *analyzer) compilesPlain(fn *ast.Node) bool {
+	return isLowerable(fn) && !isProducer(fn) && (a.isPlainFunction(fn) || !a.isEffect(fn) && !a.isFactory(fn))
+}
+
+// passingCall returns the first call in block, a plain function's try block,
+// whose exception passes through the try's catch (D282): a call of TypeScript
+// code from a .ts file or a package that returns no Effect and declares no
+// expected failure, such as Schema.decodeUnknownSync's decoder or a .ts
+// helper beside a JSON.parse whose SyntaxError the catch does receive. Calls
+// of JavaScript's built-ins are not reported: their exceptions are defects
+// too (D101), but a block of them would warn at every array method. Nested
+// functions, hatches and nested try statements with a catch, which report
+// their own, are not searched.
+func (a *analyzer) passingCall(block *ast.Node) *ast.Node {
+	var found *ast.Node
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if n != block && (isFunctionBoundary(n) || isHatchArgument(n) || n.Kind == ast.KindTryStatement && catches(n)) {
+			return false
+		}
+		if ast.IsCallExpression(n) && a.throwsPastCatch(n) {
+			found = n
+			return true
+		}
+		return n.ForEachChild(visit)
+	}
+	visit(block)
+	return found
+}
+
+// throwsPastCatch reports whether call, in a plain function, calls TypeScript
+// code whose exceptions are defects: an untrusted function, a tagged
+// declaration without @throws, or an export of a trusted package whose name
+// says it throws (throwsByName). Most of a trusted package's functions, such
+// as Option.some or Result.try, never throw, and their calls fill try blocks.
+func (a *analyzer) throwsPastCatch(call *ast.Node) bool {
+	t := callTrust(a.checker, call)
+	switch t.kind {
+	case trustTagged, trustForeign:
+	case trustEffect:
+		if !throwsByName(call) {
+			return false
+		}
+	default:
+		return false
+	}
+	if len(t.failures) > 0 {
+		return false // the catch receives its expected failures
+	}
+	sig := a.checker.GetResolvedSignature(call)
+	return sig != nil && !isEffectType(a.checker, a.checker.GetReturnTypeOfSignature(sig))
+}
+
+// throwsByName reports whether call's callee has a name that, in Effect's
+// API, says it throws: one that ends in Sync, as Schema.decodeUnknownSync and
+// Effect.runSync do, or has OrThrow in it, as Option.getOrThrow does. For a
+// call of what a call returned, as Schema.decodeUnknownSync(S)(input) is, the
+// inner call's callee names it.
+func throwsByName(call *ast.Node) bool {
+	callee := ast.SkipParentheses(call.Expression())
+	for ast.IsCallExpression(callee) {
+		callee = ast.SkipParentheses(callee.Expression())
+	}
+	var name string
+	switch {
+	case ast.IsIdentifier(callee):
+		name = callee.Text()
+	case ast.IsPropertyAccessExpression(callee):
+		name = callee.Name().Text()
+	default:
+		return false
+	}
+	return strings.HasSuffix(name, "Sync") || strings.Contains(name, "OrThrow")
 }
