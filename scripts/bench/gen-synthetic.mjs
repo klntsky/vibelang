@@ -54,14 +54,16 @@ export service Store${i} {
   size: number
 }
 
-export layer Store${i}Live: Store${i} {
+export const Store${i}Live = Layer.effect(Store${i}) {
   const items = new Map<string, Item${i}>([["k1", { id: "k1", value: ${i} }]])
-  get(id) {
-    const item = items.get(id)
-    if (item === undefined) throw new Missing${i}({ id })
-    return item
+  return {
+    get(id) {
+      const item = items.get(id)
+      if (item === undefined) throw new Missing${i}({ id })
+      return item
+    },
+    size: 1
   }
-  readonly size = 1
 }
 
 export function plain${i}(x: number) {
