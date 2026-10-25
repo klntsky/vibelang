@@ -46,17 +46,19 @@ Timeline and commitment labels state a maintainer's current belief, not a promis
 
 ## Review and merge
 
-One accepted issue becomes one focused pull request, with a test that fails without the change, the checks it affects, and updated docs. Syntax, emitted declarations, runtime semantics and diagnostics need a compatibility review. CONTRIBUTING.md, MAINTAINERS.md and both AGENTS.md files come from `.smithers/flows/docs/project.ts`, except the starter's Essentials, which come from `docs/user/llms-essentials.md`. Edit the source, then run `bun run docs:generate` in `.smithers/`.
+Keep each change focused on one accepted issue, with a test that fails without the change, the checks it affects, and updated docs. Syntax, emitted declarations, runtime semantics and diagnostics need a compatibility review. CONTRIBUTING.md, MAINTAINERS.md and both AGENTS.md files come from `.smithers/flows/docs/project.ts`, except the starter's Essentials, which come from `docs/user/llms-essentials.md`. Edit the source, then run `bun run docs:generate` in `.smithers/`.
 
-A person reviews and merges every change. Agents never approve or merge. Squash-merge. Never rewrite `main`'s history or republish a package version.
+Maintainers land their own work directly on `main`. Outside contributions arrive as pull requests that a maintainer reviews and merges. Agents never approve or merge. Never rewrite `main`'s history or republish a package version.
 
 ## Release process
 
+Until native Windows binaries ship, keep `VIBELANG_SKIP=win32` for rehearsal and both publish commands below. Current releases ship four platform binaries (macOS and Linux on arm64 and x64) and nine packages. Build and assembly still produce Windows candidates; the skip setting filters the release selection.
+
 1. **Align versions.** Every package version must equal the compiler's, in `typescript/tsc/internal/vibelang/identity.go`; `make-packages.mjs` refuses a mismatch. Review breaking changes.
 2. **Check.** Run setup, `sh scripts/e2e.sh`, the compiler cases, affected package tests, editor tests and `bun docs/tools/check-snippets.ts`. Record commands, toolchain versions and results. A skipped platform is untested.
-3. **Build.** `sh scripts/release/build-binaries.sh` cross-compiles the six platform binaries. `node scripts/release/make-packages.mjs` assembles the eleven packages and their tarballs in `dist-npm/`. Check manifests, the bundled extension, licenses and notices.
-4. **Rehearse.** `sh scripts/release/rehearse.sh` publishes the tarballs to a throwaway registry, then scaffolds, builds, starts and tests an app with npm and with Bun. It runs on one host, so it can't prove the other platforms' binaries work.
-5. **Publish.** A person runs `sh scripts/release/publish.sh --dry-run`, then `sh scripts/release/publish.sh`. It publishes the platform packages first and skips versions already published, so a rerun resumes. Keep credentials out of recordings and logs.
+3. **Build.** `sh scripts/release/build-binaries.sh` cross-compiles the candidate platform binaries. `node scripts/release/make-packages.mjs` assembles the candidate packages and their tarballs in `dist-npm/`. Check manifests, the bundled extension, licenses and notices.
+4. **Rehearse.** `VIBELANG_SKIP=win32 sh scripts/release/rehearse.sh` publishes the tarballs to a throwaway registry, then scaffolds, builds, starts and tests an app with npm and with Bun. It runs on one host, so it can't prove the other platforms' binaries work.
+5. **Publish.** A person runs `VIBELANG_SKIP=win32 sh scripts/release/publish.sh --dry-run`, then `VIBELANG_SKIP=win32 sh scripts/release/publish.sh`. It publishes the platform packages first and skips versions already published, so a rerun resumes. Keep credentials out of recordings and logs.
 6. **Verify.** `sh scripts/release/verify-published.sh <version>` scaffolds, installs, builds, starts and tests an app from the public registry. Publish release notes with exact versions, breaking changes and known limitations.
 
 Never call a cross-compiled binary tested on an operating system it didn't run on. If a release is broken, say so in its release notes and ship a fixed version through the same steps.
@@ -69,4 +71,4 @@ Reports arrive through GitHub's private vulnerability reporting; see [SECURITY.m
 
 Publish a performance or token claim only with a public, reproducible method: pinned versions, inputs, units, results and limits. The README's [token comparison](.smithers/token-compare/README.md) is the model. Keep held-out tasks, hidden tests and transcripts private; a private benchmark is not public evidence.
 
-<sub>1,318 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
+<sub>1,417 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>

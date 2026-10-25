@@ -74,3 +74,18 @@ test("contributing makes the maintainer-run PR checks explicit", async () => {
   expect(output).toContain("For each pull request, a maintainer runs")
   expect(output).toContain("`sh scripts/e2e.sh` and the compiler case suite, `(cd typescript && sh vibelang/smoke.sh --jobs 8)`")
 })
+
+test("maintainer docs describe direct landings, outside reviews, and the four-platform release", async () => {
+  const output = render(await readSources())
+  for (const path of ["MAINTAINERS.md", "CONTRIBUTING.md"]) {
+    expect(output[path]).toContain("Maintainers land their own work directly on `main`.")
+    expect(output[path]).toContain("Outside contributions arrive as pull requests that a maintainer reviews and merges.")
+    expect(output[path]).not.toContain("A person reviews and merges every change.")
+  }
+  const maintainers = output["MAINTAINERS.md"]!
+  expect(maintainers).toContain("VIBELANG_SKIP=win32")
+  expect(maintainers).toContain("four platform binaries")
+  expect(maintainers).toContain("nine packages")
+  expect(maintainers).not.toContain("six platform binaries")
+  expect(maintainers).not.toContain("eleven packages")
+})
