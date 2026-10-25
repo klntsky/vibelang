@@ -1,6 +1,8 @@
-// expect-result: [[1,2],"ab",3]
+// expect-result: [[1,2],"ab",3,[1],3,5]
 // An expression body that follows a comment still answers its value: the
 // lowering keeps the expression on the line of its return.
+error Bad { message: string }
+
 const later = (n: number): number!! => {
   sleep("1 millis")
   return n
@@ -19,6 +21,19 @@ const traced = (n: number): number!! =>
   // second line
   later(n)
 
+const parse = (text: string) =>
+  // The comment sits between the arrow and its body.
+  try((text) => JSON.parse(text) as unknown, (cause) => new Bad({ message: String(cause) }), text)
+
+const step = (n: number) =>
+  // A comment before a sync hatch.
+  sync((n) => n + 1, n)
+
+const stepped = (n: number) =>
+  /* A block comment
+     over two lines. */
+  step(n)
+
 export function main() {
-  return [both(), joined(), traced(3)]
+  return [both(), joined(), traced(3), parse("[1]"), step(2), stepped(4)]
 }
