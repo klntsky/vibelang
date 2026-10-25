@@ -1,0 +1,22 @@
+// expect-result: {"all":[1,2],"keyed":{"first":3,"second":4},"held":[5,6]}
+// await.all runs each element in its own fiber, so an element that handles
+// its own control operations runs (chapter 9, "Handlers and concurrency"). A
+// fiber already running is waited for, not started again.
+control Ask { ask(): number!! }
+
+function answered(n: number) {
+  try {
+    return Ask.ask()
+  } handle Ask.ask() {
+    resume(n)
+  }
+}
+
+export function main() {
+  const running = fork answered(5)
+  return {
+    all: await.all [answered(1), answered(2)],
+    keyed: await.all { first: answered(3), second: answered(4) },
+    held: await.all [running, answered(6)]
+  }
+}

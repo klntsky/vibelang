@@ -2,6 +2,7 @@ package vibelang
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
@@ -15,9 +16,13 @@ import (
 //	  on other fibers, where the Approval handler on this fiber cannot be reached.
 //	  Handle Approval inside the callback, or run it with concurrency 1.
 //
-// EK4201 reads a table of the Effect combinators that run an argument on
-// another fiber (forks, races, timeouts, and any call with a concurrency
-// option other than 1) and each argument's requirements. EK4202 rejects a call
+// EK4201 reads a table of the forms and Effect combinators that run an
+// argument on another fiber (fork, detach, forkIn, the await operations, for
+// concurrent, Effect's forks, races and timeouts, and any call with a
+// concurrency option other than 1) and the requirements of each program the
+// call runs there: a program passed by name (D147) needs what running it
+// adds, and each element of an await operation's operand is its own program.
+// EK4202 rejects a call
 // to a TypeScript function whose declared requirements hold a control
 // operation, because its body can fork where no table sees it.
 
@@ -32,6 +37,11 @@ var forkingEffectFunctions = []string{
 	"race", "raceAll", "raceAllFirst", "raceFirst",
 	"timeout", "timeoutOption", "timeoutOrElse",
 }
+
+// forkingRuntimeExports are the runtime's functions that run a program on a
+// new fiber: fork, which the fork keyword calls (D166), detach and forkIn
+// (D170).
+var forkingRuntimeExports = []string{"fork", "$fork", "detach", "forkIn"}
 
 func checkReach(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
@@ -52,8 +62,27 @@ func checkReach(c *checker.Checker, file *ast.SourceFile) {
 // "forEach with concurrency 4", with the fix that keeps it on this fiber, or
 // returns "" when call runs its arguments on the calling fiber.
 func forkingCall(c *checker.Checker, file *ast.SourceFile, call *ast.Node) (what string, fix string) {
-	if name := runtimeExport(c, call.Expression()); name == "fork" || name == "$fork" {
-		return "fork", "run it on this fiber"
+	switch helper := fiberHelper(call); helper {
+	case "$awaitAll", "$awaitAllSettled", "$awaitRace", "$awaitAny":
+		// Each element starts in its own fiber (D196).
+		return awaitOperationNames[helper], "run it on this fiber"
+	case "$forConcurrent":
+		// Each item runs in its own fiber, unless the limit is 1 (D169).
+		args := call.Arguments()
+		if len(args) != 3 {
+			return "", ""
+		}
+		if limit := args[1]; limit.Flags&ast.NodeFlagsReparsed == 0 {
+			text := nodeText(file, limit)
+			if text == "1" {
+				return "", ""
+			}
+			return "for concurrent(" + text + ")", "loop with for...of"
+		}
+		return "for concurrent", "loop with for...of"
+	}
+	if name := runtimeExport(c, call.Expression()); slices.Contains(forkingRuntimeExports, name) {
+		return strings.TrimPrefix(name, "$"), "run it on this fiber"
 	}
 	module, name := effectModuleExport(c, call.Expression())
 	if module == "" {
@@ -134,17 +163,87 @@ func optionValue(argument *ast.Node, name string) *ast.Node {
 // checkForkedArguments reports EK4201 for each control operation that an
 // argument of call, which runs it on another fiber, still requires.
 func checkForkedArguments(c *checker.Checker, file *ast.SourceFile, call *ast.Node, what string, fix string) {
-	for _, argument := range call.Arguments() {
-		for _, control := range controlsIn(c, requirementsOf(c, c.GetTypeAtLocation(argument), 0)) {
-			at, operation := performSite(c, file, argument, control)
-			d := report(c, at, EK4201, operation, what, control.Symbol().Name())
-			note(d, "Handle {0} inside the {1}, or {2}.", control.Symbol().Name(), argumentKind(argument), fix)
-		}
+	arguments := call.Arguments()
+	if fiberHelper(call) == "$forConcurrent" {
+		arguments = arguments[2:] // the items and the limit run on this fiber
+	}
+	for i, argument := range arguments {
+		forkedPrograms(c, argument, i == 0 && holdsRecord(c, call), func(program *ast.Node, requirements []*checker.Type) {
+			for _, control := range controlsIn(c, requirements) {
+				at, operation := performSite(c, file, program, control)
+				d := report(c, at, EK4201, operation, what, control.Symbol().Name())
+				note(d, "Handle {0} inside the {1}, or {2}.", control.Symbol().Name(), argumentKind(program), fix)
+			}
+		})
 	}
 }
 
-// argumentKind names what an argument is for a fix: a callback or a program.
+// holdsRecord reports whether call's first argument, when it is an object
+// literal, is a record of programs, as the operand of await.all and the first
+// argument of Effect.all are, rather than options, whose callbacks may run on
+// this fiber, as timeoutOrElse's orElse does.
+func holdsRecord(c *checker.Checker, call *ast.Node) bool {
+	switch fiberHelper(call) {
+	case "$awaitAll", "$awaitAllSettled":
+		return true
+	}
+	module, name := effectModuleExport(c, call.Expression())
+	return module == "Effect" && name == "all"
+}
+
+// forkedPrograms calls visit with each program that argument, an argument of
+// a call that runs it on another fiber, holds, and the requirements of that
+// program. An expression passed by name (D147), such as fork Ask.ask() or
+// Effect.forkChild(load(id)), needs what running it adds, as the lambda
+// () => Ask.ask() would; visit receives the expression it runs. Each element
+// of an array literal, and each property of an object literal that record
+// says is a record of programs, such as await.all's operand, is its own
+// program. Any other argument needs what its type holds, and a program it
+// holds from a control operation's call, such as the property Ask.ask() of
+// await.all { x: Ask.ask() }, needs that control too: the call looks the
+// control up here, and its program performs the operation where it runs.
+func forkedPrograms(c *checker.Checker, argument *ast.Node, record bool, visit func(program *ast.Node, requirements []*checker.Type)) {
+	a := analyzerFor(c)
+	node := ast.SkipParentheses(argument)
+	switch {
+	case ast.IsArrayLiteralExpression(node):
+		for _, element := range node.Elements() {
+			if ast.IsSpreadElement(element) {
+				visit(element, requirementsOf(c, c.GetTypeAtLocation(element.Expression()), 0))
+				continue
+			}
+			forkedPrograms(c, element, false, visit)
+		}
+	case record && ast.IsObjectLiteralExpression(node):
+		for _, property := range node.Properties() {
+			switch {
+			case ast.IsPropertyAssignment(property):
+				forkedPrograms(c, property.Initializer(), false, visit)
+			case ast.IsSpreadAssignment(property):
+				visit(property, requirementsOf(c, c.GetTypeAtLocation(property.Expression()), 0))
+			default:
+				visit(property, requirementsOf(c, c.GetTypeAtLocation(property.Name()), 0))
+			}
+		}
+	case a.isByName(argument):
+		program := byNameSubject(argument)
+		visit(program, a.flowOf(program).requirements)
+	default:
+		t := c.GetTypeAtLocation(argument)
+		requirements := requirementsOf(c, t, 0)
+		if control := serviceLookup(c, node); control != nil && isControlType(control) && isEffectType(c, t) {
+			requirements = append(requirements, control)
+		}
+		visit(argument, requirements)
+	}
+}
+
+// argumentKind names what an argument is for a fix: the body of a for
+// concurrent loop, a callback, or a program.
 func argumentKind(argument *ast.Node) string {
+	if ast.IsArrowFunction(argument) && argument.Flags&ast.NodeFlagsVibeLang != 0 {
+		return "loop body" // for concurrent (parser/vibelang_fibers.go)
+	}
 	if ast.IsArrowFunction(argument) || ast.IsFunctionExpression(argument) {
 		if len(argument.Parameters()) > 0 {
 			return "callback"

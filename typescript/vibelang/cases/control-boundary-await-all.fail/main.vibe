@@ -1,0 +1,33 @@
+// expect: EK4201
+// await.all and await.allSettled start each element in its own fiber
+// (D196), which cannot reach a handler on this one (chapter 9, "Handlers and
+// concurrency"). EK4201 reports each element that performs the operation.
+control Ask { ask(): number!! }
+
+function asks() {
+  return Ask.ask() + 1
+}
+
+export function all() {
+  try {
+    return await.all [Ask.ask(), Ask.ask()]
+  } handle Ask.ask() {
+    resume(1)
+  }
+}
+
+export function keyed() {
+  try {
+    return await.all { first: asks(), second: Ask.ask() }
+  } handle Ask.ask() {
+    resume(1)
+  }
+}
+
+export function settled() {
+  try {
+    return await.allSettled [Ask.ask()]
+  } handle Ask.ask() {
+    resume(1)
+  }
+}
