@@ -20,6 +20,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/repo"
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 	"github.com/microsoft/TypeScript/tsc/internal/testutil/baseline"
+	"github.com/microsoft/TypeScript/tsc/internal/testutil/fixtures"
 	"github.com/microsoft/TypeScript/tsc/internal/tsoptions"
 	"github.com/microsoft/TypeScript/tsc/internal/tsoptions/tsoptionstest"
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
@@ -151,6 +152,7 @@ func TestParseConfigFileTextToJson(t *testing.T) {
 					baselineContent.WriteString("\n")
 				}
 			}
+			fixtures.Require(t, "baselines/reference")
 			baseline.Run(t, rec.title+" jsonParse.js", baselineContent.String(), baseline.Options{Subfolder: "config/tsconfigParsing"})
 		})
 	}
@@ -1681,6 +1683,7 @@ func baselineParseConfigWith(t *testing.T, baselineFileName string, includeCompi
 			baselineContent.WriteString("\n")
 		}
 	}
+	fixtures.Require(t, "baselines/reference")
 	baseline.Run(t, baselineFileName, baselineContent.String(), baseline.Options{Subfolder: "config/tsconfigParsing"})
 }
 
@@ -1804,6 +1807,7 @@ func parseSrcCompiler(tb testing.TB) *tsoptions.ParsedCommandLine {
 	tb.Helper()
 
 	compilerDir := tspath.RootedDirectoryPathFromAbsolute(filepath.Join(repo.TestDataPath(), "fixtures/compiler"))
+	fixtures.Require(tb, "fixtures/compiler/tsconfig.json")
 	tsconfigFileName := compilerDir.ResolveFile("tsconfig.json")
 	fs := osvfs.FS()
 	jsonText, ok := fs.ReadFile(tsconfigFileName)
@@ -1844,6 +1848,7 @@ func TestParseSrcCompiler(t *testing.T) {
 
 func BenchmarkParseSrcCompiler(b *testing.B) {
 	compilerDir := tspath.RootedDirectoryPathFromAbsolute(filepath.Join(repo.TestDataPath(), "fixtures/compiler"))
+	fixtures.Require(b, "fixtures/compiler/tsconfig.json")
 	tsconfigFileName := compilerDir.ResolveFile("tsconfig.json")
 	fs := osvfs.FS()
 	jsonText, ok := fs.ReadFile(tsconfigFileName)

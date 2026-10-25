@@ -15,6 +15,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/repo"
 	"github.com/microsoft/TypeScript/tsc/internal/testutil/baseline"
 	"github.com/microsoft/TypeScript/tsc/internal/testutil/filefixture"
+	"github.com/microsoft/TypeScript/tsc/internal/testutil/fixtures"
 	"github.com/microsoft/TypeScript/tsc/internal/tsoptions"
 	"github.com/microsoft/TypeScript/tsc/internal/tsoptions/tsoptionstest"
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
@@ -96,6 +97,7 @@ func TestRemovedWatchOptions(t *testing.T) {
 			var errors strings.Builder
 			diagnosticwriter.WriteFormatDiagnostics(&errors, diagnosticwriter.FromASTDiagnostics(parsed.Errors), &diagnosticwriter.FormattingOptions{NewLine: "\n"})
 			diagnosticwriter.WriteFormatDiagnostics(&errors, diagnosticwriter.FromASTDiagnostics(build.Errors), &diagnosticwriter.FormattingOptions{NewLine: "\n"})
+			fixtures.Require(t, "baselines/reference")
 			baseline.Run(t, option+".js", errors.String(), baseline.Options{Subfolder: "tsoptions/removedWatchOptions"})
 		})
 	}
@@ -287,6 +289,7 @@ func (f commandLineSubScenario) assertParseResult(t *testing.T) {
 	t.Helper()
 	t.Run(f.testName, func(t *testing.T) {
 		t.Parallel()
+		fixtures.Require(t, "fixtures/typescript/tests/baselines/reference/config/commandLineParsing")
 		originalBaseline := f.baseline.ReadFile(t)
 		tsBaseline := parseExistingCompilerBaseline(t, originalBaseline)
 
@@ -310,6 +313,7 @@ func (f commandLineSubScenario) assertParseResult(t *testing.T) {
 		// useful for debugging--compares the new errors with the old errors. currently will NOT pass because of unimplemented options, not completely identical enum options, etc
 		// assert.Equal(t, tsBaseline.errors, newBaselineErrors)
 
+		fixtures.Require(t, "baselines/reference")
 		baseline.Run(t, f.testName+".js", formatNewBaseline(f.commandLine, o, newBaselineFileNames, newBaselineErrors), baseline.Options{Subfolder: "tsoptions/commandLineParsing"})
 	})
 }
@@ -360,6 +364,7 @@ func formatNewBaseline(
 
 func (f commandLineSubScenario) assertBuildParseResult(t *testing.T) {
 	t.Helper()
+	fixtures.Require(t, "fixtures/typescript/tests/baselines/reference/config/commandLineParsing")
 	f.assertBuildParseResultWithTsBaseline(t, func() *TestCommandLineParserBuild {
 		originalBaseline := f.baseline.ReadFile(t)
 		return parseExistingCompilerBaselineBuild(t, originalBaseline)
@@ -408,6 +413,7 @@ func (f commandLineSubScenario) assertBuildParseResultWithTsBaseline(t *testing.
 		// useful for debugging--compares the new errors with the old errors. currently will NOT pass because of unimplemented options, not completely identical enum options, etc
 		// assert.Equal(t, tsBaseline.errors, newBaselineErrors)
 
+		fixtures.Require(t, "baselines/reference")
 		baseline.Run(t, f.testName+".js", formatNewBaselineBuild(f.commandLine, o, compilerOpts, newBaselineProjects, newBaselineErrors), baseline.Options{Subfolder: "tsoptions/commandLineParsing"})
 	})
 }
