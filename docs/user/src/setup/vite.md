@@ -36,7 +36,7 @@ export function greet(name: string) {
 // Output: Hello, Vite!
 ```
 
-Import it from `.ts` or `.vibe` modules by its source name, `./greet.vibe`. TypeScript sees `greet` as a function that returns an Effect, so a `.ts` module can run it with one of Effect's runners:
+With Vite or Vitest, import it from `.ts` or `.vibe` modules by its source name, `./greet.vibe`, so the plugin loads and compiles the source. For a CLI build that emits JavaScript to run with Node, a `.ts` importer can instead use `./greet.js`; VibeLang resolves it to `greet.vibe` while checking, and Node loads the emitted `greet.js` ([CLI setup](vibelang-cli.md#3-compile-a-first-module)). TypeScript sees `greet` as a function that returns an Effect, so a `.ts` module can run it with one of Effect's runners:
 
 ```ts
 // TypeScript (.ts)
@@ -88,7 +88,18 @@ If a test starts a Node process that runs the project's source, such as a comman
 
 ## 5. Build
 
-Run `npx vite build`. It exits with status 0, and its last line starts with `✓ built in`. Tell the user which files you added.
+In `package.json`, replace `tsc` in the build script with `vibelang` so it checks both `.ts` and `.vibe` files, and add the test script:
+
+```json
+{
+  "scripts": {
+    "build": "vibelang && vite build",
+    "test": "vitest run"
+  }
+}
+```
+
+Run `npm run build`, or `bun run build`; then run `npm run test`, or `bun run test`. The build exits with status 0, and its last line starts with `✓ built in`. Tell the user which files you added.
 
 ## Next
 

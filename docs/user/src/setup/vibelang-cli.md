@@ -58,7 +58,7 @@ export function hello(name: string) {
 
 Run `npx vibelang`: it prints nothing, exits with status 0, and writes `hello.js` to the `outDir` (`dist/` above).
 
-In `.vibe` files, import local modules by their source name: `import { hello } from "./hello.vibe"`. In `.ts` files, import `./hello.js`, which resolves to `hello.vibe`.
+In `.vibe` files, import local modules by their source name: `import { hello } from "./hello.vibe"`. For this CLI build, a `.ts` importer can use `./hello.js`: VibeLang resolves it to `hello.vibe` while checking, and Node loads the emitted `hello.js`. With Vite or Vitest, use `./hello.vibe` from `.ts` too, so the plugin loads the source ([Vite setup](vite.md#3-add-a-first-module)); `rewriteRelativeImportExtensions` permits that source extension and rewrites it when emitting JavaScript.
 
 ## 4. Add an entry point
 
