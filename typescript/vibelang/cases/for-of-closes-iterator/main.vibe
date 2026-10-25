@@ -1,0 +1,96 @@
+// A for...of over an iterable closes its iterator, calling return(), on every
+// abrupt exit, as JavaScript's for...of does: a break, a return, a typed
+// failure thrown in the body or by a call in it, and an interruption. Effect
+// abandons a generator at a failed or interrupted yield* without calling its
+// return(), so a loop whose body runs an Effect goes through $forOf, which
+// closes the iterator itself. An array's iterator has no return().
+error Stop { at: number }
+
+const events: string[] = []
+
+function counting(name: string): Iterable<number> {
+  let i = 0
+  return {
+    [Symbol.iterator]() {
+      return {
+        next(): IteratorResult<number> {
+          i++
+          return i <= 5 ? { value: i, done: false } : { value: undefined, done: true }
+        },
+        return(): IteratorResult<number> {
+          events.push(name)
+          return { value: undefined, done: true }
+        }
+      }
+    }
+  }
+}
+
+function throwing(): number!Stop {
+  for (const x of counting("throw")) {
+    if (x === 2) throw new Stop({ at: x })
+  }
+  return 0
+}
+
+function throwingAfterEffect(): number!Stop {
+  for (const x of counting("throw after an effect")) {
+    sleep("0 millis")
+    if (x === 2) throw new Stop({ at: x })
+  }
+  return 0
+}
+
+function failingCall(): number!Stop {
+  for (const x of counting("failing call")) {
+    if (x === 2) throwing()
+  }
+  return 0
+}
+
+function breaking(): number!! {
+  for (const x of counting("break")) {
+    sleep("0 millis")
+    if (x === 2) break
+  }
+  return 1
+}
+
+function returning(): number!! {
+  outer: for (const x of counting("return")) {
+    sleep("0 millis")
+    if (x === 1) continue outer
+    if (x === 2) return x
+  }
+  return 0
+}
+
+function exhausted(): number!! {
+  let sum = 0
+  for (const x of counting("exhausted")) {
+    sleep("0 millis")
+    sum += x
+  }
+  return sum
+}
+
+function slow(): number!! {
+  for (const x of counting("interrupted")) {
+    sleep("1 second")
+  }
+  return 0
+}
+
+// expect-result: {"results":[-1,-1,-1,1,2,15,-1],"events":["throw","throw after an effect","throw","failing call","break","return","interrupted"]}
+export function main() {
+  const results = [
+    throwing() catch -1,
+    throwingAfterEffect() catch -1,
+    failingCall() catch -1,
+    breaking(),
+    returning(),
+    exhausted(),
+    timeout(slow(), "10 millis") catch -1
+  ]
+  return { results, events }
+}

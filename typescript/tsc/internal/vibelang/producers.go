@@ -246,7 +246,7 @@ func (a *analyzer) addStreamLoop(info *effectInfo, statement *ast.Node) {
 // producerPlan records what the lowering does with producers in one file.
 type producerPlan struct {
 	producers   map[*ast.Node]bool // producer functions
-	streamLoops map[*ast.Node]bool // for...of statements over a Stream in Effect bodies
+	streamLoops map[*ast.Node]bool // for...of statements over a Stream, or that must close their iterator (isClosingLoop), in Effect bodies
 }
 
 func newProducerPlan() producerPlan {
@@ -263,6 +263,64 @@ func (p *producerPlan) planProducer(c *checker.Checker, fn *ast.Node) {
 		p.streamLoops[loop] = true
 		return false
 	})
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if isFunctionBoundary(node) {
+			return false
+		}
+		if node.Kind == ast.KindForOfStatement && isClosingLoop(c, node) {
+			p.streamLoops[node] = true
+		}
+		return node.ForEachChild(visit)
+	}
+	if fn.Body() != nil {
+		visit(fn.Body())
+	}
+}
+
+// isClosingLoop reports whether statement, a for...of over an iterable that is
+// not a Stream in an Effect body, must close its iterator itself. JavaScript's
+// for...of calls the iterator's return() on every abrupt exit, but Effect
+// abandons a generator at a failed or interrupted yield* without calling its
+// return(), so the loop's own iterator would stay open. A loop whose body can
+// pause or fail runs through $forOf instead, which closes the iterator on
+// every exit that does not finish it, as JavaScript does. The iterators of an
+// array or a string have no return(), so a loop over one stays JavaScript's.
+func isClosingLoop(c *checker.Checker, statement *ast.Node) bool {
+	loop := statement.AsForInOrOfStatement()
+	if loop.AwaitModifier != nil || !inLowerableBody(statement) || isStreamLoop(c, statement) {
+		return false
+	}
+	if initializer := loop.Initializer; ast.IsVariableDeclarationList(initializer) && (initializer.Flags&ast.NodeFlagsUsing != 0 || len(initializer.AsVariableDeclarationList().Declarations.Nodes) == 0) {
+		return false // for (using r of rs) is a Scope region's (scopes_lower.go)
+	}
+	t := c.GetTypeAtLocation(loop.Expression)
+	if t == nil || t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsStringLike) != 0 || c.IsArrayLikeType(t) {
+		return false
+	}
+	return bodyPauses(c, loop.Statement)
+}
+
+// bodyPauses reports whether statement, in an Effect body, can stop at a yield*
+// where its fiber may fail or be interrupted: it runs a call, throws, yields,
+// loops over a Stream, or has a try statement, which runs as regions.
+func bodyPauses(c *checker.Checker, statement *ast.Node) bool {
+	a := analyzerFor(c)
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		switch {
+		case isFunctionBoundary(node):
+			return false
+		case node.Kind == ast.KindThrowStatement || node.Kind == ast.KindYieldExpression || node.Kind == ast.KindTryStatement:
+			return true
+		case node.Kind == ast.KindForOfStatement && isStreamLoop(c, node):
+			return true
+		case isInvocation(node) && a.runs(node):
+			return true
+		}
+		return node.ForEachChild(visit)
+	}
+	return visit(statement)
 }
 
 // visitProducer turns a producer into a plain function that returns
