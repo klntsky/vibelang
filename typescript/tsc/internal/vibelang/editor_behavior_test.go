@@ -181,6 +181,22 @@ func TestEditorHoverExplainsCallBehavior(t *testing.T) {
 	}
 }
 
+// A hover on an argument passed by name, before its call is checked,
+// resolves the call first, so the call keeps the signature a full check
+// infers: after the hover on the first topic, Effect.timeout's program, the
+// second topic is the timed greeting's value, a string, not unknown.
+func TestEditorHoverOnByNameArgumentBeforeCheck(t *testing.T) {
+	source := "function greeting() { return \"hi\" }\nexport function piped() {\n  return greeting() |> Effect.timeout(%, \"1 second\") |> `${%}!`\n}\n"
+	_, file, service, _ := editorProgram(t, source)
+	uri := lsconv.FileNameToDocumentURI(file.FileName())
+	line := strings.Split(source, "\n")[2]
+	first := hoverText(t, service, uri, lsproto.Position{Line: 2, Character: uint32(strings.Index(line, "(%,") + 1)})
+	second := hoverText(t, service, uri, lsproto.Position{Line: 2, Character: uint32(strings.Index(line, "${%}") + 2)})
+	if !strings.Contains(first, "(topic) %: string!!") || !strings.HasPrefix(second, "(topic) %: stringThe value") {
+		t.Fatalf("hovers %q, then %q; want the program string!!, then the value string", first, second)
+	}
+}
+
 func TestEditorDirectiveCompletions(t *testing.T) {
 	for _, source := range []string{"// @vibe", "// @vibelang-diagnostics ", "// @vibelang-diagnostics-next-line EK2004:off EK44"} {
 		program, file, _, _ := editorProgram(t, source)

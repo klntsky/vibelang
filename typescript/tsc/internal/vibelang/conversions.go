@@ -54,6 +54,17 @@ func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checke
 		return t
 	}
 	a := analyzerFor(c)
+	if call != nil && len(a.current[call]) == 0 && !a.resolving[call] {
+		// Asked for an argument's type before its call is resolved, as an
+		// editor's hover on the argument asks: resolve the call first. Its
+		// resolution checks this argument under each candidate and decides
+		// its conversion there. Classifying it below would otherwise resolve
+		// the call from inside the classification, where this argument reads
+		// as its plain value, and cache a signature inferred from that value,
+		// such as Effect.timeout's Effect<unknown, unknown, unknown> for a
+		// call passed by name.
+		a.candidateOf(call)
+	}
 	// Classifying a field reads its contextual type. For an object literal
 	// with a union context, the checker discriminates the union by the
 	// literal's members and checks a shorthand member's value, which asks for
