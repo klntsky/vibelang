@@ -61,6 +61,8 @@ The compiler cases and the doc snippet check also need the pinned packages in `e
 
 The Go suites run from `typescript/tsc/`. Install Effect with `(cd experiments && bun install)` (or set `EFFECT_NODE_MODULES` to its `node_modules` directory), and install the pinned stock compiler with `npm install --prefix packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261010.1 --no-audit --no-fund typescript@7.1.0-dev.20261010.1` from the repository root. Mapper tests build their own compiler and runtime scope. Root discovery supports Go's `-trimpath`; when running a moved test binary outside the checkout, set `TYPESCRIPT_REPO_ROOT` to the absolute `typescript/tsc/` directory. Upstream parser, formatter and tsoptions fixture checks additionally use `typescript/tsc/testdata/fixtures/` (including `compiler/` and `typescript/tests/baselines/reference/config/commandLineParsing/`) and `typescript/tsc/testdata/baselines/reference/`, which this checkout omits; restore the matching upstream testdata checkout to run them. A test missing these optional fixtures or dependencies skips with the exact missing path and setup instruction.
 
+The repository has no CI or commit statuses. For each pull request, a maintainer runs `sh scripts/e2e.sh` and the compiler case suite, `(cd typescript && sh vibelang/smoke.sh --jobs 8)`, and records the results in the pull request.
+
 The end-to-end check runs setup, then scaffolds, installs, builds, runs and tests a temporary app, and stops at the first failing step. A compiler case is a directory under `typescript/vibelang/cases/`; `typescript/vibelang/harness.mjs` describes the format. A passing check doesn't prove every language feature works, so list the checks you ran, the ones that failed and the ones you couldn't run.
 
 ## Pull requests
@@ -84,4 +86,4 @@ Start with [good first issues](https://github.com/smithersai/vibelang/issues?q=i
 
 Ask with the [question form](https://github.com/smithersai/vibelang/issues/new?template=question.yml). Report a vulnerability privately, never in an issue: see [SECURITY.md](.github/SECURITY.md).
 
-<sub>1,800 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
+<sub>1,860 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>

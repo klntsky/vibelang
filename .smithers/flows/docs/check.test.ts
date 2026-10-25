@@ -67,3 +67,10 @@ test("the shipped skill teaches current declarations and names the trusted impor
   expect(skill).not.toContain("Until your compiler accepts a form, write its long form");
   expect(skill).toContain('import { trusted } from "vibelang-runtime"');
 });
+
+test("contributing makes the maintainer-run PR checks explicit", async () => {
+  const output = render(await readSources())["CONTRIBUTING.md"]!
+  expect(output).toContain("The repository has no CI or commit statuses.")
+  expect(output).toContain("For each pull request, a maintainer runs")
+  expect(output).toContain("`sh scripts/e2e.sh` and the compiler case suite, `(cd typescript && sh vibelang/smoke.sh --jobs 8)`")
+})
