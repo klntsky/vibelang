@@ -42,6 +42,7 @@ func init() {
 	checker.RegisterCatchVariableTypeHook(catchVariableType)
 	checker.RegisterUnwrappedReturnTypeHook(unwrappedReturnType)
 	checker.RegisterAnnotatedReturnTypeHook(annotatedReturnType)
+	checker.RegisterResolvingReturnTypeHook(selfCallType)
 	checker.RegisterInferTypeHook(inferChannel)
 	declarations.RegisterTypeAnnotationHook(hasInferredChannel)
 	checker.RegisterNameResolutionHook(resolvePreludeName)

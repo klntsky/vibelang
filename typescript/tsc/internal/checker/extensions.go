@@ -299,6 +299,48 @@ func (c *Checker) applyAnnotatedReturnTypeHooks(fn *ast.Node, t *Type) *Type {
 	return t
 }
 
+// ResolvingReturnTypeHook can give the return type of call's signature while
+// the checker is resolving that return type, instead of the circularity error
+// (TS2577) reading it there would report. VibeLang reads a contract's inferred
+// channels from the function's body, and a call of the function in its own
+// body, such as n * fact(n - 1), asks for that contract (D52, D57). It returns
+// nil when it has nothing to say.
+type ResolvingReturnTypeHook func(c *Checker, call *ast.Node, signature *Signature) *Type
+
+var resolvingReturnTypeHooks []ResolvingReturnTypeHook
+
+// RegisterResolvingReturnTypeHook adds hook to every checker. Call it only
+// from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterResolvingReturnTypeHook(hook ResolvingReturnTypeHook) {
+	resolvingReturnTypeHooks = append(resolvingReturnTypeHooks, hook)
+}
+
+// resolvingReturnTypeOfCall returns what a hook gives call when the return
+// type of signature, or of the declared signature it instantiates, is being
+// resolved, and nil otherwise.
+func (c *Checker) resolvingReturnTypeOfCall(call *ast.Node, signature *Signature) *Type {
+	if len(resolvingReturnTypeHooks) == 0 {
+		return nil
+	}
+	declared := signature
+	if declared.target != nil {
+		declared = declared.target
+	}
+	if declared.target != nil || declared.getComposite() != nil || !c.isResolvingReturnTypeOfSignature(declared) {
+		return nil
+	}
+	for _, hook := range resolvingReturnTypeHooks {
+		if t := hook(c, call, declared); t != nil {
+			if declared != signature {
+				t = c.instantiateType(t, signature.mapper)
+			}
+			return t
+		}
+	}
+	return nil
+}
+
 // InferTypeHook reports whether an extension gives node, an infer type
 // outside the extends clause of a conditional type, a meaning in its
 // position. The checker then reports neither that position nor the unused

@@ -7576,7 +7576,13 @@ func (c *Checker) getQuickTypeOfExpression(node *ast.Node) *Type {
 		if isCallChain(expr) {
 			return c.applyCallExpressionTypeHooks(expr, c.getReturnTypeOfSingleNonGenericSignatureOfCallChain(expr))
 		}
-		return c.applyCallExpressionTypeHooks(expr, c.getReturnTypeOfSingleNonGenericSignature(c.checkNonNullExpression(expr.Expression()), SignatureKindCall))
+		funcType := c.checkNonNullExpression(expr.Expression())
+		if signature := c.getSingleSignature(funcType, SignatureKindCall, true /*allowMembers*/); signature != nil && len(signature.TypeParameters()) == 0 {
+			if t := c.resolvingReturnTypeOfCall(expr, signature); t != nil { // VibeLang (extensions.go)
+				return c.applyCallExpressionTypeHooks(expr, t)
+			}
+		}
+		return c.applyCallExpressionTypeHooks(expr, c.getReturnTypeOfSingleNonGenericSignature(funcType, SignatureKindCall))
 	case ast.IsNewExpression(expr):
 		return c.getReturnTypeOfSingleNonGenericSignature(c.checkNonNullExpression(expr.Expression()), SignatureKindConstruct)
 	case ast.IsAssertionExpression(expr) && !ast.IsConstTypeReference(expr.Type()):
@@ -8554,7 +8560,10 @@ func (c *Checker) checkCallExpression(node *ast.Node, checkMode CheckMode) *Type
 	if ast.IsInJSFile(node) && c.isCommonJSRequire(node) {
 		return c.resolveExternalModuleTypeByLiteral(node.Arguments()[0])
 	}
-	returnType := c.getReturnTypeOfSignature(signature)
+	returnType := c.resolvingReturnTypeOfCall(node, signature) // VibeLang (extensions.go)
+	if returnType == nil {
+		returnType = c.getReturnTypeOfSignature(signature)
+	}
 	// Treat any call to the global 'Symbol' function that is part of a const variable or readonly property
 	// as a fresh unique symbol literal type.
 	if returnType.flags&TypeFlagsESSymbolLike != 0 && c.isSymbolOrSymbolForCall(node) {

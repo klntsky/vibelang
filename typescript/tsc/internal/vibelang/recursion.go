@@ -5,6 +5,7 @@ import (
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
+	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
 
 // Recursion (D52).
@@ -159,6 +160,163 @@ func ownerFunction(node *ast.Node) *ast.Node {
 	return nil
 }
 
+// selfCallType types call, which runs a .vibe function whose contract writes
+// A and infers E or R, while the checker resolves that contract. Reading the
+// inferred channels from the body types the body, and a call of the function
+// there, as in `return n * fact(n - 1)`, would ask for the contract being
+// resolved (TS2577). The call stands for its success value, so it gets the
+// contract's A, and E and R as the fixpoint has found them so far (D52, D57);
+// nothing reads them from this type, since the analyzer reads the call's E and
+// R from the body. A call in a position that may hold the program instead,
+// such as an argument passed by name, keeps TypeScript's error.
+func selfCallType(c *checker.Checker, call *ast.Node, signature *checker.Signature) *checker.Type {
+	fn := implementationOf(signature.Declaration())
+	if fn == nil || !isLowerable(fn) || !isInvocation(call) || !inLowerableBody(call) || !takesSuccess(c, call) {
+		return nil
+	}
+	a := analyzerFor(c)
+	k := a.contractOf(fn)
+	if k == nil || k.reference == nil || k.inferred(channelA) || !k.inferredAny() || a.isFactory(fn) {
+		return nil
+	}
+	t := c.GetTypeFromTypeNode(k.annotation)
+	effect := effectInterface(c, t)
+	if effect == nil {
+		return nil
+	}
+	info := a.approx[fn]
+	if info == nil {
+		info = &effectInfo{}
+	}
+	channels := []*checker.Type{successType(c, t), channelType(c, t, "_E"), channelType(c, t, "_R")}
+	if k.inferred(channelE) {
+		channels[channelE] = c.GetUnionType(info.errors)
+	}
+	if k.inferred(channelR) {
+		channels[channelR] = c.GetUnionType(info.requirements)
+	}
+	return c.NewTypeReference(effect, channels)
+}
+
+// takesSuccess reports whether call stands where only its success value is
+// used, whatever the types around it: an operand of an operator that makes a
+// new value, a condition, a receiver, an index, an unannotated initializer, a
+// return or a statement. An argument, an element, a property, a logical
+// operand or an assignment can hold the program itself, as where a
+// parameter's type asks for an Effect (D147).
+func takesSuccess(c *checker.Checker, call *ast.Node) bool {
+	if holdsProgram(c, call) {
+		return false
+	}
+	node := call
+	for node.Parent != nil {
+		parent := node.Parent
+		if ast.IsParenthesizedExpression(parent) || parent.Kind == ast.KindConditionalExpression && parent.AsConditionalExpression().Condition != node {
+			node = parent // a conditional's arm stands where the conditional does
+			continue
+		}
+		break
+	}
+	parent := node.Parent
+	if parent == nil {
+		return false
+	}
+	switch parent.Kind {
+	case ast.KindBinaryExpression:
+		operator := parent.AsBinaryExpression().OperatorToken.Kind
+		return parent.Flags&ast.NodeFlagsVibeLang == 0 && !ast.IsAssignmentOperator(operator) && !ast.IsLogicalOrCoalescingBinaryOperator(operator) && operator != ast.KindCommaToken // not a pipe or a catch expression
+	case ast.KindPrefixUnaryExpression, ast.KindTemplateSpan, ast.KindReturnStatement, ast.KindExpressionStatement, ast.KindIfStatement,
+		ast.KindWhileStatement, ast.KindDoStatement, ast.KindSwitchStatement, ast.KindCaseClause, ast.KindElementAccessExpression, ast.KindTypeOfExpression:
+		return true
+	case ast.KindConditionalExpression:
+		return parent.AsConditionalExpression().Condition == node
+	case ast.KindPropertyAccessExpression:
+		return parent.Expression() == node
+	case ast.KindVariableDeclaration:
+		return parent.Type() == nil && parent.Initializer() == node
+	}
+	return false
+}
+
+// checkRecursiveContract reports EK2102 at the contract of fn when it writes
+// A and infers E or R, and TypeScript could not read it: a call of fn in
+// fn's own body, or on its call cycle, stands where its program may be held,
+// such as an argument, or fn is generic, so typing the call asked for the
+// contract being read (TS2577, which this covers). Writing every channel
+// breaks the cycle. It also reports EK2102 when the contract TypeScript gave
+// fn holds less than its cycle's fixpoint, so a caller read it too early.
+func (a *analyzer) checkRecursiveContract(fn *ast.Node) {
+	k := a.contractOf(fn)
+	if k == nil || k.reference == nil || k.inferred(channelA) || !k.inferredAny() || a.isFactory(fn) || a.reentered[fn] {
+		return
+	}
+	c := a.checker
+	t := c.GetReturnTypeOfSignature(c.GetSignatureFromDeclaration(fn))
+	info := a.effectOf(fn)
+	if info == nil {
+		return
+	}
+	name := functionDisplayName(fn)
+	whole := a.wholeContract(fn)
+	if t.Flags()&checker.TypeFlagsAny != 0 {
+		d := report(c, fn.Type(), EK2102.With("{0} calls itself where TypeScript needs its contract before it can infer the contract's channels, so its contract must write every channel."), name)
+		if len(fn.TypeParameters()) > 0 {
+			note(d, "Write {0}: a generic function's call of itself needs its whole contract.", whole)
+		} else {
+			note(d, "Write {0}, or call {1} where only its value is used, such as an operand or a variable's initializer.", whole, name)
+		}
+		if d != nil {
+			cover(c, fn.Type())
+		}
+		return
+	}
+	if !a.recursive[fn] {
+		return
+	}
+	if k.inferred(channelE) && channelType(c, t, "_E") != c.GetUnionType(info.errors) || k.inferred(channelR) && channelType(c, t, "_R") != c.GetUnionType(info.requirements) {
+		d := report(c, fn.Type(), EK2102.With("{0} is on a call cycle that TypeScript typed before the cycle's E and R were known, so its contract must be written."), name)
+		note(d, "Write {0}.", whole)
+	}
+}
+
+// wholeContract returns fn's contract with every channel written, as A!E!R:
+// each channel as fn's contract writes it, else E and R as the cycle's
+// fixpoint found them, and A as the placeholder A.
+func (a *analyzer) wholeContract(fn *ast.Node) string {
+	c := a.checker
+	info := a.effectOf(fn)
+	if info == nil {
+		info = &effectInfo{}
+	}
+	channels := []string{"A", c.TypeToString(c.GetUnionType(info.errors)), c.TypeToString(c.GetUnionType(info.requirements))}
+	if k := a.contractOf(fn); k != nil && k.reference != nil {
+		for i := range channels {
+			if i < len(k.channels) && !k.inferred(i) {
+				channels[i] = scanner.GetTextOfNode(k.channels[i])
+			}
+		}
+	}
+	return bangText(channels...)
+}
+
+// readsInferredContract reports whether a contract that writes fn's A and
+// infers E and R can be read: fn is not generic, and every call in its body
+// of a function on a call cycle stands where only its value is used
+// (selfCallType). Otherwise the contract must write every channel.
+func (a *analyzer) readsInferredContract(fn *ast.Node) bool {
+	if len(fn.TypeParameters()) > 0 {
+		return false
+	}
+	return !forEachCallInBody(fn, func(call *ast.Node) bool {
+		sig := a.checker.GetResolvedSignature(call)
+		if sig == nil {
+			return false
+		}
+		callee := implementationOf(sig.Declaration())
+		return callee != nil && (callee == fn || a.recursive[callee]) && !takesSuccess(a.checker, call)
+	})
+}
+
 // checkRecursion reports EK2102 for each function on a call cycle in file
 // whose A TypeScript could not infer because it depends on the function's own
 // result, and covers TypeScript's TS7022, TS7023, or TS7024 there. It also
@@ -177,6 +335,9 @@ func checkRecursion(c *checker.Checker, file *ast.SourceFile) {
 			if a.recursive[node] {
 				a.checkRecursiveFunction(node)
 			}
+		}
+		if isLowerable(node) && node.Type() != nil {
+			a.checkRecursiveContract(node)
 		}
 		if node.Kind == ast.KindCatchClause && catches(node.Parent) && node.AsCatchClause().VariableDeclaration != nil && node.AsCatchClause().VariableDeclaration.Type() == nil {
 			if fn := ownerFunction(node); fn != nil && a.recursive[fn] {
@@ -200,7 +361,11 @@ func (a *analyzer) checkRecursiveFunction(fn *ast.Node) {
 	}
 	if t.Flags()&checker.TypeFlagsAny != 0 {
 		d := report(c, at, EK2102, name)
-		note(d, "Write its contract with its success type as A, such as Effect<number, infer E, infer R>, which still infers E and R.")
+		if a.readsInferredContract(fn) {
+			note(d, "Write its contract with its success type as A, such as Effect<number, infer E, infer R>, which still infers E and R.")
+		} else {
+			note(d, "Write every channel of its contract with its success type as A: {0}.", a.wholeContract(fn))
+		}
 		cover(c, at)
 		if parent := fn.Parent; parent.Kind == ast.KindVariableDeclaration {
 			cover(c, parent.Name())
@@ -227,8 +392,8 @@ func (a *analyzer) checkReenteredFunction(fn *ast.Node) {
 	} else if parent := fn.Parent; parent.Kind == ast.KindVariableDeclaration {
 		at = parent.Name()
 	}
-	d := report(c, at, EK2102.With("{0} passes a call of itself by name, which TypeScript typed before {0}'s E and R were known, so its contract must write them."), name)
-	note(d, "Write every channel of its contract, such as number!Failure! (R = never) or Effect<number, Failure, Needs>.")
+	d := report(c, at, EK2102.With("{0} calls itself in another call's arguments, which TypeScript typed before {0}'s E and R were known, so its contract must write them."), name)
+	note(d, "Write every channel of its contract: {0}.", a.wholeContract(fn))
 }
 
 // checkRecursiveCatch reports EK2102 at clause when the checker typed its

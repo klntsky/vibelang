@@ -1,0 +1,60 @@
+// A recursive function whose contract writes A and leaves E or R to
+// inference (D52, D57): a call of itself in its body that stands for its
+// value, such as an operand or an initializer, is typed by A while E and R
+// come from the cycle's fixpoint. These were TS2577, "Return type annotation
+// circularly references itself".
+error Neg { n: number }
+service Audit { note(n: number): void!! }
+
+function fact(n: number): number!Neg {
+  if (n < 0) throw new Neg({ n })
+  if (n <= 1) return 1
+  return n * fact(n - 1)
+}
+
+function factVia(n: number): number!Neg {
+  if (n < 0) throw new Neg({ n })
+  if (n <= 1) return 1
+  const rest = factVia(n - 1)
+  return n * rest
+}
+
+function audited(n: number): number!Neg {
+  Audit.note(n)
+  if (n < 0) throw new Neg({ n })
+  if (n <= 1) return 1
+  return n * audited(n - 1)
+}
+
+function inferred(n: number): Effect<number, infer E, infer R> {
+  if (n < 0) throw new Neg({ n })
+  if (n <= 1) return 1
+  return n * inferred(n - 1)
+}
+
+function label(n: number): string!Neg {
+  if (n < 0) throw new Neg({ n })
+  if (n === 0) return "0"
+  if (label(n - 1).length > 3) return "long"
+  return `${n}${label(n - 1)}`
+}
+
+// R reaches isEven through isOdd.
+function isEven(n: number): boolean!never {
+  return n === 0 ? true : !isOdd(n - 1)
+}
+
+function isOdd(n: number): boolean!never {
+  Audit.note(n)
+  return n === 0 ? false : !isEven(n - 1)
+}
+
+const notes: number[] = []
+
+// expect-result: {"fact":120,"factVia":120,"audited":6,"inferred":24,"label":"long","even":true,"failed":"Neg","notes":[3,2,1,3,1]}
+export function main() {
+  provide Audit = { note(n) { notes.push(n) } } {
+    const failed = fact(-1) catch (e) => e._tag
+    return { fact: fact(5), factVia: factVia(5), audited: audited(3), inferred: inferred(4), label: label(4), even: isEven(4), failed, notes }
+  }
+}

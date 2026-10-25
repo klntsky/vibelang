@@ -1726,6 +1726,9 @@ typescript/vibelang/cases/recursive-contract-lambdas/main.vibe:81:27 lambda plai
 typescript/vibelang/cases/recursive-contract-lambdas/main.vibe:87:25 lambda effectFn annotation
 typescript/vibelang/cases/recursive-contract-lambdas/main.vibe:94:31 lambda effectFn annotation
 typescript/vibelang/cases/recursive-contract-lambdas/main.vibe:95:30 block prepended/program table
+typescript/vibelang/cases/recursive-partial-contract/main.vibe:56:21 lambda effectFn service
+typescript/vibelang/cases/recursive-partial-contract/main.vibe:57:20 lambda effectFn table
+typescript/vibelang/cases/recursive-partial-contract/main.vibe:57:35 lambda effectFn table
 typescript/vibelang/cases/ref1-existing-service/ref1-existing-service.vibe:14:67 lambda plain fallback
 typescript/vibelang/cases/ref1-existing-service/ref1-existing-service.vibe:60:25 lambda program table
 typescript/vibelang/cases/ref2-ambiguous-provider.fail/ref2-ambiguous-provider.fail.vibe:13:9 lambda effectFn service
