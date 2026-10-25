@@ -32,11 +32,17 @@ function fixture(t) {
   const calls = join(root, "calls.jsonl")
   writeFileSync(calls, "")
   writeFileSync(join(bin, "npm"), `#!${process.execPath}
-import { appendFileSync } from "node:fs"
+import { appendFileSync, readFileSync } from "node:fs"
+import { createHash } from "node:crypto"
 const args = process.argv.slice(2)
 appendFileSync(${JSON.stringify(calls)}, JSON.stringify(args) + "\\n")
 if (args[0] === "whoami") { if(process.env.TEST_LOGGED_IN) console.log("test-user"); process.exit(process.env.TEST_LOGGED_IN ? 0 : 1) }
-if (args[0] === "view") process.exit(args[1].startsWith(process.env.TEST_EXISTING || "NO_MATCH") ? 0 : 1)
+if (args[0] === "view") {
+  if (!args[1].startsWith(process.env.TEST_EXISTING || "NO_MATCH")) process.exit(1)
+  const file = ${JSON.stringify(tarballs)} + "/" + args[1].replace("@", "-") + ".tgz"
+  console.log(createHash("sha1").update(readFileSync(file)).digest("hex"))
+  process.exit(0)
+}
 if (args[0] === "publish") {
   if (!args.includes("--dry-run")) { console.error("test refuses live publication"); process.exit(99) }
   process.exit(process.env.TEST_FAIL_PUBLISH ? 1 : 0)

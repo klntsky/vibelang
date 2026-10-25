@@ -8,7 +8,7 @@
 #   NPM_OTP=123456 sh scripts/release/publish.sh
 #   VIBELANG_SKIP=win32 sh scripts/release/publish.sh  # omits win32 packages and their optional dependencies
 #
-# A package already published at this version is skipped, so rerunning after a
+# An identical tarball already published at this version is skipped, so rerunning after a
 # failure resumes where it stopped. If npm rejects the one-time password, the
 # script asks for a new one and retries that package.
 set -eu
@@ -47,8 +47,13 @@ for item in $(node -e 'for (const p of require(process.argv[1]).packages) consol
   done
   if [ -n "$skipped" ]; then
     echo "publish: skipping $name@$version (VIBELANG_SKIP=$skipped)"
-  elif npm view "$name@$version" version --registry "$registry" >/dev/null 2>&1; then
-    echo "publish: $name@$version is already on npm; skipping"
+  elif registry_shasum=$(npm view "$name@$version" dist.shasum --registry "$registry" 2>/dev/null); then
+    local_shasum=$(node -e 'const fs = require("node:fs"); const crypto = require("node:crypto"); console.log(crypto.createHash("sha1").update(fs.readFileSync(process.argv[1])).digest("hex"))' "$tarballs/$file")
+    [ "$registry_shasum" = "$local_shasum" ] || {
+      echo "publish: $name@$version checksum mismatch: registry dist.shasum=$registry_shasum; local sha1=$local_shasum ($file). Refusing to publish; inspect the existing registry version and local tarball." >&2
+      exit 1
+    }
+    echo "publish: $name@$version is already on npm with an identical tarball; skipping"
   else
     todo="$todo $item"
   fi
