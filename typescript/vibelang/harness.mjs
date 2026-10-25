@@ -31,9 +31,14 @@
 // A pending case runs but never fails the suite; when it passes, the harness
 // reports XPASS, and its owner deletes the file in the commit that fixed it.
 //
+// Every failed check, including pending cases and --status runs, retains a
+// JSON log under .cache/vibelang-harness/<run>/<case>.json. Its status names
+// the log: command/argv, phase, cwd, start/deadline, exit code, timeout/signal,
+// and separate stdout/stderr tails. Reruns preserve earlier logs.
+//
 // Each case gets node_modules/effect from $EFFECT_NODE_MODULES and
 // node_modules/vibelang-runtime from $VIBELANG_RUNTIME.
-import { spawn } from "node:child_process"
+import { CaseCommands } from "./harness-command.mjs"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
@@ -44,6 +49,8 @@ const casesDir = path.join(root, "vibelang", "cases")
 const tsc = path.join(root, "built", "local", "tsc")
 const effectModules = process.env.EFFECT_NODE_MODULES
 const runtimeDir = process.env.VIBELANG_RUNTIME
+// A new directory per invocation preserves intermittent failures across reruns.
+const failureDir = path.join(root, ".cache", "vibelang-harness", `${Date.now()}-${process.pid}`)
 if (!effectModules || !runtimeDir) {
   console.error("harness.mjs: set EFFECT_NODE_MODULES and VIBELANG_RUNTIME, or run vibelang/smoke.sh")
   process.exit(2)
@@ -70,22 +77,6 @@ function select(selector) {
     process.exit(2)
   }
   return matches
-}
-
-// run spawns a command and resolves with its exit code and output.
-function run(command, argv, options) {
-  return new Promise((resolve) => {
-    const child = spawn(command, argv, { ...options, stdio: ["ignore", "pipe", "pipe"] })
-    let stdout = ""
-    let stderr = ""
-    child.stdout.on("data", (d) => (stdout += d))
-    child.stderr.on("data", (d) => (stderr += d))
-    const timer = setTimeout(() => child.kill("SIGKILL"), options.timeout)
-    child.on("close", (code, signal) => {
-      clearTimeout(timer)
-      resolve({ code: signal ? `killed by ${signal}` : code, stdout, stderr })
-    })
-  })
 }
 
 // Diagnostics as `tsc --pretty false` prints them: `file(line,col): error EK2001: message`,
@@ -167,13 +158,13 @@ function readPending(dir) {
 const sameSet = (a, b) => a.size === b.size && [...a].every((x) => b.has(x))
 
 // check compiles and runs one case. It resolves with { ok, detail, log }.
-async function check(name) {
+async function check(name, commands) {
   const dir = path.join(casesDir, name)
   const headers = readHeaders(dir)
   fs.rmSync(path.join(dir, "out"), { recursive: true, force: true })
   linkNodeModules(dir)
 
-  const compiled = await run(tsc, ["-p", ".", "--pretty", "false"], { cwd: dir, timeout: 120_000 })
+  const compiled = await commands.run(tsc, ["-p", ".", "--pretty", "false"], { phase: "compile", cwd: dir, timeout: 120_000 })
   const output = compiled.stdout + compiled.stderr
   const diagnostics = parseDiagnostics(output)
   const errors = diagnostics.filter((d) => d.category === "error")
@@ -221,7 +212,7 @@ async function check(name) {
     const got = path.join(dir, "out", file)
     if (!fs.existsSync(got)) return { ok: false, detail: `out/${file} is missing`, log: output }
     if (fs.readFileSync(want, "utf8") !== fs.readFileSync(got, "utf8")) {
-      const diff = await run("diff", ["-u", want, got], { timeout: 10_000 })
+      const diff = await commands.run("diff", ["-u", want, got], { phase: "compare", cwd: dir, timeout: 10_000 })
       return { ok: false, detail: `out/${file} differs from expected/${file}`, log: diff.stdout }
     }
   }
@@ -233,7 +224,7 @@ async function check(name) {
     fs.writeFileSync(entry, runner(headers.entry))
   }
   const stdoutFile = path.join(expectedDir, "stdout.txt")
-  const ran = await run("node", [entry], { cwd: dir, timeout: 60_000 })
+  const ran = await commands.run("node", [entry], { phase: "run", cwd: dir, timeout: 60_000 })
   let want, got
   if (fs.existsSync(stdoutFile)) {
     want = fs.readFileSync(stdoutFile, "utf8")
@@ -266,10 +257,19 @@ async function main() {
       const pending = readPending(path.join(casesDir, name))
       const started = Date.now()
       let result
+      const commands = new CaseCommands()
       try {
-        result = await check(name)
+        result = await check(name, commands)
       } catch (e) {
         result = { ok: false, detail: `harness error: ${e.message}`, log: e.stack }
+      }
+      if (!result.ok) {
+        fs.mkdirSync(failureDir, { recursive: true })
+        result.logFile = path.join(failureDir, name + ".json")
+        fs.writeFileSync(result.logFile, JSON.stringify({
+          case: name, detail: result.detail, logTail: result.log?.slice(-65_536),
+          commands: commands.records,
+        }, null, 2) + "\n")
       }
       const status = pending ? (result.ok ? "XPASS" : "pending") : result.ok ? "ok" : "FAIL"
       results[index] = { name, pending, status, ms: Date.now() - started, ...result }
@@ -290,9 +290,10 @@ async function main() {
 function report(r) {
   const owner = r.pending?.owner ?? "-"
   if (statusOnly) {
-    console.log(`${r.name.padEnd(36)} ${owner.padEnd(5)} ${r.status}`)
+    console.log(`${r.name.padEnd(36)} ${owner.padEnd(5)} ${r.status}${r.logFile ? ` (log: ${r.logFile})` : ""}`)
     return
   }
+  if (r.logFile) console.log(`log:    ${r.logFile}`)
   const time = verbose ? ` (${(r.ms / 1000).toFixed(1)} s)` : ""
   switch (r.status) {
     case "ok":
