@@ -61,7 +61,7 @@ func (a *analyzer) reportFailingPlainContract(fn *ast.Node) bool {
 	errors := c.TypeToString(failures)
 	d := report(c, annotation, plainContractFailure, written, functionDisplayName(fn), errors)
 	note(d, "Write {0} to make it an Effect function that fails with {1}.", bangText(written, errors), errors)
-	note(d, "Or throw inside a hatch, whose TypeScript keeps JavaScript's throw: sync makes the exception a defect ({0}), and try an UnknownError.", bangText(written, "never", "never"))
+	note(d, "Or throw inside a hatch, whose TypeScript keeps JavaScript's throw: sync makes the exception a defect ({0}), and try makes it an UnknownError.", bangText(written, "never", "never"))
 	return true
 }
 

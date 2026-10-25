@@ -19,8 +19,8 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 | --- | ---: |
 | The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,528 |
 | The skill and the [cheat sheet](115-cheat-sheet.md) | 13,062 |
-| The skill and the user guide (131 pages) | 200,347 |
-| The user guide alone | 195,819 |
+| The skill and the user guide (131 pages) | 200,349 |
+| The user guide alone | 195,821 |
 | The specification (33 chapters) | 103,254 |
 | The decision log, `docs/design/DECISIONS.md` | 60,440 |
 
@@ -131,8 +131,8 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | Page | Tokens |
 | --- | ---: |
 | [Getting Started](../013-getting-started.md) | 919 |
-| **Error Management** | **13,195** |
-| [Expected Errors](../error-management/014-expected-errors.md) | 4,120 |
+| **Error Management** | **13,197** |
+| [Expected Errors](../error-management/014-expected-errors.md) | 4,122 |
 | [Unexpected Errors](../error-management/015-unexpected-errors.md) | 1,293 |
 | [Fallback](../error-management/016-fallback.md) | 989 |
 | [Matching](../error-management/017-matching.md) | 741 |
@@ -245,7 +245,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [PlatformLogger](../platform/108-platformlogger.md) | 758 |
 | [Runtime](../platform/109-runtime.md) | 1,219 |
 | [Terminal](../platform/110-terminal.md) | 1,511 |
-| **All 98 pages** | **131,812** |
+| **All 98 pages** | **131,814** |
 
 ### VibeLang features
 

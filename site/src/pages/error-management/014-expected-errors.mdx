@@ -67,7 +67,7 @@ function quantity(text: string): number {
 ```text
 error EK2003: number is a plain return annotation, but quantity can fail with InvalidQuantity, and a plain function never fails.
   Write number!InvalidQuantity! to make it an Effect function that fails with InvalidQuantity.
-  Or throw inside a hatch, whose TypeScript keeps JavaScript's throw: sync makes the exception a defect (number!!), and try an UnknownError.
+  Or throw inside a hatch, whose TypeScript keeps JavaScript's throw: sync makes the exception a defect (number!!), and try makes it an UnknownError.
 ```
 
 The same holds for a throw expression and for a `match` arm or `do` block that throws. A plain function calls TypeScript code directly. A call whose contract lists a failure, such as `JSON.parse`, is a typed failure only inside a `try` whose `catch` belongs to the function, which receives it with its type; elsewhere its exception propagates unchanged. Other TypeScript code's exceptions pass through the `catch` unchanged and become defects where they reach an effectful caller; to catch one, use the `try` hatch in an Effect function. Running an Effect inside a plain-annotated function is EK2003 too.
