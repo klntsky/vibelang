@@ -23,9 +23,12 @@ export const $noFailure: unique symbol = Symbol.for("vibelang/noFailure")
 
 /**
  * The first expected failure a cause holds, which the typed and untyped
- * clauses before a Cause clause test, or $noFailure.
+ * clauses before a Cause clause test, or $noFailure. A cause with a defect
+ * has none to recover, as in Effect 4.0.6's typed recovery (D305), so only
+ * the Cause clause sees it.
  */
 export const $failureOf = <E>(cause: Cause.Cause<E>): E | typeof $noFailure => {
+  if (cause.reasons.some(Cause.isDieReason)) return $noFailure
   for (const reason of cause.reasons) {
     if (Cause.isFailReason(reason)) return reason.error
   }

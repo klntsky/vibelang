@@ -1,0 +1,250 @@
+// expect-result: {"rows":{"r0_fail":{"exit":"Fail(E)","catch":"ok(catch ran: E)","catchMatch":"ok(matched E)","catchValue":"ok(fallback)","retry":"Fail(E) x3","mapError":"Fail(M:E)","catchDefect":"Fail(E)"},"r1_finallyDies":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r1_finallyExitDies":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r1_finallyThrows":{"exit":"Fail(E)+Fail(E2)","catch":"ok(catch ran: E)","catchMatch":"ok(matched E)","catchValue":"ok(fallback)","retry":"Fail(E) x3","mapError":"Fail(M:E)+Fail(M:E2)","catchDefect":"Fail(E)+Fail(E2)"},"r1_dieThenFinallyThrows":{"exit":"Die(D)+Die(E2)","catch":"Die(D)+Die(E2)","catchMatch":"Die(D)+Die(E2)","catchValue":"Die(D)+Die(E2)","retry":"Die(D)+Die(E2) x1","mapError":"Die(D)+Die(E2)","catchDefect":"ok(defect D)"},"r2_usingReleaseDies":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r2_usingDisposeThrows":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r3_producerCleanupDies":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r3_producerIteratorCloseThrows":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r4_awaitAll":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r4_forConcurrent":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r5_awaitRace":{"exit":"Fail(E)","catch":"ok(catch ran: E)","catchMatch":"ok(matched E)","catchValue":"ok(fallback)","retry":"Fail(E) x3","mapError":"Fail(M:E)","catchDefect":"Fail(E)"},"r5_awaitAny":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r6_interruptThenFinallyThrows":{"exit":"Interrupt+Fail(E)","catch":"Interrupt+Fail(E)","catchMatch":"Interrupt+Fail(E)","catchValue":"Interrupt+Fail(E)","retry":"Fail(E) x3","mapError":"Interrupt+Fail(M:E)","catchDefect":"Interrupt+Fail(E)"},"r8_abandonMixed":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r8_allSettled":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"}},"seenExit":"Failure"}
+// Mixed causes (D305): a typed failure beside a defect or an interruption,
+// from every VibeLang form that makes one, seen through every recovery form.
+// VibeLang behaves as idiomatic Effect 4.0.6 does: where a failure meets a
+// defect, from Effect's own finalizers and concurrency (Effect-TS/effect#9433)
+// or from the kernel's abandonment, the failure becomes a defect, first, and
+// no typed recovery runs (#9516). experiments/tests/defect-precedence.test.ts
+// pins the Effect side.
+error E
+error E2
+error M { of: string }
+
+control Ask {
+  ask(): number!!
+}
+
+let attempts = 0
+
+function name(value: unknown): string {
+  if (typeof value === "string") return value
+  if (typeof value === "object" && value !== null && "_tag" in value) {
+    return value instanceof M ? `M:${value.of}` : String(value._tag)
+  }
+  if (value instanceof Error) return value.message
+  return String(value)
+}
+
+function show(cause: Cause.Cause<unknown>): string {
+  return cause.reasons.map((r) => r._tag === "Fail" ? `Fail(${name(r.error)})` : r._tag === "Die" ? `Die(${name(r.defect)})` : "Interrupt").join("+")
+}
+
+function outcome(program: unknown!unknown) {
+  return match (exit(program)) {
+    when Exit.Success(let value): `ok(${name(value)})`;
+    when Exit.Failure(let cause): show(cause);
+  }
+}
+
+// Sources.
+function failNow() {
+  throw new E()
+}
+
+function dieNow() {
+  die("D")
+}
+
+function failLater() {
+  sleep("5 millis")
+  throw new E()
+}
+
+function dieOnInterrupt() {
+  try {
+    sleep("1 hour")
+  } finally {
+    die("D")
+  }
+}
+
+function finallyDies() {
+  try {
+    throw new E()
+  } finally {
+    die("D")
+  }
+}
+
+function finallyThrows() {
+  try {
+    throw new E()
+  } finally {
+    throw new E2()
+  }
+}
+
+function dieThenFinallyThrows() {
+  try {
+    die("D")
+  } finally {
+    throw new E2()
+  }
+}
+
+let seenExit = ""
+
+function finallyExitDies() {
+  try {
+    throw new E()
+  } finally (outcome) {
+    seenExit = outcome._tag
+    die("D")
+  }
+}
+
+function usingReleaseDies() {
+  using resource = Effect.acquireRelease(() => 1, (_) => die("D"))
+  throw new E()
+}
+
+function usingDisposeThrows() {
+  using resource = sync(() => ({ [Symbol.dispose]() { throw new Error("D") } }))
+  throw new E()
+}
+
+function* numbers() {
+  try {
+    yield 1
+    yield 2
+  } finally {
+    die("D")
+  }
+}
+
+function* closingItems() {
+  const items = sync(() => ({
+    [Symbol.iterator]() {
+      return { next: () => ({ done: false, value: 1 }), return(): IteratorResult<number> { throw new Error("D") } }
+    }
+  }))
+  yield* items
+}
+
+function producerIteratorCloseThrows() {
+  for (const n of closingItems()) {
+    throw new E()
+  }
+}
+
+function producerCleanupDies() {
+  for (const n of numbers()) {
+    throw new E()
+  }
+}
+
+function awaitAllMixed() {
+  return await.all [failLater(), dieOnInterrupt()]
+}
+
+function forConcurrentMixed() {
+  for concurrent (const i of [0, 1]) {
+    if (i === 0) failLater()
+    else dieOnInterrupt()
+  }
+}
+
+function awaitRaceMixed() {
+  return await.race [failNow(), dieNow()]
+}
+
+function awaitAnyMixed() {
+  return await.any [failNow(), dieNow()]
+}
+
+function interruptThenFinallyThrows() {
+  try {
+    interrupt()
+  } finally {
+    throw new E()
+  }
+}
+
+function asksWithCleanup() {
+  try {
+    return Ask.ask()
+  } finally {
+    die("D")
+  }
+}
+
+function abandonMixed() {
+  try {
+    return asksWithCleanup()
+  } handle Ask.ask() {
+    throw new E()
+  }
+}
+
+function allSettledMixed() {
+  const [settled] = await.allSettled [finallyDies()]
+  return settled._tag
+}
+
+// Recovery forms.
+function viaCatch(src: () => unknown!E | E2) {
+  try {
+    src()
+    return "no failure"
+  } catch (e) {
+    return `catch ran: ${e._tag}`
+  }
+}
+
+function viaCatchMatch(src: () => unknown!E | E2) {
+  return src() catch (e) => match (e) { when E: "matched E"; when E2: "matched E2"; }
+}
+
+function viaCatchValue(src: () => unknown!E | E2) {
+  return src() catch "fallback"
+}
+
+function viaRetry(src: () => unknown!E | E2) {
+  attempts = 0
+  return retry(() => {
+    attempts++
+    return src()
+  }, { times: 2 })
+}
+
+function viaMapError(src: () => unknown!E | E2) {
+  return Effect.mapError(src(), (e) => new M({ of: e._tag }))
+}
+
+function viaCatchDefect(src: () => unknown!E | E2) {
+  return Effect.catchDefect(src(), (d) => `defect ${name(d)}`)
+}
+
+function forms(src: () => unknown!E | E2) {
+  const raw = outcome(src())
+  const caught = outcome(viaCatch(src))
+  const matched = outcome(viaCatchMatch(src))
+  const fallback = outcome(viaCatchValue(src))
+  const retried = outcome(viaRetry(src))
+  const tries = attempts
+  const mapped = outcome(viaMapError(src))
+  const defect = outcome(viaCatchDefect(src))
+  return { exit: raw, catch: caught, catchMatch: matched, catchValue: fallback, retry: `${retried} x${tries}`, mapError: mapped, catchDefect: defect }
+}
+
+export function main() {
+  const rows = {
+    r0_fail: forms(failNow),
+    r1_finallyDies: forms(finallyDies),
+    r1_finallyExitDies: forms(finallyExitDies),
+    r1_finallyThrows: forms(finallyThrows),
+    r1_dieThenFinallyThrows: forms(dieThenFinallyThrows),
+    r2_usingReleaseDies: forms(usingReleaseDies),
+    r2_usingDisposeThrows: forms(usingDisposeThrows),
+    r3_producerCleanupDies: forms(producerCleanupDies),
+    r3_producerIteratorCloseThrows: forms(producerIteratorCloseThrows),
+    r4_awaitAll: forms(awaitAllMixed),
+    r4_forConcurrent: forms(forConcurrentMixed),
+    r5_awaitRace: forms(awaitRaceMixed),
+    r5_awaitAny: forms(awaitAnyMixed),
+    r6_interruptThenFinallyThrows: forms(interruptThenFinallyThrows),
+    r8_abandonMixed: forms(abandonMixed),
+    r8_allSettled: forms(allSettledMixed),
+  }
+  return { rows, seenExit }
+}

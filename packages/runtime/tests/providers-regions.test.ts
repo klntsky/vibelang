@@ -242,15 +242,21 @@ test("catch expressions are lazy, recover only expected causes, and keep handler
   expect(Effect.runSync(program)).toBe(42)
   expect([starts, caught]).toEqual([2, 0])
   expect(Effect.runSync($catchExpression(() => Effect.fail("bad"), e => Effect.succeed(`caught:${e}`)))).toBe("caught:bad")
-  for (const cause of [Cause.die("defect"), Cause.interrupt(123), Cause.combine(Cause.fail("bad"), Cause.die("defect"))]) {
+  for (const cause of [Cause.die("defect"), Cause.interrupt(123)]) {
     expect(await Effect.runPromiseExit($catchExpression(() => Effect.failCause(cause), () => Effect.sync(() => ++caught)))).toEqual(Exit.failCause(cause))
   }
+  // A failure beside a defect passes as a defect (D305).
+  const mixed = await Effect.runPromiseExit($catchExpression(() => Effect.failCause(Cause.combine(Cause.fail("bad"), Cause.die("defect"))), () => Effect.sync(() => ++caught)))
+  expect(Exit.isFailure(mixed) && mixed.cause.reasons.map(r => r._tag === "Die" ? r.defect : r._tag)).toEqual(["bad", "defect"])
   expect(caught).toBe(0)
 })
 
-test("cause helpers preserve all reasons and distinguish undefined failures from no failure", () => {
+test("cause helpers preserve all reasons, distinguish undefined failures from no failure, and skip a failure beside a defect", () => {
   const mixed = Cause.combine(Cause.die("defect"), Cause.combine(Cause.fail(undefined), Cause.fail("second")))
-  expect($failureOf(mixed)).toBeUndefined()
+  // A typed clause before a Cause clause never sees a failure beside a defect (D305).
+  expect($failureOf(mixed)).toBe($noFailure)
+  expect($failureOf(Cause.combine(Cause.fail(undefined), Cause.fail("second")))).toBeUndefined()
+  expect($failureOf(Cause.combine(Cause.interrupt(123), Cause.fail("second")))).toBe("second")
   expect($failureOf(Cause.interrupt(123))).toBe($noFailure)
   expect(Effect.runSync($catchCause($failCause(mixed), cause => Effect.succeed(cause)))).toEqual(mixed)
   Effect.runSync(Effect.gen(function*() {

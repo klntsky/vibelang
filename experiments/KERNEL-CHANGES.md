@@ -9,6 +9,7 @@ This change fixes the five kernel defects found in the 2026-10-16 reviews. Each 
 | 3 | `transfer` into an inherited Scope strands the continuation after the child exits (Codex R5) | A transferred continuation never outlives its capturing fiber; transfer into a parallel Scope is a defect | K13a-K13e | `FiberExitFrame`, `TransferIntoParallelScope` |
 | 4 | `Effect.catch` recovers a cause that also holds a defect (Codex R1) | Source `catch` recovers only causes made entirely of expected failures | K14a-K14c | `catchExpected` |
 | 5 | The Chapter 6 adapter cannot be cancelled under masked acquisition (Codex R3, Fable 2) | Interruptible acquisition cancels the wait and releases late values; masked acquisition waits | K15a-K15c | None; tests only |
+| 6 | On Effect 4.0.6, the kernel's own cause handling keeps a typed failure beside a defect that Effect would make a defect (2026-10-25, D305) | Where the kernel combines or recovers causes, a `Fail` beside a `Die` becomes a `Die`, as in Effect | K14b, K16a-K16d | `electDefects`; `afterAbandon`; `catchExpected` |
 
 Existing exports keep their signatures. The new exports are `TailResume`, `tailResume`, `tailResumeWith`, `catchExpected`, and `TransferIntoParallelScope`.
 
@@ -111,7 +112,7 @@ Yield: Effect.fnUntraced(function* (n: number, k: Continuation) {
 
 **Change.** `catchExpected(self, handler)` uses `Effect.catchCause`. It calls `handler` with the first failure only when every reason in the cause is a `Fail`. Otherwise it re-fails with the whole cause, untouched.
 
-**Law.** A cause that contains a defect or an interruption passes through source `catch` with every reason intact, including its `Fail` reasons. A cause of several expected failures is recovered with the first, as `Effect.catch` would recover it (K14a). Mixed causes are K14b (`Fail` + `Die`) and K14c (`Fail` + `Interrupt`, `Die` alone, interruption alone).
+**Law.** A cause that contains an interruption passes through source `catch` with every reason intact, including its `Fail` reasons. A cause that contains a defect passes through with its `Fail` reasons made `Die` (section 6). A cause of several expected failures is recovered with the first, as `Effect.catch` would recover it (K14a). Mixed causes are K14b (`Fail` + `Die`) and K14c (`Fail` + `Interrupt`, `Die` alone, interruption alone).
 
 **Lowering the compiler must emit.** Use `catchExpected` wherever the design emits `Effect.catch` for source `catch`:
 
@@ -134,7 +135,7 @@ return yield* Effect.ensuring(                      // Final: finally
 )
 ```
 
-**Typing.** `catchExpected` removes `E` from the error channel, as `Effect.catch` does. A re-raised mixed cause still contains its `Fail(e)` reasons. EffectScript catches never recover such a cause. A TypeScript caller that applies `Effect.catch` downstream can, which is Effect's behavior in R1. The checker should define `E` as the type of causes made only of expected failures.
+**Typing.** `catchExpected` removes `E` from the error channel, as `Effect.catch` does. A re-raised cause with an interruption still contains its `Fail(e)` reasons; one with a defect holds them as `Die` reasons (section 6). EffectScript catches never recover such a cause. A TypeScript caller that applies `Effect.catch` downstream can, which is Effect's behavior in R1. The checker should define `E` as the type of causes made only of expected failures.
 
 ## 5. `suspend` inside `Effect.acquireRelease`
 
@@ -168,6 +169,16 @@ export const connect = (url: string) =>
 In the deferred race, both the registration cleanup and `release` can destroy the same socket. `destroy` is idempotent.
 
 Which policy `using` applies to an EffectScript `acquireRelease` remains a design decision.
+
+## 6. Defect precedence on Effect 4.0.6 (2026-10-25)
+
+**Change upstream.** Effect 4.0.6 gives defects precedence where its runtime combines a failure with a finalizer's or a concurrent sibling's cause: `ensuring`, `onExit`, `acquireRelease`, scope close, `callback` cleanup, concurrent `forEach` and `all`, and `raceAll` when every racer fails (Effect-TS/effect#9433). Every typed recovery operator skips a cause that holds a defect and re-fails with its failures made defects (#9516). `Fail(e) + Die(d)` becomes `Die(e) + Die(d)`, in order, and no handler runs. F11a-F11e pin this.
+
+**Defect.** The kernel combines causes itself in one place. `afterAbandon` joins a clause's or a fiber's exit with the cleanup failures of the continuation it abandons, using `Cause.combine`, so a producer whose cleanup dies after the loop body failed, or a handler clause that fails while abandoning, kept `Fail(e) + Die(d)`. Source `catch` re-raised a hand-built `Fail(e) + Die(d)` untouched, where `Effect.catch` now re-raises `Die(e) + Die(d)`.
+
+**Change.** `electDefects(cause)` mirrors Effect's internal `causeElectDefects` with public APIs: when a cause holds a `Die`, each `Fail` (except a Stream's `Done`) becomes a `Die` of the same error with the same annotations. `afterAbandon` applies it to the cause it builds. `catchExpected` applies it to a cause it re-raises. The runtime's `$failureOf`, which the retired typed clauses before a Cause clause test, returns `$noFailure` for a cause with a defect.
+
+**Law.** Where the kernel combines or re-raises a cause, a `Fail` beside a `Die` is a `Die` (K16a: owner exit; K16b: fiber exit; K16d: `catchExpected`). A cleanup failure that is itself expected stays expected (K16c).
 
 ## Verification
 

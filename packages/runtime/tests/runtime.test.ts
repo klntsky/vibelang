@@ -20,16 +20,18 @@ test("calls: programs are lazy and rerunnable; bind accepts data and Effects", a
   expect(await runMain(Effect.fail("expected"))).toEqual(Exit.fail("expected"))
 })
 
-test("regions: catch handles expected failures and leaves defects and mixed causes alone", async () => {
+// A failure beside a defect passes as a defect, as Effect 4.0.6's typed
+// recovery passes it (Effect-TS/effect#9516, D305).
+test("regions: catch handles expected failures and leaves defects alone, with a failure beside one as a defect", async () => {
   let caught = 0
   const recover = (e: string) => Effect.sync(() => { caught++; return `caught:${e}` })
   expect(Effect.runSync($catch(Effect.fail("no"), recover))).toBe("caught:no")
   const defect = new Error("defect")
   const mixed = Cause.combine(Cause.fail("no"), Cause.die(defect))
-  for (const cause of [Cause.die(defect), mixed]) {
+  for (const [cause, defects] of [[Cause.die(defect), [defect]], [mixed, ["no", defect]]] as const) {
     const exit = await Effect.runPromiseExit($catch(Effect.failCause(cause), recover))
-    expect(Exit.isFailure(exit)).toBe(true)
-    if (Exit.isFailure(exit)) expect(exit.cause).toEqual(cause)
+    expect(Exit.isFailure(exit) && exit.cause.reasons.map(r => r._tag)).toEqual(defects.map(() => "Die"))
+    expect(Exit.isFailure(exit) && exit.cause.reasons.map(r => (r as Cause.Die).defect)).toEqual([...defects])
   }
   expect(caught).toBe(1)
 })

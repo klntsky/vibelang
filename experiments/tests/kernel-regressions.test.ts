@@ -399,6 +399,48 @@ describe("K14 source catch recovers expected failures only", () => {
   })
 })
 
+describe("K16 the kernel gives defects precedence where it combines causes, as Effect 4.0.6 does (D305)", () => {
+  const Ask = operation<void, void>("K16Ask")
+
+  test("K16a a clause that fails while its owner abandons a continuation whose cleanup dies fails with both, as defects, in order", () => {
+    const exit = Effect.runSyncExit(handle("h", [Ask], Ask().pipe(Effect.ensuring(Effect.die("release-defect"))), {
+      K16Ask: () => Effect.fail("E")
+    }))
+    expect(fails(exit)).toEqual([])
+    expect(defects(exit)).toEqual(["E", "release-defect"])
+  })
+
+  test("K16b a fiber that fails while its exit abandons a transferred continuation whose cleanup dies", async () => {
+    const exit = await Effect.runPromiseExit(Effect.scoped(Effect.gen(function*() {
+      const fiber = yield* Effect.forkChild(handle("h", [Ask], Ask().pipe(Effect.ensuring(Effect.die("release-defect"))), {
+        K16Ask: (_, k) => Effect.andThen(transfer(k), Effect.fail("E"))
+      }))
+      return yield* Fiber.join(fiber)
+    })))
+    expect(fails(exit)).toEqual([])
+    expect(defects(exit)).toEqual(["E", "release-defect"])
+  })
+
+  test("K16c an expected cleanup failure beside the clause's failure stays expected", () => {
+    const exit = Effect.runSyncExit(handle("h", [Ask], Ask().pipe(Effect.onExit(() => Effect.fail("cleanup"))), {
+      K16Ask: () => Effect.fail("E")
+    }))
+    expect(fails(exit)).toEqual(["E", "cleanup"])
+    expect(defects(exit)).toEqual([])
+  })
+
+  test("K16d catchExpected re-fails a cause with a defect with its failures as defects; the handler never runs", () => {
+    let handled = 0
+    const exit = Effect.runSyncExit(catchExpected(
+      Effect.failCause(Cause.combine(Cause.combine(Cause.fail("E"), Cause.interrupt(1604)), Cause.die("D"))),
+      () => Effect.sync(() => ++handled)
+    ))
+    expect(handled).toBe(0)
+    expect(Exit.isFailure(exit) && exit.cause.reasons.map((r) => r._tag)).toEqual(["Die", "Interrupt", "Die"])
+    expect(defects(exit)).toEqual(["E", "D"])
+  })
+})
+
 describe("K15 suspend inside Effect.acquireRelease: masked versus interruptible acquisition", () => {
   type Socket = { readonly id: number; destroyed: number }
 

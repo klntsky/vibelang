@@ -127,6 +127,23 @@ const keep = <E = never>(cause: Cause.Cause<E> | undefined, predicate: (reason: 
   return kept.length === 0 ? undefined : (Cause.fromReasons(kept) as Cause.Cause<E>)
 }
 
+// Defect precedence (D305). Effect 4.0.6 applies it wherever it combines a
+// failure with a finalizer's or a sibling's cause (causeElectDefects,
+// internal/effect.ts; Effect-TS/effect#9433) and in every typed recovery
+// (findRecoverableError; #9516): when a cause holds a Die, each Fail becomes a
+// Die of the same error, in place, with its annotations. A Stream's Done
+// signal stays a Fail so pulls still complete. The kernel applies the same
+// rule where it combines causes itself.
+const electDefects = <E>(cause: Cause.Cause<E>): Cause.Cause<E> => {
+  const reasons = cause.reasons
+  if (!reasons.some(Cause.isDieReason) || !reasons.some(Cause.isFailReason)) return cause
+  return Cause.fromReasons(reasons.map((reason): Cause.Reason<E> =>
+    Cause.isFailReason(reason) && !Cause.isDone(reason.error)
+      ? Cause.annotate(Cause.die(reason.error), Cause.reasonAnnotations(reason)).reasons[0] as Cause.Reason<E>
+      : reason
+  ))
+}
+
 const addInterrupts = (pending: Cause.Cause<never> | undefined, extra: Cause.Cause<never> | undefined) =>
   pending === undefined ? extra : extra === undefined ? pending : Cause.combine(pending, extra)
 
@@ -305,7 +322,8 @@ class AbandonCollector {
 }
 
 // Combine the boundary's own Exit with whatever the abandoned segment's
-// finalizers produced. Interruption reasons are not reported here: the
+// finalizers produced, giving defects precedence as Effect's own finalizers
+// do (electDefects, D305). Interruption reasons are not reported here: the
 // abandonment's own sentinel is internal, and a real interruption that arrived
 // meanwhile is still pending on the fiber and will be delivered by it.
 const afterAbandon = (exit: Exit.Exit<unknown, unknown>, unwound: Exit.Exit<unknown, unknown>) => {
@@ -313,7 +331,7 @@ const afterAbandon = (exit: Exit.Exit<unknown, unknown>, unwound: Exit.Exit<unkn
   const extra = unwound.cause.reasons.filter((r) => r._tag !== "Interrupt")
   if (extra.length === 0) return exit
   const finalizerCause = Cause.fromReasons(extra)
-  return Exit.isSuccess(exit) ? Exit.failCause(finalizerCause) : Exit.failCause(Cause.combine(exit.cause, finalizerCause))
+  return Exit.failCause(electDefects(Exit.isSuccess(exit) ? finalizerCause : Cause.combine(exit.cause, finalizerCause)))
 }
 
 // A continuation cannot outlive the fiber that captured it: only that fiber
@@ -622,13 +640,13 @@ export const handle = <A, E, R>(
 // ---------------------------------------------------------------------------
 // Source `catch`
 //
-// Effect.catch recovers from the first Fail reason and replaces the whole
-// cause (findError + catchCauseFilter, internal/effect.ts:158-165, 2646-2685),
-// so a cause holding both an expected failure and a cleanup defect is
-// recovered and the defect vanishes (Codex review R1). VibeLang's `catch`
-// handles expected failures only: it recovers when every reason in the cause
-// is a Fail, and otherwise re-fails with the whole cause untouched. The
-// handler receives the first failure, as Effect.catch's does (K14).
+// VibeLang's `catch` handles expected failures only: it recovers when every
+// reason in the cause is a Fail, and the handler receives the first failure,
+// as Effect.catch's does (K14). A cause with a defect re-fails with its
+// failures elected to defects, as Effect 4.0.6's typed recovery does
+// (findRecoverableError, Effect-TS/effect#9516; D305); on Effect 4.0.5,
+// Effect.catch recovered such a cause and dropped the defect (Codex review
+// R1). Any other cause, one with an interruption, re-fails untouched.
 // ---------------------------------------------------------------------------
 
 export const catchExpected = <A, E, R, B, E2, R2>(
@@ -638,7 +656,7 @@ export const catchExpected = <A, E, R, B, E2, R2>(
   Effect.catchCause(self, (cause): Effect.Effect<B, E2, R2> => {
     const reasons = cause.reasons
     if (reasons.length === 0 || !reasons.every(Cause.isFailReason)) {
-      return Effect.failCause(cause as Cause.Cause<never>)
+      return Effect.failCause(electDefects(cause) as Cause.Cause<never>)
     }
     return handler((reasons[0] as Cause.Fail<E>).error)
   })
