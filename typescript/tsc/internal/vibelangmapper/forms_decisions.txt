@@ -1707,6 +1707,15 @@ typescript/vibelang/cases/returned-pipe-exit-data/main.vibe:24:34 byname program
 typescript/vibelang/cases/returned-pipe-exit-data/main.vibe:26:24 lambda program annotation
 typescript/vibelang/cases/returned-pipe-exit-data/main.vibe:26:52 byname program table
 typescript/vibelang/cases/returned-pipe-exit-data/main.vibe:27:24 lambda program annotation
+typescript/vibelang/cases/returned-union-as-data.fail/main.vibe:14:23 lambda plain fallback
+typescript/vibelang/cases/returned-union-as-data.fail/main.vibe:15:18 lambda effectFn table
+typescript/vibelang/cases/returned-union-as-data.fail/main.vibe:21:17 lambda plain fallback
+typescript/vibelang/cases/returned-union-as-data.fail/main.vibe:22:33 lambda effectFn annotation
+typescript/vibelang/cases/returned-union-as-data.fail/main.vibe:28:25 lambda plain fallback
+typescript/vibelang/cases/returned-union-as-data.fail/main.vibe:28:58 lambda effectFn table
+typescript/vibelang/cases/returned-union-as-data.fail/main.vibe:34:20 lambda plain fallback
+typescript/vibelang/cases/returned-union-as-data.fail/main.vibe:35:18 lambda effectFn table
+typescript/vibelang/cases/returned-union-as-data.fail/main.vibe:8:19 lambda dual fallback
 typescript/vibelang/cases/running-call-contextual-type/main.vibe:24:74 lambda plain fallback
 typescript/vibelang/cases/running-call-contextual-type/main.vibe:7:14 lambda effectFn annotation
 typescript/vibelang/cases/s19-1-declaration-prelude/main.vibe:11:27 lambda effectFn annotation

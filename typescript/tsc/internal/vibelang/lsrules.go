@@ -239,7 +239,11 @@ func (r *ruleCheck) checkReturnedValue(fn *ast.Node, value *ast.Node) {
 			r.checkReturnedSubtype(fn, value, valueType)
 			return
 		}
-		for _, part := range returnedParts(value) {
+		parts := returnedParts(value)
+		if len(parts) == 0 {
+			r.checkReturnedUnion(fn, value, valueType)
+		}
+		for _, part := range parts {
 			r.checkReturnedValue(fn, part)
 		}
 		return
@@ -284,6 +288,35 @@ func (r *ruleCheck) checkReturnedSubtype(fn *ast.Node, value *ast.Node, valueTyp
 	note(d, "Call it to run it: {0}. To return it itself, write its type as the success type: ({1})!E!R.", callText(value), bangTypes(r.c.TypeToString(valueType)))
 }
 
+// checkReturnedUnion reports EK4802 where fn returns value, whose type is a
+// union with an Effect value or a program among its members, as data because
+// fn's success type names no value. A local that a conditional between an
+// Effect value and a running call initialized is one: in
+// `Effect.suspend(() => { const r = c ? Effect.void : set(c); return r })`
+// the call runs where it stands, and when c holds the thunk succeeds with
+// Effect.void instead of running it.
+func (r *ruleCheck) checkReturnedUnion(fn *ast.Node, value *ast.Node, valueType *checker.Type) {
+	if some, _ := r.a.programMembers(valueType); !some {
+		return
+	}
+	named := r.a.successNamesNoValue(fn)
+	if named == nil {
+		return
+	}
+	d := report(r.c, value, returnedUnionAsValue, messageText(value, "This value"), functionDisplayName(fn), r.c.TypeToString(named))
+	note(d, "Return the program where it is chosen, as an if statement that returns its call does. To return it itself, write its type as the success type: ({0})!E!R.", bangTypes(r.c.TypeToString(valueType)))
+}
+
+// programMembers reports whether t, a union, has a member that is an Effect
+// value or a program (programOf), and whether every member is one.
+func (a *analyzer) programMembers(t *checker.Type) (some bool, all bool) {
+	if t == nil || t.Flags()&checker.TypeFlagsUnion == 0 {
+		return false, false
+	}
+	program := func(member *checker.Type) bool { return isEffectType(a.checker, member) || a.programOf(member) != nil }
+	return core.Some(t.Types(), program), core.Every(t.Types(), program)
+}
+
 // isEffectSubtype reports whether t is an Effect with structure of its own
 // (D24), or a union of such types, as Exit is.
 func isEffectSubtype(c *checker.Checker, t *checker.Type) bool {
@@ -299,6 +332,7 @@ var (
 	returnedEffectAsValue  = EK4802.With("{0} is an Effect value, and {1}'s success type, {2}, names no value, so {1} succeeds with this program instead of running it.")
 	returnedLiteralAsValue = EK4802.With("{0} is a program literal, and {1}'s success type, {2}, names no value, so {1} succeeds with the function instead of running it.")
 	returnedProgramAsValue = EK4802.With("{0} is a program, and {1}'s success type, {2}, names no value, so {1} succeeds with the function instead of running it.")
+	returnedUnionAsValue   = EK4802.With("{0} can be a program, and {1}'s success type, {2}, names no value, so {1} succeeds with that program instead of running it.")
 )
 
 // successNamesNoValue returns the success type of fn's Effect when it names

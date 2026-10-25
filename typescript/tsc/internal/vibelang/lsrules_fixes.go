@@ -60,7 +60,7 @@ func nodeStart(file *ast.SourceFile, node *ast.Node) int {
 var callEffectFix = &ls.CodeFixProvider{
 	Source:     diagnosticSource,
 	ErrorCodes: []int32{EK4801.Code, EK4802.Code},
-	GetCodeActions: func(_ context.Context, fix *ls.CodeFixContext) ([]*ls.CodeAction, error) {
+	GetCodeActions: func(ctx context.Context, fix *ls.CodeFixContext) ([]*ls.CodeAction, error) {
 		value := reportedNode(fix.SourceFile, fix.Span, func(node *ast.Node) bool {
 			parent := node.Parent
 			switch {
@@ -79,6 +79,13 @@ var callEffectFix = &ls.CodeFixProvider{
 		})
 		if value == nil {
 			return nil, nil
+		}
+		c, done := fix.Program.GetTypeCheckerForFile(ctx, fix.SourceFile)
+		some, all := analyzerFor(c).programMembers(c.GetTypeAtLocation(value))
+		done()
+		uncallable := some && !all
+		if uncallable {
+			return nil, nil // a member of its union is no program, so calling it does not check
 		}
 		changes := replaceRange(fix, value.End(), value.End(), "()")
 		if needsParentheses(value) {

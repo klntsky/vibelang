@@ -89,3 +89,37 @@ export const Person = Schema.TaggedStruct("Person", { name: Schema.String })`, 4
 		})
 	}
 }
+
+// TestEditorQuickFixSkipsUncallableUnion checks that EK4802's call-it fix is
+// not offered for a returned union with a member that is no program: calling
+// `chosen` where it may be undefined would not check.
+func TestEditorQuickFixSkipsUncallableUnion(t *testing.T) {
+	source := "export function main(job: Effect.Effect<number> | undefined): unknown!! { const chosen = job; return chosen }"
+	program, file, service, converters := editorProgram(t, source)
+	var diagnostic *ast.Diagnostic
+	for _, d := range program.GetSemanticDiagnostics(t.Context(), file) {
+		if d.Code() == 4802 {
+			diagnostic = d
+			break
+		}
+	}
+	if diagnostic == nil {
+		t.Fatalf("missing EK4802 in %s", source)
+	}
+	d := lsconv.DiagnosticToLSPPush(t.Context(), converters, diagnostic)
+	only := []lsproto.CodeActionKind{lsproto.CodeActionKindQuickFix}
+	response, err := service.ProvideCodeActions(t.Context(), &lsproto.CodeActionParams{
+		TextDocument: lsproto.TextDocumentIdentifier{Uri: lsconv.FileNameToDocumentURI(file.FileName())},
+		Range:        d.Range, Context: &lsproto.CodeActionContext{Diagnostics: []*lsproto.Diagnostic{d}, Only: &only},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.CommandOrCodeActionArray != nil {
+		for _, action := range *response.CommandOrCodeActionArray {
+			if action.CodeAction != nil && action.CodeAction.Title == "Call it to run it" {
+				t.Fatal("offered Call it to run it for a union with undefined")
+			}
+		}
+	}
+}
