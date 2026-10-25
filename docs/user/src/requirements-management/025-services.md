@@ -66,7 +66,7 @@ function readImplementation() {
 // Output: ticket-23 23
 ```
 
-`Sequence.next()` looks up the service and runs the method; `Sequence()` returns the implementation, to capture it or read value members. Supply every requirement before running the program. A missing provide at an entry `main` produces warning EK3205 by default; the starter will set EK3205 to `"error"` to stop the build.
+`Sequence.next()` looks up the service and runs the method; `Sequence()` returns the implementation, to capture it or read value members. Supply every requirement before running the program. A missing provide at an entry `main` produces warning EK3205 by default; the starter sets EK3205 to `"error"`, so the build stops.
 
 ```vibe
 // run: provide Settings = { baseUrl: "https://example.test" } { Console.log(endpoint("tickets")) }
