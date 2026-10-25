@@ -140,6 +140,11 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 	// provision outside its Scope region; regionStatements lowers that region.
 	case tx.inEffect && isProvideBlock(node):
 		return tx.visitProvideBlock(node)
+	// An interruption block may also own using resources or forked fibers.
+	// Keep its mask outside its Scope region; regionStatements lowers that
+	// region inside the masked closure.
+	case tx.inEffect && maskWord(node) != "":
+		return tx.visitMaskBlock(node, maskWord(node)) // uninterruptible { ... } (primitives.go)
 	case tx.inEffect && tx.plan.scoped(node):
 		return tx.visitScoped(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.values[node]:
@@ -160,8 +165,6 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitHandleStatement(node) // try { ... } handle Control.op(...) { ... } (handles.go)
 	case tx.inEffect && node.Kind == ast.KindTryStatement:
 		return tx.visitTryStatement(node)
-	case tx.inEffect && maskWord(node) != "":
-		return tx.visitMaskBlock(node, maskWord(node)) // uninterruptible { ... } (primitives.go)
 	case maskMarkerWord(node) != "" || exitBindingOf(node) != nil:
 		return nil // the marker of an interruption block, or finally (exit)'s binding (primitives.go)
 	case isFailureTest(node):
