@@ -19,8 +19,8 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 | --- | ---: |
 | The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,528 |
 | The skill and the [cheat sheet](115-cheat-sheet.md) | 13,063 |
-| The skill and the user guide (130 pages) | 198,667 |
-| The user guide alone | 194,139 |
+| The skill and the user guide (130 pages) | 199,271 |
+| The user guide alone | 194,743 |
 | The specification (33 chapters) | 103,189 |
 | The decision log, `docs/design/DECISIONS.md` | 60,384 |
 
@@ -121,9 +121,9 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Neovim](../setup/neovim.md) | 999 |
 | [Zed](../setup/zed.md) | 431 |
 | [Other editors](../setup/other-editors.md) | 327 |
-| **Upgrade** | **4,461** |
-| [Release notes](../setup/release-notes.md) | 4,461 |
-| **All 14 pages** | **19,689** |
+| **Upgrade** | **4,581** |
+| [Release notes](../setup/release-notes.md) | 4,581 |
+| **All 14 pages** | **19,809** |
 
 ### Guides
 
@@ -147,9 +147,9 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Default Services](../requirements-management/026-default-services.md) | 965 |
 | [Managing Layers](../requirements-management/027-layers.md) | 2,305 |
 | [Layer Memoization](../requirements-management/028-layer-memoization.md) | 911 |
-| **Resource Management** | **3,451** |
-| [Introduction](../resource-management/029-introduction.md) | 1,545 |
-| [Scope](../resource-management/030-scope.md) | 1,906 |
+| **Resource Management** | **3,935** |
+| [Introduction](../resource-management/029-introduction.md) | 1,604 |
+| [Scope](../resource-management/030-scope.md) | 2,331 |
 | **Observability** | **6,462** |
 | [Logging](../observability/031-logging.md) | 1,945 |
 | [Metrics](../observability/032-metrics.md) | 1,331 |
@@ -244,7 +244,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [PlatformLogger](../platform/108-platformlogger.md) | 758 |
 | [Runtime](../platform/109-runtime.md) | 1,219 |
 | [Terminal](../platform/110-terminal.md) | 1,511 |
-| **All 98 pages** | **131,198** |
+| **All 98 pages** | **131,682** |
 
 ### VibeLang features
 

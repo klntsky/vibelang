@@ -97,8 +97,14 @@ None of these warnings changes the emitted JavaScript.
   where the success type names no value is the success value, not a program
   to run. EK4802 warns.
 - A stored call that never succeeds runs where it stands. EK1012 warns.
-- `using` does not release a value whose acquisition ends in an
-  uninterruptible section when an interruption arrives during that section.
+- A JavaScript Disposable acquired in a masked section at the end of a
+  `using` initializer can leak when an interruption is pending: it is delivered
+  as the mask ends, before `using` registers the release. The pending
+  `scopes-using-pending-interrupt` case records `["acquired"]` instead of
+  `["acquired","disposed"]`. Use `Effect.acquireRelease` with its default
+  protected acquisition and an explicit disposal callback, or
+  `using h = Effect.acquireRelease(...)` for a lexical lifetime.
+  See the [safe pattern](/resource-management/030-scope#known-limitation-pending-interruption-and-javascript-disposables).
 - A class method annotated with a plain return type whose body runs an
   Effect keeps its plain type; called through an interface, it returns the
   Effect instead of running it.

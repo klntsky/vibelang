@@ -85,6 +85,55 @@ function copyLabels() {
 
 `using` gives each declared acquisition a lifetime ending with the enclosing block. Don't return a resource to use after the block closes; return derived data, or let the caller own the acquisition. `using` works the same with Effect's existing scoped APIs.
 
+## Known limitation: pending interruption and JavaScript Disposables
+
+A JavaScript Disposable acquired in a masked section at the end of a `using`
+initializer can leak when an interruption is pending. The interruption is
+delivered as the mask ends, before `using` registers the release, so
+`Symbol.dispose` is never called. The pending
+[`scopes-using-pending-interrupt` case](https://github.com/smithersai/vibelang/tree/main/typescript/vibelang/cases/scopes-using-pending-interrupt)
+records `["acquired"]` instead of `["acquired","disposed"]`. This is the
+acquisition-to-registration window, not an interruption during the resource's
+later use. `using` itself does not mask acquisition (D25).
+
+Wrap acquisition and cleanup together with `Effect.acquireRelease`, keeping its
+default protected acquisition. Use `using h = Effect.acquireRelease(...)` to
+give it a lexical lifetime, or let the caller supply its scope. Release is then
+registered inside the protection before pending interruption is delivered.
+For a JavaScript Disposable, call its disposal method from the release callback.
+
+This example requests interruption while acquisition is waiting and still
+disposes the handle:
+
+```vibe
+// run: Console.log(JSON.stringify(safePendingAcquisition()))
+function safePendingAcquisition() {
+  const events: string[] = []
+  const entered = Deferred.make<void>()
+  const gate = Deferred.make<void>()
+
+  function work() {
+    using h = Effect.acquireRelease(
+      () => {
+        Deferred.succeed(entered, undefined)
+        Deferred.await(gate)
+        events.push("acquired")
+        return { [Symbol.dispose](): void { events.push("disposed") } }
+      },
+      (handle) => handle[Symbol.dispose]()
+    )
+  }
+
+  const child = Effect.forkChild(work())
+  Deferred.await(entered)
+  child.interruptUnsafe(98765)
+  Deferred.succeed(gate, undefined)
+  Fiber.await(child)
+  return events
+}
+// Output: ["acquired","disposed"]
+```
+
 ## Arranging nested resource lifetimes
 
 ```vibe
