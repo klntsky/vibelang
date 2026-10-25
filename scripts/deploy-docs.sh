@@ -99,4 +99,5 @@ fi
 : "${CLOUDFLARE_API_TOKEN:?deploy-docs: set CLOUDFLARE_API_TOKEN to deploy}"
 : "${CLOUDFLARE_ACCOUNT_ID:?deploy-docs: set CLOUDFLARE_ACCOUNT_ID to deploy}"
 cd "$root/site"
+# npm postdeploy checks the served pages against this manifest and npm latest.
 CI=1 npm run deploy -- --yes

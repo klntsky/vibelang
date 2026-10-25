@@ -214,3 +214,23 @@ Run the overlap regression tests with:
 ```sh
 node --test .smithers/flows/convert/check-heldout.test.mjs
 ```
+
+## Checking a deployed release
+
+Every `npm run deploy` in `site/` (including `scripts/deploy-docs.sh`) runs
+`node docs/tools/deployed-release.mjs` through npm's postdeploy hook. It fetches
+the public homepage, setup Markdown, installation HTML and Markdown, llms.txt,
+and release notes in both formats, bypassing caches. It compares release pins
+and CLI output with the compiler manifest and TypeScript version, and platform
+claims with npm's published `vibelang@latest` metadata. Historical release notes
+keep their versions. Every mismatch or failed fetch is printed and exits nonzero.
+
+Run it separately after a deployment, or pass a preview origin:
+
+```sh
+node docs/tools/deployed-release.mjs
+node docs/tools/deployed-release.mjs https://preview.example
+node --test docs/tools/deployed-release.test.mjs
+```
+
+The check reads the site and registry; it does not deploy anything.
