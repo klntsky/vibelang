@@ -90,7 +90,7 @@ A contract gives the compiler a promise to check. To infer selected channels, wr
   "vibelang": {
     "diagnostics": { "EK2004": "warning", "EK4403": "error" },
     "tracing": "exported",
-    "trustedPackages": ["@smthrs/*"]
+    "trustedPackages": ["@acme/*"]
   }
 }
 ```
@@ -101,7 +101,7 @@ Each `.vibe` file keeps the settings of the package that owns it. When a project
 
 EK1012, EK2004, EK3205, EK4403, EK4406, EK4409, Effect's language service rules, EK4801-EK4825 except EK4813, and the TypeScript-style forms below, EK4830-EK4837, can be set to `"error"`, `"warning"`, or `"off"`; the values shown are EK2004's and EK4403's defaults. With EK4403 lowered, those reads compile as trusted synchronous calls that tests cannot control. Migration diagnostics such as EK2112 for retired typed catch clauses are warnings with fixed severity; core language errors have fixed severity too. `@ts-expect-error` does not suppress EK diagnostics. `vibelang` exits non-zero on any error and reports source locations. `tracing` accepts `"none"` (the default), `"exported"`, or `"all"` to add function spans.
 
-`trustedPackages` accepts package-name globs matched against `package.json` names, workspace packages included. The whole name must match; `*`, `?`, and character classes match within each slash-delimited segment, so `"@smthrs/*"` trusts packages in that scope. Without the option, foreign calls keep EK4401. For expected failures on one function, use `trusted(impl, [Errors])` from `vibelang-runtime`, in TypeScript or VibeLang.
+`trustedPackages` accepts package-name globs matched against `package.json` names, workspace packages included. The whole name must match; `*`, `?`, and character classes match within each slash-delimited segment, so `"@acme/*"` trusts packages in that scope. Without the option, foreign calls keep EK4401. For expected failures on one function, use `trusted(impl, [Errors])` from `vibelang-runtime`, in TypeScript or VibeLang.
 
 ## TypeScript-style Effect code
 
@@ -229,7 +229,7 @@ function discard(program: Effect.Effect<number>) {
 | Completion | `Self` in classes | Not needed: declarations have no `Self` | None |
 | Completion | `Effect.gen` snippet | Not needed: no `Effect.gen` | None |
 | Completion | `Effect.fn` span name | Not needed: `tracing` names spans after functions | `"tracing": "exported",
-      "trustedPackages": ["@smthrs/*"]` |
+      "trustedPackages": ["@acme/*"]` |
 | Completion | Duration strings | Completion: `"2 seconds"` and the other units where a `Duration.Input` goes | `Effect.sleep("1 second")` |
 | Completion | Namespace import style | Not needed: effect's root names are in scope | `Option.some(1)` |
 | Completion | `Schema.brand` name | Completion: the declared name in `Schema.brand("…")` | `schema UserId = Schema.String.pipe(Schema.brand("UserId"))` |
