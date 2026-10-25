@@ -30,7 +30,7 @@ function exportRows(accepted: boolean) {
 
 `finally` runs after success, a typed failure, a defect, interruption, an early return, or a handler abandoning the protected computation. It has Effect cleanup semantics, including deferred interruption while cleanup runs.
 
-`Effect.ensuring(() => work(), () => cleanup())` remains for a reusable combinator; `finally` is usually clearer for local cleanup. A cleanup failure is kept with the original outcome, even when a handler abandons the computation while interruption is pending; it never silently replaces an earlier failure.
+`Effect.ensuring(() => work(), () => cleanup())` remains for a reusable combinator; `finally` is usually clearer for local cleanup. A cleanup failure is kept with the original outcome, even when a handler abandons the computation while interruption is pending; it never silently replaces an earlier failure. When either is a defect, the expected failure becomes a defect of the same error (D305).
 
 `ensuring` requires cleanup whose typed error channel is `never`; source `finally` permits typed cleanup failures and uses `Effect.onExit` semantics.
 

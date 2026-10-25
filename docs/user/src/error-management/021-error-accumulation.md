@@ -49,7 +49,7 @@ function checkTeamOnly() {
 All handles valid
 ```
 
-`discard: true` returns `void` on success, when you only need validation. `concurrency` sets how many checks run at once. A cause without an expected failure still terminates the computation. These APIs use Effect's error-to-result conversion, so a mixed cause containing an expected failure can shrink to that error and lose its other reasons; inspect the cause when they matter.
+`discard: true` returns `void` on success, when you only need validation. `concurrency` sets how many checks run at once. A cause without an expected failure still terminates the computation. These APIs use Effect's error-to-result conversion: a cause with a defect propagates, its expected failures as defects (D305), and an expected failure beside an interruption shrinks to that error and loses the interruption; inspect the cause when it matters.
 
 ## Partitioning successes and failures
 

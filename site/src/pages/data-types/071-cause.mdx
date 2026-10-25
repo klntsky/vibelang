@@ -36,7 +36,7 @@ Cause.fail("same error").combine(Cause.fail("same error")).reasons.length // 1
 1
 ```
 
-Effect 4 stores reasons in a flat array: `combine` merges both sets and drops equal duplicates, building no sequential or parallel tree. Inspect a mixed cause as a whole, or an expected failure can hide a defect.
+Effect 4 stores reasons in a flat array: `combine` merges both sets and drops equal duplicates, building no sequential or parallel tree. `combine` keeps an expected failure beside a defect, but where the runtime combines them, at a cleanup or a concurrent sibling, the failure becomes a defect of the same error. Inspect a mixed cause as a whole.
 
 ## Extracting a computation's cause
 

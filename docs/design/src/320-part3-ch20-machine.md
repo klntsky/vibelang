@@ -92,10 +92,10 @@ These rules are the specification. Within one rule, changes to K, Γ, ι, π, an
 | transfer | `transfer(k)` in the clause; standard library only (D16) | Owner of k := a fresh token registered with the Scope in Γ (the region around the handler); the capturing fiber's `FiberExit` frame also holds k. Returns `Suspended(k)`. Closing that Scope abandons k only if the same token still owns it; the fiber's exit abandons it if it is still suspended then (K13a-K13d). A Scope with parallel finalizers is rejected (K13e). |
 | throw | `throw e` | Fail with `Fail(e)`. |
 | fail | failure meets `Ret` | Discard the frame. |
-| | meets `Catch(h)`, every reason of the cause is a `Fail`, not interrupting | Continue with `h(e)`, where `e` is the first failure. A cause with a `Die` or an `Interrupt` reason passes through intact (K14a-K14c). |
-| | meets `Final(fin)` | Run `fin(Failure c)` with ι = false; keep failing with `c` plus `fin`'s failures. |
+| | meets `Catch(h)`, every reason of the cause is a `Fail`, not interrupting | Continue with `h(e)`, where `e` is the first failure. A cause with a `Die` passes through with each `Fail` made a `Die` (D305, K16d); one with an `Interrupt` passes through intact (K14a-K14c). |
+| | meets `Final(fin)` | Run `fin(Failure c)` with ι = false; keep failing with `c` plus `fin`'s failures, each `Fail` made a `Die` when a `Die` is among them (D305). |
 | | meets `Restore`, `Mask`, `Prompt`, `Clause` | Restore state; keep failing. |
-| | meets `Owner(k)` | Abandon `k` first if it is owned here and suspended; keep failing with `c` plus any cleanup failure. |
+| | meets `Owner(k)` | Abandon `k` first if it is owned here and suspended; keep failing with `c` plus any cleanup failure, combined as at `Final` (D305, K16a). |
 | interrupt | request `r` from another fiber | π := π ⊕ r. If ι and parked: fail with π now. If ι and running: fail with π at the next step. If not ι: fail when a `Mask` frame restores ι = true. While π ≠ ∅ and ι, unwinding skips `Catch` frames. |
 | wait (root) | `suspend(register)` | Park the fiber with K intact. `register` receives a one-shot resumer. |
 | wake | `resumer.resume(v)` | Run the fiber with `v`: synchronously while the wake depth is under budget, otherwise on the scheduler (Chapter 24). |
@@ -115,4 +115,4 @@ The interruption rows describe Effect 4 as it is (`internal/effect.ts:558-579`, 
 | Context across resume | Snapshot, or delimited dynamic binding | **Snapshot** [Rule], Chapter 22. |
 | Where a continuation can be consumed | Any fiber, or only the capturing fiber | **Capturing fiber only**, for resume, transfer, and abandon [Rule]. Effect frames are bound to the fiber that pushed them (T14b), and children, identity, and interruption authority stay coherent (O04, O06). The capturing fiber's exit releases what it transferred (K13a). |
 | Double resume | Ignore, or defect | **Defect at the caller** for handler continuations [Rule]. Root waits keep Effect's first-wins behavior but report the loss: `resume` returns `false` (Chapter 21). |
-| Which causes `catch` recovers | First failure of any cause (`Effect.catch`), or only causes made of expected failures | **Only expected failures** [Rule] (D13). A recovered mixed cause would drop a defect (`tests/runtime-boundaries.test.ts`). |
+| Which causes `catch` recovers | First failure of any cause (`Effect.catch`), or only causes made of expected failures | **Only expected failures** [Rule] (D13). On Effect 4.0.5, a recovered mixed cause dropped a defect (the runtime boundary regression); since Effect 4.0.6, a failure beside a defect is a defect before any `catch` sees it (D305). |

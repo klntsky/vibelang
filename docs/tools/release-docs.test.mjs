@@ -107,13 +107,14 @@ test("starter prerequisites make Bun conditional on the chosen package manager",
   }
 })
 
-test("installation explains the exact Effect pin and the 4.0.6 cleanup incompatibility", () => {
+test("installation documents the pinned Effect version and adopted defect precedence", () => {
   const root = fileURLToPath(new URL("../../",import.meta.url))
   for (const path of ["docs/user/src/getting-started/004-installation.md","docs/user/src/setup/existing-project.md"]) {
     const text = readFileSync(join(root,path),"utf8")
     assert.match(text,/depends on Effect internals and checks the exact version at load/,path)
-    assert.match(text,/Effect 4\.0\.6 changed how a cleanup failure combines with a body failure/,path)
-    assert.match(text,/projects on 4\.0\.6 must use 4\.0\.5 for now/,path)
+    assert.match(text,/VibeLang follows Effect 4\.0\.6.s defect precedence/,path)
+    assert.match(text,/a failure whose cleanup crashes is a defect/,path)
+    assert.doesNotMatch(text,/failure rules do not accept yet|must use 4\.0\.5 for now/,path)
   }
 })
 

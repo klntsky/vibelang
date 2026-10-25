@@ -39,6 +39,7 @@ A feature-coverage audit mapped 309 Effect features to the language (`docs/resea
 | F7, F8 | same | A child snapshots Context at fork, and nothing flows back; `forkChild` children are interrupted when the parent completes |
 | F9 | same | Direct recursion limit: about 39,900 frames on Bun 1.4.1 and 10,150 on Node 26.10 |
 | F10a, F10b | `tests/wakeup-chain.test.ts`, `scripts/` | A chain of `Deferred` wake-ups overflows in one fiber and strands the rest; effect 3.22.3 completes the same chain at 100,000 hops |
+| F11a-F11e | `tests/defect-precedence.test.ts` | Effect 4.0.6 makes a failure beside a cleanup's or a sibling's defect a defect, first; typed recovery skips a cause with a defect; an interruption doesn't block recovery; `mapError` maps every failure; `timeout` still drops a loser's cleanup failure (D305, D256) |
 | T5a, T6b | `tests/kernel.test.ts` | `Effect.callback` drops a late resume silently; plain JavaScript recursion overflows |
 | D01-D05 | `tests/conformance/source-claims.test.ts` | Corrections to the first draft's Effect claims: synchronous callback resume, fork-time async context, `zip`'s `concurrent` flag, `catchCause` on a self-raised interrupt, sibling provides sharing a supplied `MemoMap` |
 | A3 | `tests/fiber-behavior.test.ts` | Two providers for one key in `Layer.merge`: the later one wins silently |
@@ -59,8 +60,9 @@ A feature-coverage audit mapped 309 Effect features to the language (`docs/resea
 | K11a-K11d | `tests/kernel-regressions.test.ts` | A generator clause that returns `tailResume` iterates 100,000 elements at 3 frames, 5 with a per-element `using` and `finally`; yielding a tail-resume request is a defect; a resume inside a `finally` region isn't a tail resume |
 | K12a-K12e | same | Abandonment reports every cleanup failure beside real pending interruptions: explicit `abandon`, `abandonNow`, owner exit, and Scope exit |
 | K13a-K13e | same | A transferred continuation never outlives its capturing fiber; transfer into a parallel Scope is rejected |
-| K14a-K14c | same | `catchExpected` recovers only causes made of expected failures, the first one first; mixed causes pass through intact |
+| K14a-K14c | same | `catchExpected` recovers only causes made of expected failures, the first one first; a cause with an interruption passes through intact, one with a defect as defects |
 | K15b, K15c | same | Interruptible acquisition: cancellation wins, and late or deferred values are released |
+| K16a-K16d | same | Where the kernel combines or re-raises a cause (owner exit, fiber exit, `catchExpected`), a failure beside a defect is a defect; an expected cleanup failure stays expected (D305) |
 | H1-H4 | `tests/handoff.test.ts` | Handoff: one delivery; late delivery during asynchronous shutdown released before cancellation completes; deferred delivery released; delivery after quiescence rejected |
 | G6a, G6b | `tests/context-bridges.test.ts` | Spans are correct across capture; `AsyncLocalStorage` isn't delimited |
 | Probes | `tests/fiber-behavior.test.ts` | 17 combinators keep control on the performing fiber; 7 move it to other fibers |
@@ -82,7 +84,7 @@ Runtime counterexamples are kept as observational tests. A probe of a fixed defe
 
 | ID | File | What it showed |
 | --- | --- | --- |
-| Boundary | `tests/runtime-boundaries.test.ts` | `Effect.catch` recovers a cause holding both a failure and a defect, and drops the defect (D13, K14) |
+| Boundary | `tests/runtime-boundaries.test.ts` | `Effect.catch` recovers a cause holding both a failure and a defect, and drops the defect (D13, K14); true of Effect 4.0.5, fixed in 4.0.6 (D305) |
 | Boundary | same | Owner-driven abandonment keeps a cleanup defect; explicit `abandon` dropped it while an interruption was pending (D15, K12) |
 | Boundary | same | Default `acquireRelease` shields `suspend` from cancellation (D25, K15) |
 | Boundary | same | Inlining an `Effect.sync` operation removes an interruption point (D10) |

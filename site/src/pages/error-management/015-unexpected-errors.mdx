@@ -112,7 +112,7 @@ Decoder disabled after an invariant failure
 disabled
 ```
 
-`catchDefect` selects a defect and runs recovery; a cause with no defect propagates. On a mixed cause, recovery can also consume the accompanying failures or interruption, so use `catchCause` when every reason must inform the decision. Reraise defects you don't recognize. Effect `try`/`catch` never intercepts a defect, even one that is an instance of a domain error class.
+`catchDefect` selects the first defect and runs recovery; a cause with no defect propagates. A typed failure beside a defect is a defect by then, so the handler receives that failure's error, and recovery consumes the other reasons too; use `catchCause` when every reason must inform the decision. Reraise defects you don't recognize. Effect `try`/`catch` never intercepts a defect, even one that is an instance of a domain error class.
 
 ## Recovering a complete cause
 

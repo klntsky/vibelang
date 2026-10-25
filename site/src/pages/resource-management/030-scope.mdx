@@ -29,7 +29,7 @@ function runRegisteredWork() {
 
 `Effect.addFinalizer` attaches cleanup to the current scope, not the function's return. `Scope` is in the prelude: it names the module, and in a contract it means `Scope.Scope`, so no import is needed. `Effect.scoped` creates a scope, runs the program, and closes the scope with its outcome: the finalizer receives a success exit on success, and a failure exit on typed failure, a defect, or interruption.
 
-Finalizers run in reverse registration order by default, with interruption deferred during release. Their typed error channel must be `never`, so handle expected cleanup failures inside the callback. A defect during release stays in the resulting cause.
+Finalizers run in reverse registration order by default, with interruption deferred during release. Their typed error channel must be `never`, so handle expected cleanup failures inside the callback. A defect during release stays in the resulting cause, and an expected failure beside it becomes a defect.
 
 ## Opening and closing scopes explicitly
 

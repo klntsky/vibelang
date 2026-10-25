@@ -15,7 +15,7 @@ Use Effect services for platform, clock and randomness APIs, such as `Console`, 
 
 `package.json` must have `"type": "module"`. If not, ask the user before adding it: it changes how Node loads the project's `.js` files.
 
-The VibeLang runtime requires `effect` 4.0.6 exactly. The runtime depends on Effect internals and checks the exact version at load. Effect 4.0.6 changed how a cleanup failure combines with a body failure in a way VibeLang's failure rules do not accept yet, so projects on 4.0.6 must use 4.0.6 for now. If `package.json` depends on another `effect` version, stop and ask the user.
+The VibeLang runtime requires `effect` 4.0.6 exactly. The runtime depends on Effect internals and checks the exact version at load. VibeLang follows Effect 4.0.6's defect precedence: a failure whose cleanup crashes is a defect. Read the [release notes](../setup/release-notes.md) before updating code that inspects causes or recovers mixed failures. If `package.json` depends on another `effect` version, stop and ask the user.
 
 ## 2. Install the packages
 

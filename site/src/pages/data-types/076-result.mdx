@@ -101,7 +101,7 @@ function validatePair() {
 InvalidCount -1
 ```
 
-`Effect.fromResult` runs as a call: success gives A, failure enters E. Convert explicitly when passing a result to an Effect combinator. Conversely, `Effect.result(() => work())` collects expected failures into a result: a cause with none still propagates, and for a cause that mixes one with defects or interruption, Effect 4 returns the first expected failure and discards the other reasons. To keep every reason, use `Effect.exit`.
+`Effect.fromResult` runs as a call: success gives A, failure enters E. Convert explicitly when passing a result to an Effect combinator. Conversely, `Effect.result(() => work())` collects expected failures into a result: a cause with none still propagates, and so does one with a defect, its expected failures as defects; for an expected failure beside an interruption, Effect returns the first expected failure and discards the interruption. To keep every reason, use `Effect.exit`.
 
 ## Sequencing and combining results
 

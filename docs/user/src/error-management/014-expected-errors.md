@@ -167,7 +167,7 @@ Fountain pen
 No item
 ```
 
-`Effect.result` moves `E` into the success channel as `Result<A, E>`. `Effect.option` gives `Some` on success and discards a typed error as `None`; use it only when every domain failure means absence. Causes with no expected failure still propagate, but both can consume a mixed cause that contains one; use ordinary catch when defects and interruption must always propagate intact.
+`Effect.result` moves `E` into the success channel as `Result<A, E>`. `Effect.option` gives `Some` on success and discards a typed error as `None`; use it only when every domain failure means absence. Causes with no expected failure still propagate, and so do causes with a defect, their expected failures as defects (D305); both consume an expected failure beside an interruption. Use ordinary catch when interruption must always propagate intact.
 
 ## Recovering all failures
 
@@ -207,7 +207,7 @@ Unavailable (ItemMissing)
 
 After an expression, `x catch (error) => handler` runs `x` and passes an expected failure to the handler, as `Effect.catch` does, with the statement's guard: defects and interruption pass through. `x catch fallback` evaluates the fallback instead, as `Effect.orElseSucceed` does; see [Fallback](016-fallback.md).
 
-`Effect.catch(() => findItem(input), handler)` also recovers expected failures, under Effect's own policy and without source catch's mixed-cause guard: it can recover a mixed cause containing an expected failure and drop the other reasons. `Effect.catchEager` has the same policy and can recover immediately when given an already computed `Exit`.
+`Effect.catch(() => findItem(input), handler)` also recovers expected failures. Like source catch, it leaves a cause with a defect alone (D305); unlike source catch, it recovers an expected failure beside an interruption and drops the interruption. `Effect.catchEager` has the same policy and can recover immediately when given an already computed `Exit`.
 
 ## Recovering selected failures
 

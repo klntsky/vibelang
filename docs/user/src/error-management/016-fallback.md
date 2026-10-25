@@ -51,7 +51,7 @@ Saved issue
 
 `x catch fallback` is the expression form and recovers exactly what the statement does: the left side runs inside the catch, and the fallback runs only after an expected failure. `catch` binds looser than `??` and `||` and tighter than `? :`, so `a ?? b catch c` applies the default inside the catch.
 
-`Effect.catch(() => latestTitle(), () => cachedTitle())` also works, but unlike source catch, Effect's recovery combinators can consume a mixed cause containing an expected failure. When defects and interruption must propagate intact, use a catch statement or expression, narrowing and rethrowing. `Effect.catchTag`, `Effect.catchIf`, and `Effect.catchFilter` also select domain failures, under Effect's own recovery policy.
+`Effect.catch(() => latestTitle(), () => cachedTitle())` also works. Like source catch, it leaves a cause with a defect alone (D305); unlike source catch, it recovers an expected failure beside an interruption and drops the interruption. When interruption must propagate intact, use a catch statement or expression, narrowing and rethrowing. `Effect.catchTag`, `Effect.catchIf`, and `Effect.catchFilter` also select domain failures, under Effect's own recovery policy.
 
 ## Supplying a default success
 
@@ -104,7 +104,7 @@ Reading saved title
 Saved issue
 ```
 
-`firstSuccessOf` tries programs one at a time in priority order and stops on success; if all fail with expected errors, it reports the last error. A cause without an expected failure stops the search; a mixed cause containing one can activate the next alternative. An empty iterable is a defect: pass at least one.
+`firstSuccessOf` tries programs one at a time in priority order and stops on success; if all fail with expected errors, it reports the last error. A cause without an expected failure stops the search, and so does one with a defect (D305); an expected failure beside an interruption activates the next alternative. An empty iterable is a defect: pass at least one.
 
 A chain of catch expressions also tries alternatives in order, because `catch` associates to the left: `latestTitle() catch cachedTitle() catch "Untitled issue"` tries the cache after the primary fails and the title after the cache fails. Unlike `firstSuccessOf`, it stops at a mixed cause, as every source catch does.
 

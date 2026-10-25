@@ -120,7 +120,7 @@ function combine() {
 
 `await.all [...]`, like `Promise.all`, starts every element in its own fiber, waits for all, and keeps the array or object shape. Elements are passed by name, so `rowCount()` starts in its fiber, not before the operation. If one fails, `await.all` interrupts the rest and propagates the failure, as `all` fails fast. For an expected-failure fallback, wrap it in `try` and recover in `catch`; defects and interruption still propagate.
 
-`await.allSettled [...]` returns each success or typed failure as a `Result` and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"` (D258); a cause with no typed failure still propagates. Wrap each program in `Effect.exit` to keep every outcome as data, mixed causes included.
+`await.allSettled [...]` returns each success or typed failure as a `Result` and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"` (D258), and so does a typed failure beside a defect, as a defect (D305); a cause with no typed failure still propagates. Wrap each program in `Effect.exit` to keep every outcome as data, mixed causes included.
 
 For fibers you already hold, use `join`: `const [name, count] = join [titleFiber, rowsFiber]`. An await operation also accepts a fiber or a `Deferred` as an element and waits for it without restarting it.
 
