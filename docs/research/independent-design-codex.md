@@ -8,7 +8,7 @@ Written 2026-10-15 by Codex (`gpt-6.1-sol`) from the shared brief, without acces
 
 **VERIFIED — Evidence convention.** `VERIFIED` identifies inspected Effect 4.0.5 source, directly inspected prototype code, or the experiments in `kernel/kernel.test.ts`. `PROPOSED` identifies a language rule or implementation recommendation. `UNTESTED` identifies an implementation claim needing further experiment. Each paragraph, list item, table row, and code block below carries one of those labels; a label covers the statements within that unit. Verified finite experiments do not establish a universal correctness proof.
 
-**VERIFIED — Source identity.** Effect citations such as `internal/effect.ts:625–679` refer to `/Users/williamcory/effectscript/experiments/node_modules/effect/src/`. The prototype installs exactly `effect@4.0.5`; `kernel/node_modules/effect/package.json:4` reports that version. The installed and pinned `src/internal/effect.ts` have identical SHA-256 `29200eee28c991b77b9f62317831332d4330179d8ab654fec8dea4472732d0af`. No other designer's artifacts or docs were read.
+**VERIFIED — Source identity.** Effect citations such as `internal/effect.ts:625–679` refer to `./experiments/node_modules/effect/src/`. The prototype installs exactly `effect@4.0.5`; `kernel/node_modules/effect/package.json:4` reports that version. The installed and pinned `src/internal/effect.ts` have identical SHA-256 `29200eee28c991b77b9f62317831332d4330179d8ab654fec8dea4472732d0af`. No other designer's artifacts or docs were read.
 
 ## 1. Definitions and execution boundaries
 

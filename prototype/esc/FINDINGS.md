@@ -13,7 +13,7 @@ The remaining three fail for reasons the proposal must fix:
 ## How to run
 
 ```sh
-cd /Users/williamcory/effectscript
+cd .
 bun prototype/esc/src/cli.ts build prototype/esc/examples/ch01-first-look.es [--out dir]
 bun prototype/esc/src/cli.ts run prototype/esc/examples/ch09-handlers.es
 bun prototype/esc/examples/run-all.ts [filter] [--verbose]    # 46/46 pass, about 16 s

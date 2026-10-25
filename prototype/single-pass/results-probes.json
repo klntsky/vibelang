@@ -125,9 +125,9 @@
       "c p1-overloads.es:L48=plain/false/false/",
       "c p1-overloads.es:L22=plain/false/false/",
       "c p1-overloads.es:L27=plain/false/false/",
-      "d/Users/williamcory/effectscript/prototype/single-pass/probes/p1-overloads.es#bare",
-      "d/Users/williamcory/effectscript/prototype/single-pass/probes/p1-overloads.es#esCall",
-      "d/Users/williamcory/effectscript/prototype/single-pass/probes/p1-overloads.es#plainCall",
+      "d<repo>/prototype/single-pass/probes/p1-overloads.es#bare",
+      "d<repo>/prototype/single-pass/probes/p1-overloads.es#esCall",
+      "d<repo>/prototype/single-pass/probes/p1-overloads.es#plainCall",
       "l p1-overloads.es:L37=effectFn/false",
       "l p1-overloads.es:L42=program/false",
       "l p1-overloads.es:L47=none/false",
@@ -142,8 +142,8 @@
       "c p1-overloads.es:L48=effect/false/false/",
       "c p1-overloads.es:L22=effect/false/false/",
       "c p1-overloads.es:L27=effect/false/false/",
-      "d/Users/williamcory/effectscript/prototype/single-pass/probes/p1-overloads.es#effectFirst",
-      "d/Users/williamcory/effectscript/prototype/single-pass/probes/p1-overloads.es#programOrThunk",
+      "d<repo>/prototype/single-pass/probes/p1-overloads.es#effectFirst",
+      "d<repo>/prototype/single-pass/probes/p1-overloads.es#programOrThunk",
       "l p1-overloads.es:L37=plainFn/false",
       "l p1-overloads.es:L42=plainFn/false",
       "l p1-overloads.es:L47=effectFn/false",
@@ -193,10 +193,10 @@
       }
     ],
     "rawOnlySinglePass": [
-      "r/Users/williamcory/effectscript/prototype/single-pass/probes/p2-recursion.es#isEven=any/never/never"
+      "r<repo>/prototype/single-pass/probes/p2-recursion.es#isEven=any/never/never"
     ],
     "rawOnlyPrototype": [
-      "r/Users/williamcory/effectscript/prototype/single-pass/probes/p2-recursion.es#isEven=any/Odd/never"
+      "r<repo>/prototype/single-pass/probes/p2-recursion.es#isEven=any/Odd/never"
     ],
     "anomalies": [],
     "selections": {

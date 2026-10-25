@@ -30,12 +30,12 @@ and fork Go only for checker-dependent lowering, with EffectScript code in-tree 
 - npm: `npm view <pkg> dist-tags|time|exports|gitHead`.
 - Clone: `jj git clone --depth 1 --branch main --fetch-tags none https://github.com/microsoft/TypeScript.git`
   into
-  `/private/tmp/claude-501/-Users-williamcory-effectscript/f783844b-3596-4f12-87bc-f9312d1b34e3/scratchpad/tsgo-research/TypeScript`.
+  `<scratch>/tsgo-research/TypeScript`.
   Its working-copy parent is `0e081d6`, the same `main` SHA the API reported.
 - Local checkouts: read files only. Submodule pins came from `.git/modules/typescript-go/HEAD` and
   the GitHub contents API (`type: submodule`). No git CLI.
 - Go `internal` demo: disposable modules in
-  `/private/tmp/claude-501/-Users-williamcory-effectscript/f783844b-3596-4f12-87bc-f9312d1b34e3/scratchpad/tsgo-research/internal-rule-demo`,
+  `<scratch>/tsgo-research/internal-rule-demo`,
   built with go1.26.0, `GOWORK=off`.
 
 ---
@@ -238,7 +238,7 @@ module github.com/microsoft/TypeScript/tsc/shim/checker -> builds (exit 0)
 
 ---
 
-## Part 2. effect-tsgo (`/Users/williamcory/effect-tsgo`)
+## Part 2. effect-tsgo (`<external-checkout>/effect-tsgo`)
 
 ### 2.1 What it is and which revisions
 
@@ -469,7 +469,7 @@ Limits:
   had to "generate provider-specific `TSGetSymbol*` helpers so Effect code supports field-based
   TypeScript 7.0.2 symbols and method-based current symbols".
 
-### 2.9 baml-tsgo (`/Users/williamcory/baml-tsgo`)
+### 2.9 baml-tsgo (`<external-checkout>/baml-tsgo`)
 
 baml-tsgo (remote `git@github.com:smithersai/baml-tsgo.git`; HEAD `refs/heads/feat/baml-rust-tooling`
 = `86a1bc31ce418a1ec8b06f9fc134be0c4f4667a6`; `main` = `431711f`; typescript-go `5b1047d`) is a copy of

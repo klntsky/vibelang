@@ -2,7 +2,7 @@
   "version": 2,
   "flow": "docs",
   "source": ".smithers/flows/docs/flow.ts",
-  "digest": "8ab8f63e40a122bdb73d190c3045d1ad84061620bf31a99e69f56032f54833bf",
+  "digest": "15c5e91998750232e48309f6f109b8c1b0562d3cb166666b5de7b6027230bed5",
   "inputs": [
     {
       "path": ".smithers/flows/docs/project.ts",
@@ -22,7 +22,7 @@
     },
     {
       "path": ".smithers/package.json",
-      "sha256": "cc24ada9758ef28fdbe49d57bf931d08cadfd0e02a77c4792f09b8e5db618625"
+      "sha256": "9b6e3ba8c2c0739f2d38d3de508109e64489ad2ae7e4a41ba0dd74abdca904da"
     },
     {
       "path": ".smithers/bun.lock",

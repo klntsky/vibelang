@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "docs:generate": "node ../docs/tools/release-docs.mjs --write && bun run flows/docs/run.ts && bun ../site/scripts/build-docs.ts --sources",
-    "docs:check": "node ../docs/tools/release-docs.mjs --check && bun test ./flows/docs/check.test.ts"
+    "docs:check": "node ../docs/tools/check-tracked-leaks.mjs && node ../docs/tools/release-docs.mjs --check && bun test ./flows/docs/check.test.ts"
   },
   "dependencies": {
     "@smthrs/artifacts": "1.0.0-rc.16",

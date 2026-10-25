@@ -172,10 +172,10 @@ All 16 disagreements in p1 come from the first five rows: 6 lambdas, the 5 calls
 ## How to run
 
 ```sh
-cd /Users/williamcory/effectscript/prototype/single-pass
+cd ./prototype/single-pass
 bun patch/apply.ts            # copy TypeScript 5.9.3 to typescript/, patch it, write patch/typescript.patch
 bun harness/compare.ts        # corpus: 46/46, writes results.json (about 10 s)
-bun harness/compare.ts --dir /Users/williamcory/effectscript/prototype/single-pass/probes --verbose
+bun harness/compare.ts --dir probes --verbose
 bun harness/passes.ts         # the prototype's decision changes per pass
 bun harness/inspect.ts ch01-first-look.es --text   # one file's neutral text and selections
 ```

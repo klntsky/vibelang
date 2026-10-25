@@ -1,5 +1,5 @@
 import ts from "typescript"
-const file = "/Users/williamcory/effectscript/prototype/esc/scratch/km.ts"
+const file = "./prototype/esc/scratch/km.ts"
 const src = `import { $service } from "../../../packages/runtime/src/index.ts"\ninterface S { m(): void }\nexport class S extends $service<S>("k") {}\nexport const probe = S\n`
 const host = ts.createCompilerHost({})
 const og = host.getSourceFile

@@ -19,10 +19,10 @@ test("publication keeps refusals after normalizing known build metadata", () => 
 test("prepare-site rejects unexpected paths, hosts and credential values", () => {
   const dir = mkdtempSync(join(tmpdir(), "docs-publication-"))
   try {
-    for (const text of ["/home/other/file", "smithers-baremetal", "192.168.1.2", "fixture-sensitive-value-0123456789"]) {
+    for (const text of ["/home/other/file", "private-build.example", "192.168.1.2", "fixture-sensitive-value-0123456789"]) {
       writeFileSync(join(dir, "test.html"), text)
       const result = Bun.spawnSync(["bun", join(import.meta.dir, "prepare-site.ts"), dir], {
-        env: { ...process.env, PUBLICATION_TEST_SECRET: "fixture-sensitive-value-0123456789" },
+        env: { ...process.env, VIBELANG_LEAK_PATTERNS: JSON.stringify(["private-build\\.example"]), PUBLICATION_TEST_SECRET: "fixture-sensitive-value-0123456789" },
         stdout: "pipe", stderr: "pipe"
       })
       expect(result.exitCode).toBe(1)
