@@ -8,7 +8,7 @@
 #   case        a case name, or a substring that selects every case containing it
 #
 # Environment:
-#   EFFECT_NODE_MODULES    a node_modules directory that holds effect 4.0.5
+#   EFFECT_NODE_MODULES    a node_modules directory that holds effect 4.0.6
 #                          (default: ../experiments/node_modules)
 #   VIBELANG_RUNTIME   the vibelang-runtime package directory
 #                          (default: ../packages/runtime, built here with tsc)

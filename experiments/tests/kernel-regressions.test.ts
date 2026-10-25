@@ -359,9 +359,11 @@ describe("K14 source catch recovers expected failures only", () => {
     expect(Exit.isSuccess(two) && two.value).toBe("recovered first")
   })
 
-  test("K14b the generated try/catch/finally re-raises an expected failure that carries a cleanup defect (Codex R1)", () => {
+  test("K14b the generated try/catch/finally re-raises an expected failure that carries a cleanup defect, as defects (Codex R1)", () => {
     // Source: try { return find(id) } catch (e) { return guest } finally { log("finally") }
     // where find's own cleanup dies while find fails with UserNotFound.
+    // Effect 4.0.6 gives the defect precedence where it combines the two
+    // (Effect-TS/effect#9433): UserNotFound arrives as a defect, first.
     const { events, note } = recorder()
     const find = Effect.ensuring(Effect.fail("UserNotFound"), Effect.die("release-defect"))
     let handled = 0
@@ -376,11 +378,12 @@ describe("K14 source catch recovers expected failures only", () => {
     )
     const exit = Effect.runSyncExit(profile)
     expect(handled).toBe(0)
-    expect(fails(exit)).toEqual(["UserNotFound"])
-    expect(defects(exit)).toEqual(["release-defect"])
+    expect(fails(exit)).toEqual([])
+    expect(defects(exit)).toEqual(["UserNotFound", "release-defect"])
     expect(events).toEqual(["finally"])
-    // Effect.catch, the previous lowering, recovers and drops the defect.
-    expect(Effect.runSyncExit(Effect.catch(find, () => Effect.succeed("guest")))).toEqual(Exit.succeed("guest"))
+    // Effect.catch, the previous lowering, no longer recovers either
+    // (Effect-TS/effect#9516); on 4.0.5 it recovered and dropped the defect.
+    expect(defects(Effect.runSyncExit(Effect.catch(find, () => Effect.succeed("guest"))))).toEqual(["UserNotFound", "release-defect"])
   })
 
   test("K14c expected failure with interruption, a defect alone, and interruption alone pass through untouched", () => {

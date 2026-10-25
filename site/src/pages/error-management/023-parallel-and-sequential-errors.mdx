@@ -49,7 +49,7 @@ function inspectDelivery() {
 ```
 
 ```text
-{"expected":true,"defective":true,"interrupted":false}
+{"expected":false,"defective":true,"interrupted":false}
 ```
 
 A cleanup failure is kept beside the original failure. Concurrent combinators normally stop after a failure and interrupt siblings, but overlapping failures can still add several reasons. The flat representation keeps no causal tree and doesn't prove which task completed first.

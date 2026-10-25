@@ -215,7 +215,7 @@ test("packs only MIT text when the root license is MIT first with trailing excep
 })
 
 test("refuses a missing or drifting transitive Effect override before packing", (t) => {
-  for (const pin of [undefined, "4.0.6"]) {
+  for (const pin of [undefined, "0.0.0"]) {
     const root = fixture(t)
     const path = join(root, "templates/app/package.json")
     const app = json(path)

@@ -8,7 +8,7 @@ This part is for reviewing how VibeLang runs: how the features of Parts I and II
 
 | Tag | Meaning |
 | --- | --- |
-| **[Effect]** | Verified in `effect@4.0.5` source (`experiments/node_modules/effect/src`, cited as `file:line`) or by an Effect-only test (F1-F10, conformance tests D01-D05, K15a) |
+| **[Effect]** | Verified in `effect@4.0.5` source (`experiments/node_modules/effect/src` at the time, cited as `file:line`) or by an Effect-only test (F1-F10, conformance tests D01-D05, K15a); the tests and the kernel laws run on the pinned `effect@4.0.6` |
 | **[Kernel]** | Verified by a kernel test: T1-T17, K10-K15, H1-H4, G6, and the conformance suite's A, F, I, O, S, T, W, and X tests, which test the language model, not ordinary Effect programs |
 | **[Prototype]** | Compiled from `.vibe` by the prototype compiler and run on the kernel: an example in `prototype/esc/examples` (Chapter 27) |
 | **[Rule]** | A language rule, decided in Part V; the compiler enforces it, and no test can prove a rule a checker has not been built to enforce |
@@ -32,7 +32,7 @@ Both examples need one thing Effect does not expose today: a way for code on a f
 
 Effect 4 runs every program as a one-shot continuation. A fiber's `_stack` is the rest of the computation, reified as an array of frames. `Effect.callback` parks it and accepts one resume. Interruption unwinds it through finalizer frames. Effect lacks a delimiter inside a fiber: the fiber's root is the only one, so the only continuation anyone can take is the whole fiber.
 
-VibeLang adds the missing delimiter. A 881-line kernel prototype on `effect@4.0.5` pushes prompt frames onto the real fiber stack and captures the segment above a prompt as a one-shot continuation. It restores the Context and interruptibility recorded at each boundary, abandons unresumed continuations through Effect's own finalizers, keeps a continuation from outliving the fiber that captured it, and bounds cross-fiber wake-up depth. 172 tests cover nested suspension with Context and Scope, double resumption, abandonment, interruption while a continuation is held, cancellation races, a 100,001-frame capture, capture through TypeScript-authored `Effect.forEach`, retry, producers in constant stack, cause-aware `catch`, and a 54-test conformance suite written by an independent reviewer.
+VibeLang adds the missing delimiter. A 881-line kernel prototype on `effect@4.0.6` pushes prompt frames onto the real fiber stack and captures the segment above a prompt as a one-shot continuation. It restores the Context and interruptibility recorded at each boundary, abandons unresumed continuations through Effect's own finalizers, keeps a continuation from outliving the fiber that captured it, and bounds cross-fiber wake-up depth. 177 tests cover nested suspension with Context and Scope, double resumption, abandonment, interruption while a continuation is held, cancellation races, a 100,001-frame capture, capture through TypeScript-authored `Effect.forEach`, retry, producers in constant stack, cause-aware `catch`, and a 54-test conformance suite written by an independent reviewer.
 
 Every feature in Parts I and II is a rule over that one machine:
 

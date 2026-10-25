@@ -6,7 +6,7 @@ These docs mirror the Effect 4 documentation page for page: same sections, order
 
 1. `docs/design/DECISIONS.md`, the decision log, wins every conflict.
 2. `docs/design/src/`, the spec, one file per chapter, especially Part I (the language by example) and Part II (the rules). Chapter numbers change; refer to topics. Read the tooling chapter for exact names before writing about tooling. Cite only diagnostic codes the spec defines (D53).
-3. Effect 4.0.5's API, in `experiments/node_modules/effect/src`. Check every Effect name you use there.
+3. Effect 4.0.6's API, in `experiments/node_modules/effect/src`. Check every Effect name you use there.
 
 ## The language
 

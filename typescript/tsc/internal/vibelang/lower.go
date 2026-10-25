@@ -403,12 +403,12 @@ func (tx *lowering) convert(node *ast.Node, conversion conversion) *ast.Node {
 
 // byNameProgram lowers a by-name expression (D147), evaluating it on every
 // run. A tail program is returned by suspend, never yielded by a wrapper:
-// Effect 4.0.5 internal/effect.ts:976-982 returns the thunk's Effect without
-// pushing a continuation. In contrast, gen (1222-1244) installs an Iterator
-// (1417-1428), whose post-program step can be interrupted before restore
-// reinstates the mask (4582-4585, 4617-4637).
+// Effect 4.0.6 internal/effect.ts:1015-1021 returns the thunk's Effect without
+// pushing a continuation. In contrast, gen (1262-1284) installs an Iterator
+// (1457-1468), whose post-program step can be interrupted before restore
+// reinstates the mask (4626-4629, 4661-4681).
 // If operands run Effects, a generator computes the tail program first and
-// flatten (1867-1869, flatMap with identity) runs it after that generator
+// flatten (1907-1909, flatMap with identity) runs it after that generator
 // has finished. Expressions that compute a value after their last call
 // retain their generator.
 func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {

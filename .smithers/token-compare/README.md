@@ -19,7 +19,7 @@ node verify.mjs
 node count.mjs
 ```
 
-`verify.mjs` compiles `users.vibe` with the checkout's native compiler and runtime, strictly type-checks and emits `users.ts` against Effect 4.0.5 with TypeScript 5.9.3, runs both with Node, and fails unless each prints `Ada Guest`. It uses the repository this directory is in; set `VIBELANG_CHECKOUT` to use another checkout. `package-lock.json` pins every dependency.
+`verify.mjs` compiles `users.vibe` with the checkout's native compiler and runtime, strictly type-checks and emits `users.ts` against Effect 4.0.6 with TypeScript 5.9.3, runs both with Node, and fails unless each prints `Ada Guest`. It uses the repository this directory is in; set `VIBELANG_CHECKOUT` to use another checkout. `package-lock.json` pins every dependency.
 
 `count.mjs` encodes each complete file with the `o200k_base` encoding bundled in `js-tiktoken` 1.0.21, offline. The repository's docs footers use the same tokenizer.
 

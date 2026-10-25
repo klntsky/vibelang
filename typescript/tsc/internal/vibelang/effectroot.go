@@ -11,7 +11,7 @@ package vibelang
 // emitted JavaScript imports each used name from its own module, never from
 // the root, which would load every module.
 //
-// effectRootNames is generated from effect@4.0.5's dist/index.d.ts, the
+// effectRootNames is generated from effect@4.0.6's dist/index.d.ts, the
 // version VibeLang pins (D1); TestEffectRootNamesMatchEffect checks it against
 // the installed package.
 
@@ -48,6 +48,7 @@ var effectRootNames = map[string]effectRootExport{
 	"Boolean":              {module: "effect/Boolean", namespace: true},
 	"Brand":                {module: "effect/Brand", namespace: true},
 	"ByteSize":             {module: "effect/ByteSize", namespace: true},
+	"Bytes":                {module: "effect/Bytes", namespace: true},
 	"Cache":                {module: "effect/Cache", namespace: true},
 	"Cause":                {module: "effect/Cause", namespace: true},
 	"Channel":              {module: "effect/Channel", namespace: true},
@@ -146,6 +147,8 @@ var effectRootNames = map[string]effectRootExport{
 	"ScopedCache":          {module: "effect/ScopedCache", namespace: true},
 	"ScopedRef":            {module: "effect/ScopedRef", namespace: true},
 	"Semaphore":            {module: "effect/Semaphore", namespace: true},
+	"SemVer":               {module: "effect/SemVer", namespace: true},
+	"SemVerRange":          {module: "effect/SemVerRange", namespace: true},
 	"Sink":                 {module: "effect/Sink", namespace: true},
 	"StandardSchema":       {module: "effect/StandardSchema", namespace: true},
 	"Stdio":                {module: "effect/Stdio", namespace: true},
@@ -157,6 +160,7 @@ var effectRootNames = map[string]effectRootExport{
 	"SynchronizedRef":      {module: "effect/SynchronizedRef", namespace: true},
 	"Take":                 {module: "effect/Take", namespace: true},
 	"Terminal":             {module: "effect/Terminal", namespace: true},
+	"TextDiff":             {module: "effect/TextDiff", namespace: true},
 	"Tracer":               {module: "effect/Tracer", namespace: true},
 	"Trie":                 {module: "effect/Trie", namespace: true},
 	"Tuple":                {module: "effect/Tuple", namespace: true},

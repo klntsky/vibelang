@@ -185,7 +185,7 @@ function scenario() {
   }
 }
 
-// expect-result: {"first":"uploaded tmp1","second":"queued r2","third":"TimeoutError","deadline":"uploaded tmp4","defect":["Die"],"mixed":["Fail","Die"],"moved":"TimeoutError","events":["create tmp1","write tmp1 a","upload tmp1","metric exports","remove tmp1","create tmp2","write tmp2 a","queue r2","metric exports","remove tmp2","create tmp3","write tmp3 a","metric exports","remove tmp3","create tmp4","write tmp4 a","upload tmp4","metric exports","remove tmp4","debit a 10","credit b 10"]}
+// expect-result: {"first":"uploaded tmp1","second":"queued r2","third":"TimeoutError","deadline":"uploaded tmp4","defect":["Die"],"mixed":["Die","Die"],"moved":"TimeoutError","events":["create tmp1","write tmp1 a","upload tmp1","metric exports","remove tmp1","create tmp2","write tmp2 a","queue r2","metric exports","remove tmp2","create tmp3","write tmp3 a","metric exports","remove tmp3","create tmp4","write tmp4 a","upload tmp4","metric exports","remove tmp4","debit a 10","credit b 10"]}
 export function main() {
   return Effect.provide(
     () => scenario(),

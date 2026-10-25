@@ -57,7 +57,7 @@ Where Effect has no service yet, as for `os.hostname()`, `fs.lstat`, or `process
 ## Installing runtime-specific packages
 
 ```sh
-npm install effect@4.0.5 @effect/platform-node
+npm install effect@4.0.6 @effect/platform-node
 npm install vibelang-runtime
 npm install --save-dev vibelang
 ```
@@ -66,10 +66,10 @@ The `effect` package holds the interfaces. Install `@effect/platform-node` for N
 
 ```sh
 # Deno
-deno add npm:effect@4.0.5 npm:@effect/platform-node
+deno add npm:effect@4.0.6 npm:@effect/platform-node
 
 # Bun
-bun add effect@4.0.5 @effect/platform-bun
+bun add effect@4.0.6 @effect/platform-bun
 ```
 
 `vibelang` ships the `vibelang` binary. `npx vibelang` checks and compiles the project's `.vibe` and `.ts` sources, then you launch the generated JavaScript; `npx vibelang --noEmit` only checks. Bun and Deno projects also need `vibelang-runtime` and the compiler. Never pass `.vibe` files to a TypeScript runner.

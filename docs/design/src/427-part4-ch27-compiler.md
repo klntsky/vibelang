@@ -97,7 +97,7 @@ text per lambda form.
 Generated JavaScript imports only `effect` and `vibelang-runtime` (D30). The
 runtime holds the continuation kernel and the helpers the compiler emits; it
 runs on Effect's fiber, Context, and Scope and adds no scheduler. It checks for
-`effect@4.0.5` at load time and rejects other versions.
+`effect@4.0.6` at load time and rejects other versions.
 
 | Runtime helper | Purpose |
 | --- | --- |

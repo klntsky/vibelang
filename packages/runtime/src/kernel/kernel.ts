@@ -1,4 +1,4 @@
-// VibeLang continuation kernel prototype on effect@4.0.5.
+// VibeLang continuation kernel prototype on effect@4.0.6.
 //
 // The kernel adds multi-prompt, one-shot delimited control to Effect's own
 // fiber stack. A handler installs a Prompt frame on `fiber._stack` and an
@@ -657,7 +657,7 @@ export interface Resumer<A> {
   readonly state: () => "waiting" | "resumed" | "cancelled"
 }
 
-// Effect 4.0.5 runs a woken fiber synchronously on the waker's JS stack with
+// Effect 4.0.6 runs a woken fiber synchronously on the waker's JS stack with
 // no depth guard (tests/wakeup-chain.test.ts: ~1,000 chained wake-ups on V8,
 // ~3,000 on JSC overflow and silently strand the rest of the chain). The
 // kernel bounds nesting: beyond wakeConfig.budget it enqueues the wake-up on

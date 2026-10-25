@@ -59,7 +59,7 @@ D57 supplies decision 2's partial-annotation spelling: explicit `infer Name` slo
 | D27 | `wire` is an intrinsic with a bounded contract (EK3201-EK3204) | Layer types carry outputs and inputs | 4 |
 | D28 | A `catch` over several expected failures receives the first | K14a | 3, 17 |
 | D29 | P1-P22 are the spec's rules, as revised below | Verified runtime counterexamples refine the original rules | 29 |
-| D30 | Installation: `vibelang` (`vibelang`) and `vibelang-runtime`; `effect` 4.0.5 exactly | Mirrors `typescript@7` packaging | 28 |
+| D30 | Installation: `vibelang` (`vibelang`) and `vibelang-runtime`; `effect` 4.0.6 exactly | Mirrors `typescript@7` packaging | 28 |
 | D31 | Builds: `vibelang --watch`; `vibelang-vite` for Vite | One checker for CLI, editor, and bundler | 28 |
 | D32 | The editor: `vibelang --lsp --stdio`; the `vibelang.vibelang` extension | The fork's binary already serves LSP | 28 |
 | D33 | v0 editor features: hover, completions, quick fixes, four refactors | The diagnostics with mechanical fixes | 28 |

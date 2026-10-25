@@ -131,7 +131,7 @@ function createParcel() {
 false
 ```
 
-`withConstructorDefault` makes a field optional for construction, not decoding, and evaluates its program when needed. Constructor failures are raw schema issues in local Effect 4.0.5.
+`withConstructorDefault` makes a field optional for construction, not decoding, and evaluates its program when needed. Constructor failures are raw schema issues in local Effect 4.0.6.
 
 ## Distinguishing optional keys, optional values, null, and absence
 

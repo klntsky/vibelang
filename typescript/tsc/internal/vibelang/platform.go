@@ -51,7 +51,7 @@ const nodeServices = `NodeServices.layer from "@effect/platform-node", or BunSer
 
 // platformServices are the Effect APIs that replace platform APIs (Chapter 11), by
 // the names the tables below use. Each import and layer is declared by
-// effect 4.0.5 or its platform packages; TestPlatformServicesTable checks
+// effect 4.0.6 or its platform packages; TestPlatformServicesTable checks
 // that each example uses what its import brings in.
 var platformServices = map[string]*platformService{
 	"FileSystem": {"the FileSystem service", "FileSystem.readFileString(path)", `import { FileSystem } from "effect/FileSystem"`, nodeServices},

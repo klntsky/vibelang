@@ -15,7 +15,7 @@ Use Effect services for platform, clock and randomness APIs, such as `Console`, 
 
 `package.json` must have `"type": "module"`. If not, ask the user before adding it: it changes how Node loads the project's `.js` files.
 
-The VibeLang runtime requires `effect` 4.0.5 exactly. The runtime depends on Effect internals and checks the exact version at load. Effect 4.0.6 changed how a cleanup failure combines with a body failure in a way VibeLang's failure rules do not accept yet, so projects on 4.0.6 must use 4.0.5 for now. If `package.json` depends on another `effect` version, stop and ask the user.
+The VibeLang runtime requires `effect` 4.0.6 exactly. The runtime depends on Effect internals and checks the exact version at load. Effect 4.0.6 changed how a cleanup failure combines with a body failure in a way VibeLang's failure rules do not accept yet, so projects on 4.0.6 must use 4.0.6 for now. If `package.json` depends on another `effect` version, stop and ask the user.
 
 ## 2. Install the packages
 
@@ -24,7 +24,7 @@ Before installing, add this transitive pin to `package.json` (npm and Bun both h
 ```json
 {
   "overrides": {
-    "@effect/platform-node-shared": "4.0.5"
+    "@effect/platform-node-shared": "4.0.6"
   }
 }
 ```
@@ -34,26 +34,26 @@ This keeps the platform package from selecting a newer patch with a different Ef
 With Bun, run:
 
 ```sh
-bun add --exact vibelang-runtime@0.0.10 effect@4.0.5 @effect/platform-node@4.0.5
-bun add -d --exact vibelang@0.0.10 vibelang-vite@0.0.10 vitest@5.0.5 @effect/vitest@4.0.5
+bun add --exact vibelang-runtime@0.0.10 effect@4.0.6 @effect/platform-node@4.0.6
+bun add -d --exact vibelang@0.0.10 vibelang-vite@0.0.10 vitest@5.0.5 @effect/vitest@4.0.6
 ```
 
 With npm, run:
 
 ```sh
-npm install --save-exact vibelang-runtime@0.0.10 effect@4.0.5 @effect/platform-node@4.0.5
-npm install --save-dev --save-exact vibelang@0.0.10 vibelang-vite@0.0.10 vitest@5.0.5 @effect/vitest@4.0.5
+npm install --save-exact vibelang-runtime@0.0.10 effect@4.0.6 @effect/platform-node@4.0.6
+npm install --save-dev --save-exact vibelang@0.0.10 vibelang-vite@0.0.10 vitest@5.0.5 @effect/vitest@4.0.6
 ```
 
 | Package | Install as | Purpose |
 | --- | --- | --- |
 | `vibelang-runtime` | Dependency | The continuation kernel and helpers that compiled code imports |
-| `effect`, `@effect/platform-node` | Dependency | Effect 4.0.5 and its Node platform |
+| `effect`, `@effect/platform-node` | Dependency | Effect 4.0.6 and its Node platform |
 | `vibelang` | Dev dependency | The compiler and language server, its native binary, and the VS Code extension |
 | `vibelang-vite` | Dev dependency | Compiles `.vibe` modules for Vite and Vitest |
-| `vitest`, `@effect/vitest` | Dev dependency | Vitest 5.0.5 and `@effect/vitest` 4.0.5 for tests |
+| `vitest`, `@effect/vitest` | Dev dependency | Vitest 5.0.5 and `@effect/vitest` 4.0.6 for tests |
 
-Keep `effect`, `@effect/platform-node`, and `@effect/vitest` at 4.0.5. `vibelang`, `vibelang-runtime`, and `vibelang-vite` release together; keep them at one version.
+Keep `effect`, `@effect/platform-node`, and `@effect/vitest` at 4.0.6. `vibelang`, `vibelang-runtime`, and `vibelang-vite` release together; keep them at one version.
 
 Keep optional dependencies enabled: `vibelang` gets its native compiler from one optional dependency per platform, such as `vibelang-darwin-arm64`. If an install skips them, as `npm install --omit=optional` does, `vibelang` cannot find its binary and exits with an error.
 

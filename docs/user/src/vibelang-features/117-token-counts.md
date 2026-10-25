@@ -19,9 +19,9 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 | --- | ---: |
 | The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,809 |
 | The skill and the [cheat sheet](115-cheat-sheet.md) | 14,160 |
-| The skill and the user guide (131 pages) | 211,832 |
-| The user guide alone | 207,023 |
-| The specification (33 chapters) | 105,350 |
+| The skill and the user guide (131 pages) | 211,850 |
+| The user guide alone | 207,041 |
+| The specification (33 chapters) | 105,373 |
 | The decision log, `docs/design/DECISIONS.md` | 61,585 |
 
 ## Effect TypeScript beside VibeLang
@@ -242,14 +242,14 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Equivalence](../schema/102-equivalence.md) | 770 |
 | [Formatter](../schema/103-formatter.md) | 541 |
 | [Schema Compilers](../schema/104-compilers.md) | 2,122 |
-| **Platform** | **7,434** |
+| **Platform** | **7,452** |
 | [Introduction](../platform/105-introduction.md) | 1,791 |
 | [FileSystem](../platform/106-file-system.md) | 1,215 |
 | [Path](../platform/107-path.md) | 940 |
 | [PlatformLogger](../platform/108-platformlogger.md) | 758 |
 | [Runtime](../platform/109-runtime.md) | 1,219 |
-| [Terminal](../platform/110-terminal.md) | 1,511 |
-| **All 98 pages** | **134,467** |
+| [Terminal](../platform/110-terminal.md) | 1,529 |
+| **All 98 pages** | **134,485** |
 
 ### VibeLang features
 
@@ -287,8 +287,8 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [15. Which functions compile to plain JavaScript](../../../design/src/215-part2-ch15-direct.md) | 2,412 |
 | [16. Callbacks and higher-order functions](../../../design/src/216-part2-ch16-callbacks.md) | 1,320 |
 | [17. Failures, defects, interruption, and cleanup](../../../design/src/217-part2-ch17-failures.md) | 1,791 |
-| **Part III. The runtime** | **20,823** |
-| [18. Why a continuation runtime](../../../design/src/318-part3-ch18-why.md) | 2,127 |
+| **Part III. The runtime** | **20,846** |
+| [18. Why a continuation runtime](../../../design/src/318-part3-ch18-why.md) | 2,150 |
 | [19. The checkout trace, step by step](../../../design/src/319-part3-ch19-trace.md) | 1,582 |
 | [20. The machine](../../../design/src/320-part3-ch20-machine.md) | 3,290 |
 | [21. One-shot ownership and races](../../../design/src/321-part3-ch21-ownership.md) | 1,879 |
@@ -306,6 +306,6 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | **Appendices** | **12,875** |
 | [A. Evidence index and B. Prior art](../../../design/src/900-appendices.md) | 4,645 |
 | [C. Every Effect feature in VibeLang](../../../design/src/901-appendix-c-coverage.md) | 8,230 |
-| **All 33 pages** | **105,350** |
+| **All 33 pages** | **105,373** |
 
 <!-- token-counts: end -->

@@ -5,11 +5,11 @@
     "": {
       "name": "independent-continuation-kernel",
       "dependencies": {
-        "effect": "4.0.5",
+        "effect": "4.0.6",
       },
     },
   },
   "packages": {
-    "effect": ["effect@4.0.5", "", {}, "sha512-BY4/28NlpOd99yzmV741xbVGmp+1U7tks4oB7F/Png64bTa5tm5eCA6W0RiXsnuLDDoJpjfVSo4Dnq4BZb/89Q=="],
+    "effect": ["effect@4.0.6", "", {}, "sha512-Tc3mkzuLR6t6P9dhLt0D2GrxYtmU5td4XEJEiXCmILz53IRIfJyHsKZWjTA3xEjiwpNTtXBgI4iqYPxMztBDrw=="],
   }
 }

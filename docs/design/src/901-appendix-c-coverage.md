@@ -8,7 +8,7 @@ function loadUser(id: string) {
 }
 ```
 
-Every section of Effect 4's documentation, the Effect 3 pages version 4 dropped, and the `effect@4.0.5` modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to VibeLang. **Changed**: VibeLang has its own form. **Unchanged**: by design, you use Effect's API as you do today; the call rule (Chapter 13) makes it work directly, and a second way would be ceremony. The map comes from the feature-coverage audit (`docs/research/effect-feature-coverage.md`, 309 features), updated to the decisions in Chapter 29. D57 completes partial annotations with explicit `infer` slots.
+Every section of Effect 4's documentation, the Effect 3 pages version 4 dropped, and the `effect@4.0.6` modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to VibeLang. **Changed**: VibeLang has its own form. **Unchanged**: by design, you use Effect's API as you do today; the call rule (Chapter 13) makes it work directly, and a second way would be ceremony. The map comes from the feature-coverage audit (`docs/research/effect-feature-coverage.md`, 309 features), updated to the decisions in Chapter 29. D57 completes partial annotations with explicit `infer` slots.
 
 #### C1. Getting started: the Effect type, creating, running, generators, pipelines
 
@@ -17,7 +17,7 @@ Every section of Effect 4's documentation, the Effect 3 pages version 4 dropped,
 | The `Effect<A, E, R>` type | Changed | Inferred for every function; written as a return annotation to have it checked (Chapter 2) |
 | Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged | Apply them to the TypeScript type of a VibeLang function |
 | Annotate one channel, infer the rest | Changed (D57) | In a return annotation with a body, write `Effect<A, infer E, infer R>`; a slot left out of `Effect<…>` is `never` (D308), and `A!E` infers R (D309) |
-| Installation | Changed | `effect@4.0.5`, `vibelang-runtime`, and `vibelang` (Chapter 28) |
+| Installation | Changed | `effect@4.0.6`, `vibelang-runtime`, and `vibelang` (Chapter 28) |
 | Importing Effect | Changed | `effect`'s root modules need no import (D146); import subpath packages such as `effect/http` |
 | `Effect.succeed` | Changed | `return 42` |
 | `Effect.fail`, `failSync` | Changed | `throw new HttpError()` |

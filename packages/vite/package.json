@@ -39,9 +39,9 @@
     "vite": ">=7 <9"
   },
   "devDependencies": {
-    "@effect/vitest": "4.0.5",
+    "@effect/vitest": "4.0.6",
     "@vitest/coverage-v8": "5.0.5",
-    "effect": "4.0.5",
+    "effect": "4.0.6",
     "vite": "^8.0.0",
     "vitest": "5.0.5"
   },

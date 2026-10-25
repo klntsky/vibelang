@@ -22,7 +22,7 @@ const fixture = (version: string) => {
   return dir
 }
 
-for (const version of ["4.0.5", "4.0.6", "3.99.0"]) {
+for (const version of ["4.0.6", "4.0.5", "4.0.7", "3.99.0"]) {
   test(`package: Node, Bun, and browser bundles check effect@${version}`, async () => {
     const dir = fixture(version)
     try {
@@ -37,14 +37,14 @@ for (const version of ["4.0.5", "4.0.6", "3.99.0"]) {
       for (const command of commands) {
         const result = Bun.spawnSync(command, { cwd: dir, stdout: "pipe", stderr: "pipe" })
         const output = result.stdout.toString() + result.stderr.toString()
-        if (version === "4.0.5") {
+        if (version === "4.0.6") {
           expect(result.exitCode).toBe(0)
           expect(output.trim()).toBe("42")
         } else {
           expect(result.exitCode).not.toBe(0)
-          expect(output).toContain("vibelang-runtime@0.0.10 requires effect@4.0.5")
+          expect(output).toContain("vibelang-runtime@0.0.10 requires effect@4.0.6")
           expect(output).toContain(`found effect@${version}`)
-          expect(output).toContain("npm install effect@4.0.5")
+          expect(output).toContain("npm install effect@4.0.6")
         }
       }
     } finally {

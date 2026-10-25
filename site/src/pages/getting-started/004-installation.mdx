@@ -63,7 +63,7 @@ Before installing, add this transitive pin to `package.json` (npm and Bun both h
 ```json
 {
   "overrides": {
-    "@effect/platform-node-shared": "4.0.5"
+    "@effect/platform-node-shared": "4.0.6"
   }
 }
 ```
@@ -71,8 +71,8 @@ Before installing, add this transitive pin to `package.json` (npm and Bun both h
 This keeps the platform package from selecting a newer patch with a different Effect peer requirement.
 
 ```sh
-bun add --exact vibelang-runtime@0.0.10 effect@4.0.5 @effect/platform-node@4.0.5
-bun add -d --exact vibelang@0.0.10 vibelang-vite@0.0.10 vitest@5.0.5 @effect/vitest@4.0.5
+bun add --exact vibelang-runtime@0.0.10 effect@4.0.6 @effect/platform-node@4.0.6
+bun add -d --exact vibelang@0.0.10 vibelang-vite@0.0.10 vitest@5.0.5 @effect/vitest@4.0.6
 ```
 
 With npm, run `npm install --save-exact` for the first line and `npm install --save-dev --save-exact` for the second.
@@ -80,12 +80,12 @@ With npm, run `npm install --save-exact` for the first line and `npm install --s
 | Package | Install as | Purpose |
 | --- | --- | --- |
 | `vibelang-runtime` | Dependency | The continuation kernel and helpers that compiled code imports |
-| `effect`, `@effect/platform-node` | Dependency | Effect 4.0.5 and its Node platform |
+| `effect`, `@effect/platform-node` | Dependency | Effect 4.0.6 and its Node platform |
 | `vibelang` | Dev dependency | The compiler and language server, its native binary, and the VS Code extension |
 | `vibelang-vite` | Dev dependency | Compiles `.vibe` modules for Vite and Vitest |
-| `vitest`, `@effect/vitest` | Dev dependency | Vitest 5.0.5 and `@effect/vitest` 4.0.5 for tests |
+| `vitest`, `@effect/vitest` | Dev dependency | Vitest 5.0.5 and `@effect/vitest` 4.0.6 for tests |
 
-`vibelang-runtime` requires `effect` 4.0.5 exactly. The runtime depends on Effect internals and checks the exact version at load. Effect 4.0.6 changed how a cleanup failure combines with a body failure in a way VibeLang's failure rules do not accept yet, so projects on 4.0.6 must use 4.0.5 for now. Keep `effect`, `@effect/platform-node`, and `@effect/vitest` at 4.0.5, so the runtime and your program share one copy of `effect`. Keep `vibelang`, `vibelang-runtime`, and `vibelang-vite` at one version; they are released together.
+`vibelang-runtime` requires `effect` 4.0.6 exactly. The runtime depends on Effect internals and checks the exact version at load. Effect 4.0.6 changed how a cleanup failure combines with a body failure in a way VibeLang's failure rules do not accept yet, so projects on 4.0.6 must use 4.0.6 for now. Keep `effect`, `@effect/platform-node`, and `@effect/vitest` at 4.0.6, so the runtime and your program share one copy of `effect`. Keep `vibelang`, `vibelang-runtime`, and `vibelang-vite` at one version; they are released together.
 
 Add a `tsconfig.json` that selects `.vibe` sources and emits Node ESM to `dist/`:
 
@@ -196,7 +196,7 @@ Set `"declaration": true` in `compilerOptions` to emit `.d.ts` files. The starte
 
 ## Coming from Effect
 
-Install `vibelang` to compile `.vibe` and `vibelang-runtime` beside `effect@4.0.5`. Write application logic in `.vibe` and keep ordinary TypeScript integrations in `.ts`; the compiler checks both file types as one program.
+Install `vibelang` to compile `.vibe` and `vibelang-runtime` beside `effect@4.0.6`. Write application logic in `.vibe` and keep ordinary TypeScript integrations in `.ts`; the compiler checks both file types as one program.
 
 ---
 

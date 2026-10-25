@@ -214,7 +214,10 @@ test("abandoning yield delegation closes the delegated JavaScript generator", as
   expect(closed).toBe(1)
 })
 
-test("iterable cleanup failures accompany body failures, and exhausted iterators are not closed twice", async () => {
+// Effect 4.0.6 gives defects precedence where it combines a body's failure
+// with a cleanup failure (Effect-TS/effect#9433): the body's typed failure
+// becomes a defect, first, beside the cleanup's.
+test("iterable cleanup failures accompany body failures as defects, and exhausted iterators are not closed twice", async () => {
   let returned = 0
   const values = {
     [Symbol.iterator]() {
@@ -226,8 +229,8 @@ test("iterable cleanup failures accompany body failures, and exhausted iterators
   }
   const exit = await Effect.runPromiseExit($forOf(values, () => Effect.fail("body failed")))
   expect(returned).toBe(1)
-  expect(Exit.isFailure(exit) && exit.cause.reasons.filter(Cause.isFailReason).map(r => r.error)).toEqual(["body failed"])
-  expect(Exit.isFailure(exit) && String(exit.cause.reasons.find(Cause.isDieReason)?.defect)).toContain("close failed")
+  expect(Exit.isFailure(exit) && exit.cause.reasons.map(r => r._tag)).toEqual(["Die", "Die"])
+  expect(Exit.isFailure(exit) && exit.cause.reasons.map(r => String((r as Cause.Die).defect))).toEqual(["body failed", "Error: close failed"])
   const exhausted = {
     [Symbol.iterator]() {
       return {

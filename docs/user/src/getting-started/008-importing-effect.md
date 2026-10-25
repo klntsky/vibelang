@@ -5,7 +5,7 @@ In `.vibe` files, Effect's modules are already in scope: the prelude, and every 
 ## Install the core package
 
 ```sh
-npm install effect@4.0.5
+npm install effect@4.0.6
 ```
 
 The core package supplies Effect's data types, schedules, concurrency tools, and other modules. See [Installation](004-installation.md) for platform packages, `vibelang`, and `vibelang-runtime`.

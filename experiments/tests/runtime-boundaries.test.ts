@@ -11,16 +11,16 @@ const reasons = (exit: Exit.Exit<unknown, unknown>) => Exit.isFailure(exit)
   ? exit.cause.reasons.map(r => r._tag === "Die" ? [r._tag, String(r.defect)] : r._tag)
   : ["Success", exit.value]
 
-test("Boundary 1 Effect.catch hides a release defect when the body also fails", () => {
+test("Boundary 1 Effect.catch preserves defects when the body also fails (Effect 4.0.6)", () => {
   const body = Effect.ensuring(Effect.fail("expected"), Effect.die("release-defect"))
   const before = Effect.runSyncExit(body)
   const after = Effect.runSyncExit(Effect.catch(body, () => Effect.succeed("recovered")))
   console.log("Boundary 1", JSON.stringify({ before: reasons(before), after: reasons(after) }))
-  expect(Exit.isFailure(before) && before.cause.reasons.map(r => r._tag)).toEqual(["Fail", "Die"])
-  expect(after).toEqual(Exit.succeed("recovered"))
-  // Fixed lowering (K14): source `catch` emits catchExpected, which re-raises the whole cause.
+  expect(Exit.isFailure(before) && before.cause.reasons.map(r => r._tag)).toEqual(["Die", "Die"])
+  expect(reasons(after)).toEqual([["Die", "expected"], ["Die", "release-defect"]])
+  // Both the source catch and Effect.catch preserve the elected defects (D305).
   const lowered = Effect.runSyncExit(catchExpected(body, () => Effect.succeed("recovered")))
-  expect(Exit.isFailure(lowered) && lowered.cause.reasons.map(r => r._tag)).toEqual(["Fail", "Die"])
+  expect(Exit.isFailure(lowered) && lowered.cause.reasons.map(r => r._tag)).toEqual(["Die", "Die"])
 })
 
 test("Boundary 2 owner-driven abandonment retains a cleanup defect alongside interruption", () => {

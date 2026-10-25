@@ -32,8 +32,8 @@ import (
 var preludeNames = func() map[string]bool {
 	names := map[string]bool{}
 	for _, list := range []string{
-		// effect's root modules (effect@4.0.5 dist/index.d.ts).
-		`Arbitrary Array BigDecimal BigInt Boolean Brand ByteSize Cache Cause Channel ChannelSchema Chunk Clock Combiner
+		// effect's root modules (effect@4.0.6 dist/index.d.ts).
+		`Arbitrary Array BigDecimal BigInt Boolean Brand Bytes ByteSize Cache Cause Channel ChannelSchema Chunk Clock Combiner
 		Config ConfigProvider Console Context Cron Crypto Data DateTime Deferred Differ Duration Effect Effectable Equal
 		Equivalence ErrorReporter ExecutionPlan Exit Fiber FiberHandle FiberMap FiberSet FileSystem Filter Formatter
 		Function Graph Hash HashMap HashRing HashSet HKT Inspectable Iterable JsonPatch JsonPointer JsonSchema Latch Layer
@@ -41,8 +41,8 @@ var preludeNames = func() map[string]bool {
 		Newtype NonEmptyIterable Number Optic Option Order Ordering PartitionedSemaphore Path Pipeable PlatformError Pool
 		Predicate PrimaryKey PubSub Pull Queue Random RcMap RcRef Record Redactable Redacted Reducer Ref References RegExp
 		Request RequestResolver Resource Result Runtime Schedule Scheduler Schema SchemaAST SchemaGetter SchemaIssue
-		SchemaParser SchemaRepresentation SchemaTransformation Scope ScopedCache ScopedRef Semaphore Sink StandardSchema
-		Stdio Stream String Struct SubscriptionRef Symbol SynchronizedRef Take Terminal Tracer Trie Tuple TxChunk
+		SchemaParser SchemaRepresentation SchemaTransformation Scope ScopedCache ScopedRef Semaphore SemVer SemVerRange Sink StandardSchema
+		Stdio Stream String Struct SubscriptionRef Symbol SynchronizedRef Take Terminal TextDiff Tracer Trie Tuple TxChunk
 		TxDeferred TxHashMap TxHashSet TxPriorityQueue TxPubSub TxQueue TxReentrantLock TxRef TxSemaphore
 		TxSubscriptionRef Types UndefinedOr Unify Utils Version absurd cast flow hole identity`,
 		// D151.

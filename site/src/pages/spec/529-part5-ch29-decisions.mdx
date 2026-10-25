@@ -63,7 +63,7 @@ D57 supplies decision 2's partial-annotation spelling: explicit `infer Name` slo
 | D27 | `wire` is an intrinsic with a bounded contract (EK3201-EK3204) | Layer types carry outputs and inputs | 4 |
 | D28 | A `catch` over several expected failures receives the first | K14a | 3, 17 |
 | D29 | P1-P22 are the spec's rules, as revised below | Verified runtime counterexamples refine the original rules | 29 |
-| D30 | Installation: `vibelang` (`vibelang`) and `vibelang-runtime`; `effect` 4.0.5 exactly | Mirrors `typescript@7` packaging | 28 |
+| D30 | Installation: `vibelang` (`vibelang`) and `vibelang-runtime`; `effect` 4.0.6 exactly | Mirrors `typescript@7` packaging | 28 |
 | D31 | Builds: `vibelang --watch`; `vibelang-vite` for Vite | One checker for CLI, editor, and bundler | 28 |
 | D32 | The editor: `vibelang --lsp --stdio`; the `vibelang.vibelang` extension | The fork's binary already serves LSP | 28 |
 | D33 | v0 editor features: hover, completions, quick fixes, four refactors | The diagnostics with mechanical fixes | 28 |
@@ -247,7 +247,7 @@ Proposed in the first draft as P1-P22; adopted by D29. A row marked **revised** 
 | # | Rule | Evidence | Chapters |
 | --- | --- | --- | --- |
 | P1 | The machine in Chapter 20 is the specification. Every feature is a rule over it | Chapter 18 | All |
-| P2 | Runtime: Effect-native prompts (strategy A). Reference semantics: an explicit machine (strategy B), once G16 runs one law suite on both. **Revised**: the two disagree today on the Context a reinstalled prompt records , so passing tests in both are not agreement | 172 kernel tests; 20 reference tests; T7a; `tests/runtime-boundaries.test.ts` | 25 |
+| P2 | Runtime: Effect-native prompts (strategy A). Reference semantics: an explicit machine (strategy B), once G16 runs one law suite on both. **Revised**: the two disagree today on the Context a reinstalled prompt records , so passing tests in both are not agreement | 177 kernel tests; 20 reference tests; T7a; `tests/runtime-boundaries.test.ts` | 25 |
 | P3 | Deep handlers, dynamic selection, clauses run outside their prompt | T9, clause-outside test | 20 |
 | P4 | Context is a snapshot across capture; the reinstalled prompt records the resume site's Context | T1, T13, T15 | 22 |
 | P5 | Every consumption of a continuation (resume, transfer, abandon) happens on the capturing fiber | T14, T14b, O04, O06 | 21 |

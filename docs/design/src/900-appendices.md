@@ -6,7 +6,7 @@ Run everything:
 
 ```sh
 cd experiments
-bun install        # effect@4.0.5 exactly
+bun install        # effect@4.0.6 exactly
 bun test           # {{testCount}} tests in {{testFiles}} files, about a second
 bun test ./tests/runtime-boundaries.test.ts         # runtime boundary regressions
 bun test ./tests/acquisition-cancellation.test.ts ./tests/generator-tail-resume.test.ts

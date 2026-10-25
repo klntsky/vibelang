@@ -1,5 +1,5 @@
 /// <reference lib="esnext.disposable" />
-// Effect 4.0.5 exposes disposal protocols even when the source uses no using.
+// Effect 4.0.6 exposes disposal protocols even when the source uses no using.
 // The prelude of VibeLang's TypeScript 7 content mapper. Every file the mapper
 // projects starts with one import from this module:
 //
@@ -381,7 +381,7 @@ type Unresolved<T> = [T] extends [{ readonly "~vibelang-ts-mapper/unresolved": t
  */
 export type $PreludeLoaded =
   Unresolved<typeof EffectModule.gen> extends true
-    ? "vibelang-ts-mapper: the prelude cannot resolve effect from its own location; install effect 4.0.5 beside vibelang-ts-mapper"
+    ? "vibelang-ts-mapper: the prelude cannot resolve effect from its own location; install effect 4.0.6 beside vibelang-ts-mapper"
     : Unresolved<typeof Runtime.$service> extends true
       ? "vibelang-ts-mapper: the prelude cannot resolve vibelang-runtime from its own location; install vibelang-runtime beside vibelang-ts-mapper"
       : true
@@ -1902,9 +1902,9 @@ interface $D152Method_catchDefect {
     "catchDefect"<A, E, R, A2, E2, R2>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, f: (defect: unknown) => $D152Effect_Effect<A2, E2, R2>): $D152Effect_Effect<A | A2, E | E2, R | R2>;
 }
 interface $D152Method_catchIf {
-    "catchIf"<A, E, R, EB extends E, A2, E2, R2, A3 = $D152Stream_unassigned, E3 = never, R3 = never>(this: $D152Stream_Stream<A, E, R>, refinement: $D152Stream_Refinement<E, EB>, f: (e: EB) => $D152Stream_Stream<A2, E2, R2>, orElse?: ((e: Exclude<E, EB>) => $D152Stream_Stream<A3, E3, R3>) | undefined): $D152Stream_Stream<A | A2 | Exclude<A3, $D152Stream_unassigned>, E2 | E3 | (A3 extends $D152Stream_unassigned ? Exclude<E, EB> : never), R | R2 | R3>;
+    "catchIf"<A, E, R, EB extends E, A2, E2, R2, A3 = $D152Stream_unassigned, E3 = never, R3 = never>(this: $D152Stream_Stream<A, E, R>, refinement: $D152Stream_Refinement<$D152Stream_NoInfer<E>, EB>, f: (e: EB) => $D152Stream_Stream<A2, E2, R2>, orElse?: ((e: Exclude<E, EB>) => $D152Stream_Stream<A3, E3, R3>) | undefined): $D152Stream_Stream<A | A2 | Exclude<A3, $D152Stream_unassigned>, E2 | E3 | (A3 extends $D152Stream_unassigned ? Exclude<E, EB> : never), R | R2 | R3>;
     "catchIf"<A, E, R, A2, E2, R2, A3 = $D152Stream_unassigned, E3 = never, R3 = never>(this: $D152Stream_Stream<A, E, R>, predicate: $D152Stream_Predicate<E>, f: (e: E) => $D152Stream_Stream<A2, E2, R2>, orElse?: ((e: E) => $D152Stream_Stream<A3, E3, R3>) | undefined): $D152Stream_Stream<A | A2 | Exclude<A3, $D152Stream_unassigned>, E2 | E3 | (A3 extends $D152Stream_unassigned ? E : never), R | R2 | R3>;
-    "catchIf"<A, E, R, EB extends E, A2, E2, R2, A3 = $D152Effect_unassigned, E3 = never, R3 = never>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, refinement: $D152Effect_Predicate.Refinement<E, EB>, f: (e: EB) => $D152Effect_Effect<A2, E2, R2>, orElse?: ((e: Exclude<E, EB>) => $D152Effect_Effect<A3, E3, R3>) | undefined): $D152Effect_Effect<A | A2 | Exclude<A3, $D152Effect_unassigned>, E2 | E3 | (A3 extends $D152Effect_unassigned ? Exclude<E, EB> : never), R | R2 | R3>;
+    "catchIf"<A, E, R, EB extends E, A2, E2, R2, A3 = $D152Effect_unassigned, E3 = never, R3 = never>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, refinement: $D152Effect_Predicate.Refinement<$D152Effect_NoInfer<E>, EB>, f: (e: EB) => $D152Effect_Effect<A2, E2, R2>, orElse?: ((e: Exclude<E, EB>) => $D152Effect_Effect<A3, E3, R3>) | undefined): $D152Effect_Effect<A | A2 | Exclude<A3, $D152Effect_unassigned>, E2 | E3 | (A3 extends $D152Effect_unassigned ? Exclude<E, EB> : never), R | R2 | R3>;
     "catchIf"<A, E, R, A2, E2, R2, A3 = $D152Effect_unassigned, E3 = never, R3 = never>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, predicate: $D152Effect_Predicate.Predicate<E>, f: (e: E) => $D152Effect_Effect<A2, E2, R2>, orElse?: ((e: E) => $D152Effect_Effect<A3, E3, R3>) | undefined): $D152Effect_Effect<A | A2 | Exclude<A3, $D152Effect_unassigned>, E2 | E3 | (A3 extends $D152Effect_unassigned ? E : never), R | R2 | R3>;
 }
 interface $D152Method_catchFilter {
@@ -3342,7 +3342,7 @@ interface $D152Method_mkArrayBuffer {
     "mkArrayBuffer"<E, R>(this: $D152Stream_Stream<Uint8Array, E, R>): $D152Stream_Effect.Effect<ArrayBuffer, E, R>;
 }
 interface $D152Method_mkUint8Array {
-    "mkUint8Array"<E, R>(this: $D152Stream_Stream<Uint8Array, E, R>): $D152Stream_Effect.Effect<Uint8Array, E, R>;
+    "mkUint8Array"<E, R>(this: $D152Stream_Stream<Uint8Array, E, R>): $D152Stream_Effect.Effect<Uint8Array<ArrayBuffer>, E, R>;
 }
 interface $D152Method_toReadableStreamWith {
     "toReadableStreamWith"<A, E, XR, R extends XR>(this: $D152Stream_Stream<A, E, R>, context: $D152Stream_Context.Context<XR>, options?: {

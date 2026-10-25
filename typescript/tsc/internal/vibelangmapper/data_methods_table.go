@@ -1,6 +1,6 @@
 package vibelangmapper
 
-// dataGuards records the predicate exports of the pinned effect 4.0.5 declarations.
+// dataGuards records the predicate exports of the pinned effect 4.0.6 declarations.
 // Their boolean results stay as calls so stock TypeScript retains narrowing.
 var dataGuards = map[string]bool{
 	"effect/BigDecimal#isBigDecimal":       true,

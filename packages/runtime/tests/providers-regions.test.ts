@@ -123,7 +123,9 @@ for (const masked of [true, false]) {
   })
 }
 
-test("a Disposable defect is retained beside a body failure; other finalizers still run", () => {
+// Effect 4.0.6 defect precedence (Effect-TS/effect#9433): the body's
+// typed failure becomes a defect beside the Disposable's.
+test("a Disposable defect is retained beside a body failure, which becomes a defect; other finalizers still run", () => {
   const events: string[] = []
   const defect = new Error("dispose failed")
   const exit = Effect.runSyncExit($region(scope => Effect.gen(function*() {
@@ -132,8 +134,8 @@ test("a Disposable defect is retained beside a body failure; other finalizers st
     return yield* Effect.fail("body failed")
   })))
   expect(events).toEqual(["last"])
-  expect(Exit.isFailure(exit) && exit.cause.reasons.filter(Cause.isFailReason).map(r => r.error)).toEqual(["body failed"])
-  expect(Exit.isFailure(exit) && exit.cause.reasons.find(Cause.isDieReason)?.defect).toBe(defect)
+  expect(Exit.isFailure(exit) && exit.cause.reasons.map(r => r._tag)).toEqual(["Die", "Die"])
+  expect(Exit.isFailure(exit) && exit.cause.reasons.map(r => (r as Cause.Die).defect)).toEqual(["body failed", defect])
 })
 
 test("using disposes callable resources at block exit", () => {
@@ -259,6 +261,8 @@ test("cause helpers preserve all reasons and distinguish undefined failures from
   for (const value of [null, undefined, "Missing", {}, { _tag: "Other" }]) expect($isFailure(value, "Missing")).toBe(false)
 })
 
+// The finalizer sees the body's own Exit; the combined cause gives defects
+// precedence, as Effect.onExit does in Effect 4.0.6 (Effect-TS/effect#9433).
 test("finally Exit sees void on success, preserves failure, and retains cleanup failures", () => {
   let observed: unknown
   expect(Effect.runSync($finallyExit(Effect.succeed(42), exit => Effect.sync(() => { observed = exit })))).toBe(42)
@@ -269,8 +273,11 @@ test("finally Exit sees void on success, preserves failure, and retains cleanup 
     return Effect.fail("cleanup")
   }))
   expect(observed).toEqual(Exit.failCause(cause))
-  expect(Exit.isFailure(exit) && exit.cause.reasons.filter(Cause.isFailReason).map(r => r.error)).toEqual(["body", "cleanup"])
-  expect(Exit.isFailure(exit) && exit.cause.reasons.find(Cause.isDieReason)?.defect).toBe("defect")
+  expect(Exit.isFailure(exit) && exit.cause.reasons.map(r => r._tag)).toEqual(["Die", "Die", "Die"])
+  expect(Exit.isFailure(exit) && exit.cause.reasons.map(r => (r as Cause.Die).defect)).toEqual(["body", "defect", "cleanup"])
+  // Without a defect, both typed failures stay typed.
+  const typed = Effect.runSyncExit($finallyExit(Effect.fail("body"), () => Effect.fail("cleanup")))
+  expect(Exit.isFailure(typed) && typed.cause.reasons.map(r => r._tag === "Fail" ? r.error : r._tag)).toEqual(["body", "cleanup"])
 })
 
 test("nested masks restore the innermost region's previous interruptibility", async () => {

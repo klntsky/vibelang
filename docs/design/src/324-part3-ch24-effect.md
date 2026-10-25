@@ -1,6 +1,6 @@
 ### 24. What Effect provides and what the kernel adds
 
-The kernel is a TypeScript library over `effect@4.0.5`. This is kernel test T3, written directly against it: a handler that returns without resuming, and the cleanup that follows.
+The kernel is a TypeScript library over `effect@4.0.6`. This is kernel test T3, written directly against it: a handler that returns without resuming, and the cleanup that follows.
 
 ```ts ts
 const Ask = operation<void, number>("Ask")

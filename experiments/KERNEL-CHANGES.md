@@ -138,7 +138,7 @@ return yield* Effect.ensuring(                      // Final: finally
 
 ## 5. `suspend` inside `Effect.acquireRelease`
 
-**Confirmed.** effect 4.0.5 takes `options?: { readonly interruptible?: boolean }` as the third argument (`src/Effect.ts:13366-13370`). With it, the acquire runs under `restore` (`internal/effect.ts:4154`). The release is still registered under the mask, after acquisition succeeds, so no leak window opens.
+**Confirmed.** effect 4.0.6 takes `options?: { readonly interruptible?: boolean }` as the third argument (`src/Effect.ts:13600-13604`). With it, the acquire runs under `restore` (`internal/effect.ts:4194`). The release is still registered under the mask, after acquisition succeeds, so no leak window opens.
 
 **Behavior (tests only; no kernel change).**
 

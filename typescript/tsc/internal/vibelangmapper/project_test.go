@@ -1021,12 +1021,12 @@ func TestModuleKey(t *testing.T) {
 // packages get none.
 func TestVersionMismatch(t *testing.T) {
 	t.Parallel()
-	header := Header{Inputs: []Input{{Package: "effect", Version: "4.0.5"}, {Package: "@effect/vitest", Version: "4.0.5"}, {Package: "vite", Version: "8.3.4"}}}
+	header := Header{Inputs: []Input{{Package: "effect", Version: "4.0.6"}, {Package: "@effect/vitest", Version: "4.0.6"}, {Package: "vite", Version: "8.3.4"}}}
 	files := map[string]string{
 		"/repo/node_modules/effect/package.json":         `{"version": "4.1.0"}`,
-		"/repo/node_modules/@effect/vitest/package.json": `{"version": "4.0.5"}`,
+		"/repo/node_modules/@effect/vitest/package.json": `{"version": "4.0.6"}`,
 		"/repo/node_modules/vite/package.json":           `{"version": "9.0.0"}`,
-		"/ok/node_modules/effect/package.json":           `{"version": "4.0.5"}`,
+		"/ok/node_modules/effect/package.json":           `{"version": "4.0.6"}`,
 	}
 	read := func(name string) ([]byte, error) {
 		if text, ok := files[name]; ok {
@@ -1035,7 +1035,7 @@ func TestVersionMismatch(t *testing.T) {
 		return nil, errNotFound
 	}
 	message := versionMismatch(header, "/repo/app", read)
-	assert.Assert(t, strings.Contains(message, "effect 4.1.0 (the table pins 4.0.5)"), message)
+	assert.Assert(t, strings.Contains(message, "effect 4.1.0 (the table pins 4.0.6)"), message)
 	assert.Assert(t, !strings.Contains(message, "vitest") && !strings.Contains(message, "vite "), message)
 	assert.Equal(t, versionMismatch(header, "/ok", read), "")
 	assert.Equal(t, versionMismatch(header, "/none", read), "")

@@ -1,7 +1,7 @@
 // Static JSON imports work in Node, Bun, and browser bundlers without Node APIs.
 import effectPackage from "effect/package.json" with { type: "json" }
 
-export const PINNED_EFFECT_VERSION = "4.0.5"
+export const PINNED_EFFECT_VERSION = "4.0.6"
 
 if (effectPackage.version !== PINNED_EFFECT_VERSION) {
   throw new Error(
