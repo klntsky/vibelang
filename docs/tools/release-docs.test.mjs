@@ -98,3 +98,11 @@ test("example installs use published pins and the release gate updates them", ()
     assert.deepEqual(releaseDocsProblems(root),[])
   } finally { rmSync(repo,{recursive:true,force:true}) }
 })
+
+test("starter prerequisites make Bun conditional on the chosen package manager", () => {
+  const root = fileURLToPath(new URL("../../",import.meta.url))
+  for (const path of ["README.md","docs/user/src/getting-started/004-installation.md"]) {
+    const text = readFileSync(join(root,path),"utf8")
+    assert.match(text,/Node 26 or later\. If you use Bun, use Bun 1\.4 or later\./,path)
+  }
+})

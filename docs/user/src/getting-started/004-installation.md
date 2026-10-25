@@ -18,7 +18,7 @@ The native `vibelang` compiler compiles `.vibe` sources to JavaScript. Version 0
 
 ## Prerequisites
 
-Install Node 26 or later and Bun 1.4 or later. The compiler is a native binary: `vibelang` lists one package per platform as an optional dependency, and your package manager installs only the one that matches your machine:
+Install Node 26 or later. If you use Bun, use Bun 1.4 or later. The compiler is a native binary: `vibelang` lists one package per platform as an optional dependency, and your package manager installs only the one that matches your machine:
 
 | Platform | Package | Rehearsed for 0.0.6 |
 | --- | --- | --- |
