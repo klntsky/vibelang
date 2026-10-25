@@ -55,6 +55,7 @@ export default defineConfig({
   },
   renderStrategy: 'full-static',
   sidebar: [...sidebar, ...specSidebar],
+  socials: [{ icon: 'github', link: 'https://github.com/smithersai/vibelang' }],
   title: 'VibeLang',
   titleTemplate: '%s | VibeLang',
   topNav: [
