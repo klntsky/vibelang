@@ -66,3 +66,15 @@ test("install docs and the launcher describe the four published platforms and WS
   const launcher = readFileSync(join(root, "packages/compiler/bin/vibelang"), "utf8")
   assert.doesNotMatch(launcher, /const platforms = .*win32/)
 })
+
+test("the starter and existing-project instructions pin the transitive Effect peer", () => {
+  const root = fileURLToPath(new URL("../../", import.meta.url))
+  const effect = JSON.parse(readFileSync(join(root, "packages/runtime/package.json"), "utf8")).peerDependencies.effect
+  const app = JSON.parse(readFileSync(join(root, "templates/app/package.json"), "utf8"))
+  assert.equal(app.overrides?.["@effect/platform-node-shared"], effect)
+  for (const page of ["docs/user/src/setup/existing-project.md", "docs/user/src/getting-started/004-installation.md"]) {
+    assert.ok(readFileSync(join(root, page), "utf8").includes('"@effect/platform-node-shared": "' + effect + '"'), page)
+  }
+  assert.equal(renderReleasePage("page.md", '{"overrides":{"@effect/platform-node-shared": "4.0.6"}}', "9.8.7", effect),
+    '{"overrides":{"@effect/platform-node-shared": "' + effect + '"}}')
+})

@@ -58,6 +58,18 @@ See [Getting Started](/013-getting-started) for the starter's files and [Running
 
 ## Add VibeLang to an existing project
 
+Before installing, add this transitive pin to `package.json` (npm and Bun both honor `overrides`):
+
+```json
+{
+  "overrides": {
+    "@effect/platform-node-shared": "4.0.5"
+  }
+}
+```
+
+This keeps the platform package from selecting a newer patch with a different Effect peer requirement.
+
 ```sh
 bun add vibelang-runtime@0.0.6 effect@4.0.5 @effect/platform-node@4.0.5
 bun add -d vibelang@0.0.6 vibelang-vite@0.0.6 vitest@5.0.5 @effect/vitest@4.0.5

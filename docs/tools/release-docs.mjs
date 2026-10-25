@@ -9,7 +9,7 @@ const root = fileURLToPath(new URL("../../", import.meta.url))
 const semver = String.raw`\d+\.\d+\.\d+(?:-[\w.-]+)?`
 const historical = /(?:^|\/)(?:release-notes|compiler-gaps)\.(?:md|mdx)$/
 
-export function renderReleasePage(path, text, version) {
+export function renderReleasePage(path, text, version, effect) {
   if (historical.test(path)) return text
   let output = text
     .replace(new RegExp(String.raw`\b(vibelang(?:-[a-z0-9-]+)?@)` + semver, "g"), (_, prefix) => prefix + version)
@@ -18,6 +18,7 @@ export function renderReleasePage(path, text, version) {
   if (path === "site/src/pages/index.mdx") {
     output = output.replace(new RegExp("(<strong>)" + semver + "(</strong>)", "g"), (_, prefix, suffix) => prefix + version + suffix)
   }
+  if (effect) output = output.replace(new RegExp('("@effect/platform-node-shared": ")' + semver + '(")', "g"), (_, prefix, suffix) => prefix + effect + suffix)
   return output
 }
 
@@ -38,11 +39,14 @@ export function releasePaths(repository) {
 export function releaseDocsProblems(repository = root, write = false) {
   const version = JSON.parse(readFileSync(join(repository, "packages/compiler/package.json"), "utf8")).version
   if (!new RegExp("^" + semver + "$").test(version)) throw new Error("Invalid compiler version: " + version)
+  const runtime = join(repository, "packages/runtime/package.json")
+  const effect = existsSync(runtime) ? JSON.parse(readFileSync(runtime, "utf8")).peerDependencies?.effect : undefined
   const problems = []
   for (const path of releasePaths(repository)) {
     const file = join(repository, path)
     const current = readFileSync(file, "utf8")
-    const generated = renderReleasePage(path, current, version)
+    const generated = renderReleasePage(path, current, version, effect)
+    if (effect && ["docs/user/src/setup/existing-project.md", "docs/user/src/getting-started/004-installation.md"].includes(path) && !generated.includes('"@effect/platform-node-shared": "' + effect + '"')) problems.push(path + ": missing @effect/platform-node-shared override for effect " + effect)
     if (current === generated) continue
     if (write && (!path.startsWith("site/src/pages/") || path === "site/src/pages/index.mdx")) writeFileSync(file, generated)
     else if (!write) problems.push(path + ": stale VibeLang version; expected " + version + " from packages/compiler/package.json")

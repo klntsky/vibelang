@@ -69,6 +69,7 @@ const effect = runtime.peerDependencies?.effect
 expect(template.dependencies?.effect === effect, `template: effect ${template.dependencies?.effect}, but the runtime requires ${effect}`)
 expect(template.dependencies?.["@effect/platform-node"] === effect, `template: @effect/platform-node must match effect ${effect}`)
 expect(template.devDependencies?.["@effect/vitest"] === effect, `template: @effect/vitest must match effect ${effect}`)
+expect(template.overrides?.["@effect/platform-node-shared"] === effect, `template: @effect/platform-node-shared override must match effect ${effect}`)
 for (const [platform, [os]] of Object.entries(platforms)) {
   const binary = join(out, "bin", platform, os === "win32" ? "vibelang.exe" : "vibelang")
   expect(existsSync(binary), `missing ${binary.slice(root.length)}; run scripts/release/build-binaries.sh`)

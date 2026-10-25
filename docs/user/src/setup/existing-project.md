@@ -10,6 +10,18 @@ The VibeLang runtime requires `effect` 4.0.5 exactly. If `package.json` depends 
 
 ## 2. Install the packages
 
+Before installing, add this transitive pin to `package.json` (npm and Bun both honor `overrides`):
+
+```json
+{
+  "overrides": {
+    "@effect/platform-node-shared": "4.0.5"
+  }
+}
+```
+
+This keeps the platform package from selecting a newer patch with a different Effect peer requirement.
+
 With Bun, run:
 
 ```sh
