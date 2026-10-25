@@ -56,7 +56,7 @@ A feature-coverage audit mapped 309 Effect features to the language (`docs/resea
 | K11a-K11d | `tests/kernel-regressions.test.ts` | A generator clause that returns `tailResume` iterates 100,000 elements at 3 frames, 5 with a per-element `using` and `finally`; yielding a tail-resume request is a defect; a resume inside a `finally` region isn't a tail resume |
 | K12a-K12e | same | Abandonment reports every cleanup failure beside real pending interruptions: explicit `abandon`, `abandonNow`, owner exit, and Scope exit |
 | K13a-K13e | same | A transferred continuation never outlives its capturing fiber; transfer into a parallel Scope is rejected |
-| K14a-K14c | same | `catchExpected` recovers only causes made of expected failures, the first one first; a cause with an interruption passes through intact, one with a defect as defects |
+| K14a-K14d | same | `catchExpected` follows `Effect.catch`: it recovers the first expected failure of a cause with no defect and drops an interruption beside it (D306); a cause with a defect passes as defects; an abandonment passes through untouched |
 | K15b, K15c | same | Interruptible acquisition: cancellation wins, and late or deferred values are released |
 | K16a-K16d | same | Where the kernel combines or re-raises a cause (owner exit, fiber exit, `catchExpected`), a failure beside a defect is a defect; an expected cleanup failure stays expected (D305) |
 | H1-H4 | `tests/handoff.test.ts` | Handoff: one delivery; late delivery during asynchronous shutdown released before cancellation completes; deferred delivery released; delivery after quiescence rejected |

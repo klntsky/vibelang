@@ -27,14 +27,14 @@ If the 30 seconds run out during the upload, the upload is interrupted, the `cat
 | Interruption | Another fiber, a timeout, or an enclosing scope closing | No | No | Yes |
 | Abandonment | A handler that does not continue its program (Chapter 9) | No | No | Yes |
 | Expected failures plus a defect | A `finally` that crashed while the block was failing | No: each expected failure becomes a defect of the same error, first, as in Effect 4.0.6 (D305) | No: the whole exit propagates with every reason, the failures as defects | Yes |
-| Expected failures plus an interruption | A joined fiber that was interrupted while its `finally` threw | No: E describes causes made only of expected failures, so this cause can carry failures outside E (Chapter 14) | No: the whole exit propagates, every reason intact | Yes |
+| Expected failures plus an interruption | A joined fiber that was interrupted while its `finally` threw | Yes | Yes; `e` is the first, and the interruption is dropped, as `Effect.catch` drops it (D306) | Yes |
 | Several expected failures | `Effect.race` with both branches failed | Yes | Yes; `e` is the first, and the `catch` handles the exit as a whole | Yes |
 
 Rules:
 
 - **E comes from `throw` and from contracts.** A `throw` in an Effect function, a callee's E, and the exceptions a trusted contract lists are expected failures. Any other JavaScript exception is a defect, as in Effect today.
 - **A defect beside an expected failure wins, as in Effect 4.0.6** (D305). Where a failure meets a cleanup's or a sibling's defect, each expected failure becomes a defect of the same error, first, in order (Effect-TS/effect#9433), whether Effect combines them or the kernel does when a handler abandons a continuation (K16a, K16b). No typed recovery runs on such a cause: not `catch`, not `Effect.catch`, `Effect.result` or `retry` (#9516). `Effect.catchDefect` and `exit` see it.
-- **`catch` handles a cause only when it is made entirely of expected failures.** A cause that also holds an interruption passes through `catch` untouched, keeping its expected failures, so a cause-level tool such as `Effect.catchCause` can still see them; no VibeLang `catch` will. `Effect.catch` would recover such a cause and drop the interruption. A cause that holds a defect passes through with its failures as defects (K16d). Source `catch` therefore compiles to the runtime's `catchExpected` (K14a-K14c, Chapter 26). A catch expression, `x catch fallback` or `x catch (e) => …` (D236), compiles to `catchExpected` too, so it recovers exactly what the statement recovers.
+- **`catch` recovers as `Effect.catch` does** (D306). It handles the first expected failure of a cause with no defect and drops any interruption or further failure beside it. A cause with a defect passes through with its failures as defects (K16d), and one with no expected failure passes through untouched. One rule is VibeLang's own: a failure raised while a handler abandons a continuation (Chapter 9) passes every `catch` inside that continuation, so cleanup can't resume abandoned code (K14d). Source `catch` therefore compiles to the runtime's `catchExpected` (K14a-K14d, Chapter 26). A catch expression, `x catch fallback` or `x catch (e) => …` (D236), compiles to `catchExpected` too, so it recovers exactly what the statement recovers.
 - **Cleanup runs in reverse order of acquisition**, once per exit, with interruption held off until it finishes.
 - **A failure during cleanup is never dropped.** It is added to the cause being reported, on every path: a block's exit, a clause that abandons, an explicit `abandon` while an interruption is pending, a scope that closes, and a fiber that exits (K12a-K12e, K13d).
 - **Control cannot leave a `finally` block.** A `return`, `break`, or `continue` there would replace the block's exit, and in JavaScript it discards a failure in flight, so it is EK2006.
@@ -52,7 +52,7 @@ Effect's own operators keep their Effect behavior when VibeLang calls them. A ca
 | `Effect.catchDefect` | Acts on the first defect, the original error once it is a defect, and drops the rest |
 | `Effect.exit`, `Effect.catchCause`, `Effect.sandbox` | Keep every reason |
 
-Given an expected failure plus an interruption and no defect, the typed operators act on the first failure and drop the interruption, `retry` retries, and `mapError` keeps the interruption. These were checked against `effect@4.0.6` (F11a-F11e). Use such an operator where dropping a reason is what the program means; a VibeLang `catch` never drops one.
+Given an expected failure plus an interruption and no defect, the typed operators act on the first failure and drop the interruption, `retry` retries, and `mapError` keeps the interruption. These were checked against `effect@4.0.6` (F11a-F11e). Use such an operator where dropping a reason is what the program means; a VibeLang `catch` drops only what `Effect.catch` drops.
 
 Effect's own combinators hold off interruption for a block of work:
 

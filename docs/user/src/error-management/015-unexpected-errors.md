@@ -138,4 +138,4 @@ Decoder failed ["Die"]
 disabled
 ```
 
-`exit(program)` returns the whole outcome, as `Effect.exit` does: a `Failure` exit's cause holds every reason, including the failures, defects, and interruption that ordinary catch leaves alone. Test it with `is` or `match` on `Exit.Success` and `Exit.Failure`. `throw cause` restores the original failure with every reason, as `Effect.failCause` does; it doesn't make the cause object a typed error. Inspect every reason before recovering from a mixed cause, and preserve cancellation unless the boundary has a reason to consume it.
+`exit(program)` returns the whole outcome, as `Effect.exit` does: a `Failure` exit's cause holds every reason, including the defects and interruption that ordinary catch leaves alone or drops. Test it with `is` or `match` on `Exit.Success` and `Exit.Failure`. `throw cause` restores the original failure with every reason, as `Effect.failCause` does; it doesn't make the cause object a typed error. Inspect every reason before recovering from a mixed cause, and preserve cancellation unless the boundary has a reason to consume it.

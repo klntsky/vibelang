@@ -138,3 +138,4 @@ typescript/vibelang/cases/contextual-named-programs/main.vibe:13:19 lambda: plai
 typescript/vibelang/cases/contextual-named-programs/main.vibe:18:19 lambda: plain annotation -> plain fallback # S1-5 revert: same plain form, no enclosing-contract provenance
 typescript/vibelang/cases/contextual-named-programs/main.vibe:22:19 lambda: plain annotation -> plain fallback # S1-5 revert: same plain form, no enclosing-contract provenance
 typescript/vibelang/cases/factory-visitor/main.vibe:7:28 lambda: plain annotation -> dual fallback # S1-5 revert: the inner thunk returns work()'s program; dual is the pre-S1-5 resolution
+typescript/vibelang/cases/failures-mixed-causes/main.vibe:119:22 lambda: plain hatch -> plain table # D306 parity fixture moved source coordinates: this coordinate now identifies the outer sync callback; both the old and new decisions remain plain.

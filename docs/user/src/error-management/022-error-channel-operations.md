@@ -43,7 +43,7 @@ Rejected quantity 0
 
 `mapError` changes `E` and preserves successes. `mapBoth` maps each outcome channel separately; failures stay failures. The callbacks must be eligible synchronous functions; for a transformation that needs Effect operations, use a catch block or an effectful operator.
 
-These combinators keep Effect's own policy: `mapError` maps every expected failure in place and keeps defects and interruption. A cause with a defect has no expected failure left to map (D305). Ordinary catch maps only causes made entirely of expected failures and leaves the others intact.
+These combinators keep Effect's own policy: `mapError` maps every expected failure in place and keeps defects and interruption. A cause with a defect has no expected failure left to map (D305). Ordinary catch recovers the first expected failure of a cause with no defect (D306) and leaves the others intact.
 
 `mapErrorEager` and `mapBothEager` are eager optimization variants with the same channel distinction, not substitutes for effectful callbacks.
 

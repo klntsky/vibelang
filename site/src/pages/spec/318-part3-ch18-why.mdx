@@ -32,7 +32,7 @@ Both examples need one thing Effect does not expose today: a way for code on a f
 
 Effect 4 runs every program as a one-shot continuation. A fiber's `_stack` is the rest of the computation, reified as an array of frames. `Effect.callback` parks it and accepts one resume. Interruption unwinds it through finalizer frames. Effect lacks a delimiter inside a fiber: the fiber's root is the only one, so the only continuation anyone can take is the whole fiber.
 
-VibeLang adds the missing delimiter. A 899-line kernel prototype on `effect@4.0.6` pushes prompt frames onto the real fiber stack and captures the segment above a prompt as a one-shot continuation. It restores the Context and interruptibility recorded at each boundary, abandons unresumed continuations through Effect's own finalizers, keeps a continuation from outliving the fiber that captured it, and bounds cross-fiber wake-up depth. 181 tests cover nested suspension with Context and Scope, double resumption, abandonment, interruption while a continuation is held, cancellation races, a 100,001-frame capture, capture through TypeScript-authored `Effect.forEach`, retry, producers in constant stack, cause-aware `catch`, and a 54-test conformance suite written by an independent reviewer.
+VibeLang adds the missing delimiter. A 900-line kernel prototype on `effect@4.0.6` pushes prompt frames onto the real fiber stack and captures the segment above a prompt as a one-shot continuation. It restores the Context and interruptibility recorded at each boundary, abandons unresumed continuations through Effect's own finalizers, keeps a continuation from outliving the fiber that captured it, and bounds cross-fiber wake-up depth. 182 tests cover nested suspension with Context and Scope, double resumption, abandonment, interruption while a continuation is held, cancellation races, a 100,001-frame capture, capture through TypeScript-authored `Effect.forEach`, retry, producers in constant stack, cause-aware `catch`, and a 54-test conformance suite written by an independent reviewer.
 
 Every feature in Parts I and II is a rule over that one machine:
 
@@ -64,7 +64,7 @@ General delimited control therefore needs new frame kinds (`Prompt` and `Owner` 
 | --- | --- | --- | --- |
 | Program entry | A runner creates a fiber root for a program value | No | Chapters 13, 23 |
 | Calls and returns | `Ret` frames; plain calls only where no pause or capture is reachable | No | T6a, T17; F9; `ch02-functions.vibe`, `ch13-plain.vibe` |
-| `throw` and `catch` | Abortive unwinding to a `Catch` frame that recovers only causes made of expected failures; a failure beside a defect unwinds as a defect (D305) | No: aborts | K14a-K14c, K16a-K16d; `resumeWith` test; `ch15-failures.vibe` |
+| `throw` and `catch` | Abortive unwinding to a `Catch` frame that recovers the first expected failure of a cause with no defect, as `Effect.catch` does (D306); a failure beside a defect unwinds as a defect (D305) | No: aborts | K14a-K14d, K16a-K16d; `resumeWith` test; `ch15-failures.vibe` |
 | `finally` and `using` | `Final` frames on every exit, abandonment included | No | T1, T3, T4, T10, K11b; `regions.vibe` |
 | Services | In-place evidence in the Context | No: runs in place | In-place evidence test; `ch04-services.vibe` |
 | Providers and Layers | Installing evidence: `Restore` frames plus a Scope | No | Effect (Chapter 24) |

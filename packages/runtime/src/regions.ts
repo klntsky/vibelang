@@ -3,7 +3,7 @@ import * as K from "./kernel/kernel.js"
 
 export const $normal = { kind: "normal" } as const
 
-/** D13: `catch` recovers a cause made only of expected failures (the kernel's `catchExpected`). */
+/** D13, D306: `catch` recovers the first expected failure of a cause with no defect, as `Effect.catch` does (the kernel's `catchExpected`). */
 export const $catch: <A, E, R, B, E2, R2>(
   self: Effect.Effect<A, E, R>,
   handler: (error: E) => Effect.Effect<B, E2, R2>

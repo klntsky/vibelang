@@ -30,7 +30,7 @@ const boundary = Stream.die(new Error("decoder invariant failed")).catchDefect((
 // Output: ["unreadable"]
 ```
 
-`catchDefect` handles defects at a deliberate boundary. `catchCause` receives the full Cause, with failure, defect, and interruption reasons; use it only when you need all of it. Ordinary VibeLang `catch` handles typed failures only. It propagates a cause with a defect, whose typed failures are defects by then (D305), and a cause with an interruption.
+`catchDefect` handles defects at a deliberate boundary. `catchCause` receives the full Cause, with failure, defect, and interruption reasons; use it only when you need all of it. Ordinary VibeLang `catch` handles typed failures only, as `Effect.catch` does. It propagates a cause with a defect, whose typed failures are defects by then (D305), and an interruption without a typed failure (D306).
 
 ## Selective recovery
 

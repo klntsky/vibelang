@@ -40,7 +40,7 @@ A block opens a Scope region when it directly declares `using` or calls `fork`; 
 | Return | `Final` frames in LIFO order with `Success` | Effect `OnExit`, `internal/effect.ts:4173-4214` [Effect] |
 | Expected failure | Unwind to the nearest `Catch` whose cause is made only of expected failures; `Final` frames on the way run first with `Failure(Fail e)` | [Effect]; K14a |
 | Expected failure plus a defect | Unwind past every `Catch` as defects: each failure becomes a defect of the same error (D305); `Final` frames run | K14b, K16a-K16d; F11a, F11b [Effect] |
-| Expected failure plus an interruption | Unwind past every `Catch`; `Final` frames run; the cause keeps every reason | K14c [Kernel] |
+| Expected failure plus an interruption | Unwind to the nearest `Catch`, which drops the interruption, as `Effect.catch` does (D306); `Final` frames on the way run first | K14c; F11c [Effect] |
 | Defect | Unwind past every `Catch`; `Final` frames run | [Effect] |
 | Interruption | Like a defect. While the fiber has a pending interruption π and is interruptible, even cause-level `catchCause` frames are skipped (`internal/core.ts:611-627`). A self-raised interrupt cause with no π, such as `Effect.interrupt`, can still be caught by `catchCause` (conformance test D04), but not by source `catch`. `Final` frames run masked | [Effect] |
 | Abandonment | The segment unwinds as if interrupted. Finalizers see an interruption Exit, `catchCause` inside the segment does not run, and the abandoner continues only after the unwinding finishes. | T3 [Kernel] |

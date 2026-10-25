@@ -52,7 +52,7 @@ function inspectDelivery() {
 
 A cleanup failure is kept beside the original failure; when either is a defect, each expected failure becomes a defect of the same error (D305). Concurrent combinators normally stop after a failure and interrupt siblings, but overlapping failures can still add several reasons. The flat representation keeps no causal tree and doesn't prove which task completed first.
 
-Ordinary `catch` doesn't recover a cause containing a defect, whose typed failures are defects by then (D305), or one containing an interruption, even with a typed failure present; `Effect.exit` or `Effect.catchCause` examines the whole outcome. `Cause.findError` and `Cause.findDefect` return a `Result` holding one matching value; inspect `reasons` when all values matter.
+Ordinary `catch`, like `Effect.catch`, doesn't recover a cause containing a defect, whose typed failures are defects by then (D305), and recovers a typed failure beside an interruption, dropping the interruption (D306); `Effect.exit` or `Effect.catchCause` examines the whole outcome. `Cause.findError` and `Cause.findDefect` return a `Result` holding one matching value; inspect `reasons` when all values matter.
 
 When every reason is an expected failure, ordinary catch receives the first and handles the whole cause: if both programs passed to `Effect.race` fail, catch receives one error, not an array. Use `Effect.catchCause` when recovery needs them all.
 

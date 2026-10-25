@@ -61,7 +61,7 @@ function profile(raw: string) {
 export const profile = Effect.fnUntraced(function* (raw: string) {
   const id = yield* parseId(raw)
   return yield* Effect.onExit(                         // Final: finally
-    catchExpected(                                     // Catch: causes made only of expected failures
+    catchExpected(                                     // Catch: the first expected failure (D306)
       Effect.fnUntraced(function* () {                 // try region
         return yield* (yield* Users).find(String(id))
       })(),
@@ -76,7 +76,7 @@ export const profile = Effect.fnUntraced(function* (raw: string) {
 
 | Source | Frame | Generated with |
 | --- | --- | --- |
-| `try { } catch (e) { }` | `Catch(h)`: causes made only of expected failures | The runtime's `catchExpected`, built on `Effect.catchCause` (K14a-K14c) |
+| `try { } catch (e) { }` | `Catch(h)`: the first expected failure of a cause with no defect, as `Effect.catch` (D306) | The runtime's `catchExpected`, built on `Effect.catchCause`; an abandonment passes through (K14a-K14d) |
 | `finally { }` | `Final(fin)` | `Effect.onExit`, never `Effect.ensuring`, whose cleanup must have E = `never` (D46) |
 | `throw e` | Fail | `return yield* Effect.fail(e)`: the `return` keeps TypeScript's narrowing after the `throw` |
 | A block that declares `using` or calls `fork` | A Scope region: `Final` closes it | `Effect.scopedWith` |

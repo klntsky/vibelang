@@ -1,11 +1,14 @@
-// expect-result: {"rows":{"r0_fail":{"exit":"Fail(E)","catch":"ok(catch ran: E)","catchMatch":"ok(matched E)","catchValue":"ok(fallback)","retry":"Fail(E) x3","mapError":"Fail(M:E)","catchDefect":"Fail(E)"},"r1_finallyDies":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r1_finallyExitDies":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r1_finallyThrows":{"exit":"Fail(E)+Fail(E2)","catch":"ok(catch ran: E)","catchMatch":"ok(matched E)","catchValue":"ok(fallback)","retry":"Fail(E) x3","mapError":"Fail(M:E)+Fail(M:E2)","catchDefect":"Fail(E)+Fail(E2)"},"r1_dieThenFinallyThrows":{"exit":"Die(D)+Die(E2)","catch":"Die(D)+Die(E2)","catchMatch":"Die(D)+Die(E2)","catchValue":"Die(D)+Die(E2)","retry":"Die(D)+Die(E2) x1","mapError":"Die(D)+Die(E2)","catchDefect":"ok(defect D)"},"r2_usingReleaseDies":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r2_usingDisposeThrows":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r3_producerCleanupDies":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r3_producerIteratorCloseThrows":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r4_awaitAll":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r4_forConcurrent":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r5_awaitRace":{"exit":"Fail(E)","catch":"ok(catch ran: E)","catchMatch":"ok(matched E)","catchValue":"ok(fallback)","retry":"Fail(E) x3","mapError":"Fail(M:E)","catchDefect":"Fail(E)"},"r5_awaitAny":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r6_interruptThenFinallyThrows":{"exit":"Interrupt+Fail(E)","catch":"Interrupt+Fail(E)","catchMatch":"Interrupt+Fail(E)","catchValue":"Interrupt+Fail(E)","retry":"Fail(E) x3","mapError":"Interrupt+Fail(M:E)","catchDefect":"Interrupt+Fail(E)"},"r8_abandonMixed":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r8_allSettled":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"}},"seenExit":"Failure"}
+// expect-result: {"rows":{"r0_fail":{"exit":"Fail(E)","catch":"ok(catch ran: E)","catchMatch":"ok(matched E)","catchValue":"ok(fallback)","retry":"Fail(E) x3","mapError":"Fail(M:E)","catchDefect":"Fail(E)"},"r1_finallyDies":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r1_finallyExitDies":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r1_finallyThrows":{"exit":"Fail(E)+Fail(E2)","catch":"ok(catch ran: E)","catchMatch":"ok(matched E)","catchValue":"ok(fallback)","retry":"Fail(E) x3","mapError":"Fail(M:E)+Fail(M:E2)","catchDefect":"Fail(E)+Fail(E2)"},"r1_dieThenFinallyThrows":{"exit":"Die(D)+Die(E2)","catch":"Die(D)+Die(E2)","catchMatch":"Die(D)+Die(E2)","catchValue":"Die(D)+Die(E2)","retry":"Die(D)+Die(E2) x1","mapError":"Die(D)+Die(E2)","catchDefect":"ok(defect D)"},"r2_usingReleaseDies":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r2_usingDisposeThrows":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r3_producerCleanupDies":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r3_producerIteratorCloseThrows":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r4_awaitAll":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r4_forConcurrent":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r5_awaitRace":{"exit":"Fail(E)","catch":"ok(catch ran: E)","catchMatch":"ok(matched E)","catchValue":"ok(fallback)","retry":"Fail(E) x3","mapError":"Fail(M:E)","catchDefect":"Fail(E)"},"r5_awaitAny":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r6_interruptThenFinallyThrows":{"exit":"Interrupt+Fail(E)","catch":"ok(catch ran: E)","catchMatch":"ok(matched E)","catchValue":"ok(fallback)","retry":"Fail(E) x3","mapError":"Interrupt+Fail(M:E)","catchDefect":"Interrupt+Fail(E)"},"r8_abandonMixed":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r8_allSettled":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r2_forUsingHead":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r2_forUsingOf":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r2_callableDispose":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r2_callableAsyncDispose":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r2_holder":{"exit":"Die(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Die(E)+Die(D)","catchDefect":"ok(defect E)"},"r9_handBuiltMixed":{"exit":"Fail(E)+Die(D)","catch":"Die(E)+Die(D)","catchMatch":"Die(E)+Die(D)","catchValue":"Die(E)+Die(D)","retry":"Die(E)+Die(D) x1","mapError":"Fail(M:E)+Die(D)","catchDefect":"ok(defect D)"}},"seenExit":"Failure","parity":true}
 // Mixed causes (D305): a typed failure beside a defect or an interruption,
 // from every VibeLang form that makes one, seen through every recovery form.
 // VibeLang behaves as idiomatic Effect 4.0.6 does: where a failure meets a
 // defect, from Effect's own finalizers and concurrency (Effect-TS/effect#9433)
 // or from the kernel's abandonment, the failure becomes a defect, first, and
 // no typed recovery runs (#9516). experiments/tests/defect-precedence.test.ts
-// pins the Effect side.
+// pins the Effect side. Without a defect, catch recovers the first failure
+// and drops an interruption beside it, as Effect.catch does (D306).
+import { referenceRows } from "./reference.js"
+
 error E
 error E2
 error M { of: string }
@@ -181,6 +184,35 @@ function allSettledMixed() {
   return settled._tag
 }
 
+function forUsingHead() {
+  for (using r = sync(() => ({ [Symbol.dispose]() { throw new Error("D") } })); ;) {
+    throw new E()
+  }
+}
+function forUsingOf() {
+  for (using r of sync(() => [{ [Symbol.dispose]() { throw new Error("D") } }])) {
+    throw new E()
+  }
+}
+function callableDispose() {
+  using r = sync(() => Object.assign(() => {}, { [Symbol.dispose]() { throw new Error("D") } }))
+  throw new E()
+}
+function callableAsyncDispose() {
+  using r = sync(() => Object.assign(() => {}, { async [Symbol.asyncDispose]() { throw new Error("D") } }))
+  throw new E()
+}
+function holderDispose() {
+  using holder = Effect.acquireRelease(
+    () => ({ value: sync(() => ({ [Symbol.dispose]() { throw new Error("D") } })) }),
+    (h) => sync((holder) => holder.value[Symbol.dispose](), h)
+  )
+  throw new E()
+}
+function handBuiltMixed() {
+  throw Cause.combine(Cause.fail(new E()), Cause.die("D"))
+}
+
 // Recovery forms.
 function viaCatch(src: () => unknown!E | E2) {
   try {
@@ -245,6 +277,14 @@ export function main() {
     r6_interruptThenFinallyThrows: forms(interruptThenFinallyThrows),
     r8_abandonMixed: forms(abandonMixed),
     r8_allSettled: forms(allSettledMixed),
+    r2_forUsingHead: forms(forUsingHead),
+    r2_forUsingOf: forms(forUsingOf),
+    r2_callableDispose: forms(callableDispose),
+    r2_callableAsyncDispose: forms(callableAsyncDispose),
+    r2_holder: forms(holderDispose),
+    r9_handBuiltMixed: forms(handBuiltMixed),
   }
-  return { rows, seenExit }
+  const expected = referenceRows()
+  const parity = sync((actual, reference) => JSON.stringify(actual) === JSON.stringify(reference), rows, expected)
+  return { rows, seenExit, parity }
 }

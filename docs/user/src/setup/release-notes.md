@@ -4,6 +4,69 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
+## 0.0.11 (unreleased)
+
+### Effect 4.0.6 and failures
+
+Use exactly `effect@4.0.6`. Update `@effect/platform-node`,
+`@effect/platform-bun` and `@effect/vitest` to `4.0.6` when used, and set
+the `@effect/platform-node-shared` override to `4.0.6`. The starter includes
+these pins. Syntax and error-channel types are unchanged.
+
+A failure whose cleanup crashes is now a defect, following Effect 4.0.6:
+
+```vibe
+error Busy
+
+function save() {
+  try {
+    throw new Busy()
+  } finally {
+    die("flush crashed")
+  }
+}
+```
+
+Before, `exit(save())` contained `Fail(Busy) + Die("flush crashed")`.
+Now it contains `Die(Busy) + Die("flush crashed")`, in that order, and
+`cause.hasFails()` is false. The same rule applies to cleanup from `using`,
+producers and abandoned continuations, and to combined concurrent failures.
+A `catch` does not recover these defects. Effect's typed recovery operators
+(`result`, `option`, `ignore`, `catchTag`, and fallbacks) now preserve them
+too; `await.allSettled` propagates the defect instead of returning a failed
+`Result`. `Effect.catchDefect` sees the original error first.
+
+A failure beside an interruption, with no defect, is now caught:
+
+```vibe
+error CleanupFailed
+
+function stopped() {
+  try {
+    interrupt()
+  } finally {
+    throw new CleanupFailed()
+  }
+}
+
+function recover() {
+  return stopped() catch "recovered"
+}
+```
+
+Before, `recover()` propagated `Interrupt + Fail(CleanupFailed)`. Now it
+returns `"recovered"`, as `Effect.catch` does: the first expected failure
+reaches the handler and the accompanying interruption is dropped. Catch
+statements and handler expressions follow the same rule. Interruption alone
+still propagates, and pending cancellation of the running fiber still unwinds
+it. VibeLang's internal abandonment signal still bypasses recovery so cleanup
+cannot resume an abandoned continuation.
+
+`retry` likewise retries a failure beside an interruption, but never a cause
+containing a defect. `Effect.mapError` maps every expected failure in place and
+preserves the other reasons. Code that inspects causes or depended on an
+Effect recovery operator dropping a cleanup defect should be updated.
+
 ## 0.0.10
 
 Update `vibelang`, `vibelang-runtime` and the bundler plugin together. This

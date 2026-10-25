@@ -60,7 +60,7 @@ General delimited control therefore needs new frame kinds (`Prompt` and `Owner` 
 | --- | --- | --- | --- |
 | Program entry | A runner creates a fiber root for a program value | No | Chapters 13, 23 |
 | Calls and returns | `Ret` frames; plain calls only where no pause or capture is reachable | No | T6a, T17; F9; `ch02-functions.vibe`, `ch13-plain.vibe` |
-| `throw` and `catch` | Abortive unwinding to a `Catch` frame that recovers only causes made of expected failures; a failure beside a defect unwinds as a defect (D305) | No: aborts | K14a-K14c, K16a-K16d; `resumeWith` test; `ch15-failures.vibe` |
+| `throw` and `catch` | Abortive unwinding to a `Catch` frame that recovers the first expected failure of a cause with no defect, as `Effect.catch` does (D306); a failure beside a defect unwinds as a defect (D305) | No: aborts | K14a-K14d, K16a-K16d; `resumeWith` test; `ch15-failures.vibe` |
 | `finally` and `using` | `Final` frames on every exit, abandonment included | No | T1, T3, T4, T10, K11b; `regions.vibe` |
 | Services | In-place evidence in the Context | No: runs in place | In-place evidence test; `ch04-services.vibe` |
 | Providers and Layers | Installing evidence: `Restore` frames plus a Scope | No | Effect (Chapter 24) |

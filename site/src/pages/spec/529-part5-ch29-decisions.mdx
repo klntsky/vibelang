@@ -46,7 +46,7 @@ D57 supplies decision 2's partial-annotation spelling: explicit `infer Name` slo
 | D10 | Plain JavaScript when a function performs no Effect operation and E is never; source order kept; a function on a cycle of plain calls keeps its plain type, runs shallow recursion as fast JavaScript, then continues on heap frames without a recursion-depth limit | Preserves source order and fast JavaScript recursion for plain helpers; plain `countdown` overflowed at 20,000 calls (case `recursion-stack-safe`) | 15 |
 | D11 | Higher-order functions compile to frames in v0 | Higher-order calls need continuation frames until specialization | 15, 16 |
 | D12 | A callback type without a contract accepts any contract; unchanged by D57 | Settled decision 2 forbids reading it as `never` | 16 |
-| D13 | `catch` handles a cause only when it holds no defect and no interruption; a failure beside a defect is a defect (D305) | Mixed failure and defect causes must propagate intact; K14a-K14c | 3, 17, 26 |
+| D13 | `catch` handles a cause only when it holds no defect; a failure beside a defect is a defect (D305), and one beside an interruption is caught (D306) | K14a-K14d | 3, 17, 26 |
 | D14 | Only `using` acquisitions belong to the block | An acquisition without using belongs to its caller | 6, 23, 26 |
 | D15 | A failure during cleanup is never dropped | Cleanup failures remain visible under interruption; K12a-K12e | 17, 21 |
 | D16 | v0 exposes `handle`, `resume`, `resumeWith`, `abandon`; `transfer` stays in the standard library | K13 bounds a transfer by its fiber, and G3 remains | 9, 21 |
@@ -159,12 +159,12 @@ These rows record implementation decisions. The decision log separates implement
 | D127 | (Superseded by D308, restored by D309.) Effect types are written `Result!Error!Dependencies`; an empty slot is never, and left-out dependencies are inferred on a function with a body | Fewer tokens than `Effect<A, E, R>` in every contract | 14 |
 | D128 | (Amended by D220, reverted by D223.) `service` and `control` declare abstract classes whose bodiless members are abstract; an implemented member is EK2103 | Fewer tokens than `abstract class` and `abstract` on every member | 4, 9 |
 | D129 | (Superseded by D221.) `layer UsersLive: Users { setup; find(id) { ... } }` is `Layer.effect` (or `Layer.succeed` without setup); setup after members is EK2104 | Fewer tokens than `Layer.effect(S, () => { return { ... } })` | 4 |
-| D130 | A block form provides a layer to statements that stay code of the enclosing function; its keyword is `provide` since D172 | Fewer tokens than `Effect.provide(() => { ... }, AppLive)`, and `return` keeps its meaning | 4 |
-| D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; superseded by D216 | Fewer tokens than narrowing and rethrowing | 3 |
-| D132 | `try { ... } handle Approval.approve(request) { resume(true) }` handles a control's operations; the block and the clauses stay code of the enclosing function | Fewer tokens than `handle(() => ..., Approval, { approve(request, k) { return resume(k, true) } })`, and `return` keeps its meaning | 9 |
-| D133 | `schema User { id: string; role: "admin" \| "member" }` declares a `Schema.Struct` and the interface of its decoded type | Fewer tokens than a struct and a type alias; the two cannot drift apart | 11 |
-| D134 | Members of interfaces and object types are readonly unless written `mutable` | Immutable data is the common case and no longer repeats `readonly` | 10 |
-| D135 | A module that exports a parameterless `main` runs it with `NodeRuntime.runMain`, or the runtime's copy without `@effect/platform-node`, when the host starts the module | No `run.vibe` file or runner line per program; importing the module still runs nothing | 1 |
+| D13 | `catch` handles a cause only when it holds no defect; a failure beside a defect is a defect (D305), and one beside an interruption is caught (D306) | K14a-K14d | 3, 17, 26 |
+| D13 | `catch` handles a cause only when it holds no defect; a failure beside a defect is a defect (D305), and one beside an interruption is caught (D306) | K14a-K14d | 3, 17, 26 |
+| D13 | `catch` handles a cause only when it holds no defect; a failure beside a defect is a defect (D305), and one beside an interruption is caught (D306) | K14a-K14d | 3, 17, 26 |
+| D13 | `catch` handles a cause only when it holds no defect; a failure beside a defect is a defect (D305), and one beside an interruption is caught (D306) | K14a-K14d | 3, 17, 26 |
+| D13 | `catch` handles a cause only when it holds no defect; a failure beside a defect is a defect (D305), and one beside an interruption is caught (D306) | K14a-K14d | 3, 17, 26 |
+| D13 | `catch` handles a cause only when it holds no defect; a failure beside a defect is a defect (D305), and one beside an interruption is caught (D306) | K14a-K14d | 3, 17, 26 |
 | D146 | Every export of `effect`'s root is in scope; JavaScript's own globals win, host globals do not | Imports from `effect` were 5.9% of the docs' tokens | 1, 27 |
 | D147 | A call is passed by name where a parameter expects a program: `fork(fetchReport())` | Thunks around single calls were 2.6% of the docs' tokens | 5, 13 |
 | D148 | (Amended by D229-D232.) `sync`, `try`, and `callback` are boundary hatches whose first arguments are plain TypeScript | One visible escape hatch replaces five Effect constructors and their lambda rules | 10, 28 |
@@ -237,6 +237,7 @@ These rows record implementation decisions. The decision log separates implement
 | D281 | `service Name: Type` declares a service of any shape, `Context.Service<Name, Type>`; its body holds only static members (EK2103) | Smithers: 103 services with the interface beside them, 8 of shape `string` | 4 |
 | D282 | `throw` always fails and `catch` receives typed failures only, outside hatches; a plain function never fails and needs nothing, so a throw that can escape it, or a constructor, an accessor or a static block, is EK2003 (supersedes D263) | A plain contract excludes expected failures | 3, 15 |
 | D305 | VibeLang follows Effect 4.0.6's defect precedence: a failure beside a defect becomes a defect where Effect or the kernel combines causes, and no typed recovery runs on it | Effect-TS/effect#9433, #9516; F11, K16 | 3, 14, 17, 20, 23, 24 |
+| D306 | `catch` recovers the first expected failure beside an interruption, as `Effect.catch` does; an abandonment still passes through | F11c, K14c, K14d | 3, 14, 17, 20, 23, 24, 26 |
 | D307 | `data Name { Variant; Variant { field: Type } }` declares Effect's `Data.TaggedEnum` type and its `Data.taggedEnum` constructors; `when Name.Variant { let field }` tests the tag and binds fields; EK2122-EK2127, EK4706, EK4707 | Effect's own tagged union, without writing the type and the constructors apart | 3, 11 |
 | D308 | (Superseded by D309.) A contract was written `Effect<A, E, R>`, a type argument left out was `never`, as in TypeScript, and the `!` form was retired as EK1014 (superseded D127) | Uses Effect's ordinary type argument defaults | 2, 14, 28 |
 | D309 | The `!` form is restored as an alias of `Effect<A, E, R>` and is the documented form; `Effect<…>` keeps D308's meaning; EK1014 is retired; EK4833 reports only `Effect.Effect<…>` and its fix writes the `!` form (supersedes D308, restores D127) | Fewer tokens in every contract | 2, 14, 28 |
@@ -248,7 +249,7 @@ Proposed in the first draft as P1-P22; adopted by D29. A row marked **revised** 
 | # | Rule | Evidence | Chapters |
 | --- | --- | --- | --- |
 | P1 | The machine in Chapter 20 is the specification. Every feature is a rule over it | Chapter 18 | All |
-| P2 | Runtime: Effect-native prompts (strategy A). Reference semantics: an explicit machine (strategy B), once G16 runs one law suite on both. **Revised**: the two disagree today on the Context a reinstalled prompt records , so passing tests in both are not agreement | 181 kernel tests; 20 reference tests; T7a; `tests/runtime-boundaries.test.ts` | 25 |
+| P2 | Runtime: Effect-native prompts (strategy A). Reference semantics: an explicit machine (strategy B), once G16 runs one law suite on both. **Revised**: the two disagree today on the Context a reinstalled prompt records , so passing tests in both are not agreement | 182 kernel tests; 20 reference tests; T7a; `tests/runtime-boundaries.test.ts` | 25 |
 | P3 | Deep handlers, dynamic selection, clauses run outside their prompt | T9, clause-outside test | 20 |
 | P4 | Context is a snapshot across capture; the reinstalled prompt records the resume site's Context | T1, T13, T15 | 22 |
 | P5 | Every consumption of a continuation (resume, transfer, abandon) happens on the capturing fiber | T14, T14b, O04, O06 | 21 |

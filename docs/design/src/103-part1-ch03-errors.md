@@ -160,7 +160,7 @@ function lookupAudited(id: string) {
 | Defect: a bug | `(undefined as any).name` throws a `TypeError` | No | No | Yes |
 | Interruption | a timeout, a cancelled request, a parent shutdown | No | No | Yes |
 | An expected failure plus a defect | `lookupAudited` above | No: the failure becomes a defect (D305) | No: the whole exit propagates | Yes |
-| An expected failure plus an interruption | a joined fiber, interrupted while its cleanup failed | No: E describes causes made only of expected failures, so this exit can carry a failure outside E (Chapter 14) | No: the whole exit propagates | Yes |
+| An expected failure plus an interruption | a joined fiber, interrupted while its cleanup failed | Yes | Yes: `e` is the first, and the interruption is dropped (D306) | Yes |
 | Several expected failures | both branches of `Effect.race` failed | Yes | Yes: `e` is the first | Yes |
 
 `catch` does not catch bugs or cancellation, because that would hide them. Handle defects deliberately with Effect's tools at a boundary: `Effect.catchDefect(() => risky(), …)`. To declare an expected failure impossible here, make it a defect: `const id = Effect.orDie(() => parseId(raw))`. To see every failure in an exit, use `Effect.catchCause` or `Effect.exit`. Chapter 17 states the full rules.

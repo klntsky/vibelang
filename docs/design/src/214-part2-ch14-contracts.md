@@ -23,7 +23,7 @@ function quoteCart(cartId: string) {
 
 `PricingDown` is caught, so it is not in E, but `Pricing` stays in R: catching an error does not remove the need for the service.
 
-Precisely, E is the type of the expected failures in a cause made only of expected failures. A defect beside expected failures makes them defects (D305), so such a cause carries no `Fail` reason. A cause that also holds an interruption can carry `Fail` reasons outside E, because `catch` passes such a cause through untouched (Chapter 17); no VibeLang `catch` recovers it, and only cause-level tools see those reasons.
+Precisely, E is the type of every expected failure a cause can hold. A defect beside expected failures makes them defects (D305), and `catch` recovers an expected failure beside an interruption, as `Effect.catch` does (D306), so no `Fail` reason escapes E.
 
 #### Writing contracts
 

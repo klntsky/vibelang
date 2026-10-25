@@ -640,13 +640,15 @@ export const handle = <A, E, R>(
 // ---------------------------------------------------------------------------
 // Source `catch`
 //
-// VibeLang's `catch` handles expected failures only: it recovers when every
-// reason in the cause is a Fail, and the handler receives the first failure,
-// as Effect.catch's does (K14). A cause with a defect re-fails with its
-// failures elected to defects, as Effect 4.0.6's typed recovery does
-// (findRecoverableError, Effect-TS/effect#9516; D305); on Effect 4.0.5,
-// Effect.catch recovered such a cause and dropped the defect (Codex review
-// R1). Any other cause, one with an interruption, re-fails untouched.
+// VibeLang's `catch` recovers as Effect 4.0.6's Effect.catch does
+// (findRecoverableError, Effect-TS/effect#9516; D305, D306): a cause with a
+// defect re-fails with its failures elected to defects; otherwise the
+// handler receives the first failure, and an interruption or a further
+// failure beside it is dropped (K14). On Effect 4.0.5, Effect.catch also
+// recovered a cause with a defect and dropped the defect (Codex review R1).
+// One rule is VibeLang's own: a cause that carries an abandonment's sentinel
+// interrupt passes through untouched, because recovering a failure raised
+// while a handler abandons a continuation would resume abandoned code (K14d).
 // ---------------------------------------------------------------------------
 
 export const catchExpected = <A, E, R, B, E2, R2>(
@@ -654,11 +656,10 @@ export const catchExpected = <A, E, R, B, E2, R2>(
   handler: (error: E) => Effect.Effect<B, E2, R2>
 ): Effect.Effect<A | B, E2, R | R2> =>
   Effect.catchCause(self, (cause): Effect.Effect<B, E2, R2> => {
-    const reasons = cause.reasons
-    if (reasons.length === 0 || !reasons.every(Cause.isFailReason)) {
-      return Effect.failCause(electDefects(cause) as Cause.Cause<never>)
-    }
-    return handler((reasons[0] as Cause.Fail<E>).error)
+    if (isAbortCause(cause)) return Effect.failCause(cause as Cause.Cause<never>)
+    if (cause.reasons.some(Cause.isDieReason)) return Effect.failCause(electDefects(cause) as Cause.Cause<never>)
+    const failure = cause.reasons.find(Cause.isFailReason)
+    return failure === undefined ? Effect.failCause(cause as Cause.Cause<never>) : handler((failure as Cause.Fail<E>).error)
   })
 
 // ---------------------------------------------------------------------------

@@ -386,16 +386,30 @@ describe("K14 source catch recovers expected failures only", () => {
     expect(defects(Effect.runSyncExit(Effect.catch(find, () => Effect.succeed("guest"))))).toEqual(["UserNotFound", "release-defect"])
   })
 
-  test("K14c expected failure with interruption, a defect alone, and interruption alone pass through untouched", () => {
-    const handler = () => Effect.succeed("recovered")
-    const mixed = Cause.combine(Cause.fail("Busy"), Cause.interrupt(1403))
-    const withInterrupt = Effect.runSyncExit(catchExpected(Effect.failCause(mixed), handler))
-    expect(fails(withInterrupt)).toEqual(["Busy"])
-    expect(interrupts(withInterrupt)).toEqual([1403])
+  test("K14c an expected failure beside an interruption is recovered and the interruption dropped, as Effect.catch does (D306); a defect alone and an interruption alone pass through", () => {
+    const handler = (e: string) => Effect.succeed(`recovered ${e}`)
+    const mixed = Cause.combine(Cause.combine(Cause.interrupt(1403), Cause.fail("Busy")), Cause.fail("Second"))
+    expect(Effect.runSyncExit(catchExpected(Effect.failCause(mixed), handler))).toEqual(Exit.succeed("recovered Busy"))
+    expect(Effect.runSyncExit(Effect.catch(Effect.failCause(mixed), handler))).toEqual(Exit.succeed("recovered Busy"))
     expect(defects(Effect.runSyncExit(catchExpected(Effect.die("bug"), handler)))).toEqual(["bug"])
     expect(Exit.hasInterrupts(Effect.runSyncExit(catchExpected(Effect.interrupt, handler)))).toBe(true)
-    // Effect.catch recovers the Fail and drops the interruption.
-    expect(Effect.runSyncExit(Effect.catch(Effect.failCause(mixed), handler))).toEqual(Exit.succeed("recovered"))
+  })
+
+  test("K14d a failure raised while a handler abandons a continuation passes a catch inside it untouched", () => {
+    // Masked, the abandoned segment reaches its catch frame (interruptibly,
+    // Effect's skip loop passes it). Recovering there would resume abandoned
+    // code and lose the cleanup failure.
+    const Ask = operation<void, void>("K14dAsk")
+    let handled = 0
+    const exit = Effect.runSyncExit(handle(
+      "h",
+      [Ask],
+      Effect.uninterruptible(catchExpected(Effect.onExit(Ask(), () => Effect.fail("cleanup")), () => Effect.sync(() => ++handled))),
+      { K14dAsk: () => Effect.succeed("stop") }
+    ))
+    expect(handled).toBe(0)
+    expect(fails(exit)).toEqual(["cleanup"])
+    expect(defects(exit)).toEqual([])
   })
 })
 
