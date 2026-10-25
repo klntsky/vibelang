@@ -1,0 +1,10 @@
+// expect: TS2552
+// In a .vibe file, TypeScript's "Did you mean" suggestion (TS2552) offers the
+// prelude's names and effect's root exports, which no symbol table lists:
+// Consle suggests Console, one edit away, not the global console. A global
+// still wins when it is closer.
+export function main() {
+  Consle.log("x")
+  sleeep("1 millis")
+  return Mat.max(1, 2)
+}

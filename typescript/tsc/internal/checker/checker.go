@@ -1562,6 +1562,7 @@ func (c *Checker) createNameResolverForSuggestion() *binder.NameResolver {
 		SymbolReferenced:            c.symbolReferenced,
 		SetRequiresScopeChangeCache: c.setRequiresScopeChangeCache,
 		GetRequiresScopeChangeCache: c.getRequiresScopeChangeCache,
+		ResolveBeforeGlobals:        c.suggestBeforeGlobals,
 	}
 }
 

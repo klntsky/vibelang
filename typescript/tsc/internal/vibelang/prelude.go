@@ -338,6 +338,37 @@ func resolvePreludeName(c *checker.Checker, location *ast.Node, name string, mea
 	return symbol
 }
 
+// preludeSpellingCandidates offers the prelude's names and effect's root
+// exports, which no symbol table of a .vibe file lists, to TypeScript's "Did
+// you mean" suggestion for a value there: Consle.log suggests Console, which
+// is one edit away, not the global console (TS2552). Names the parser
+// writes, which start with $, are not offered.
+func preludeSpellingCandidates(c *checker.Checker, location *ast.Node, meaning ast.SymbolFlags) []*ast.Symbol {
+	file := ast.GetSourceFileOfNode(location)
+	if meaning&ast.SymbolFlagsValue == 0 || !isVibeLangFile(file) {
+		return nil
+	}
+	state := preludeStateOf(c)
+	var candidates []*ast.Symbol
+	offer := func(name string) {
+		if !strings.HasPrefix(name, "$") {
+			if symbol := preludeSymbol(c, state, file, name); symbol != nil {
+				candidates = append(candidates, symbol)
+			}
+		}
+	}
+	for name := range preludeModules {
+		offer(name)
+	}
+	for name := range effectRootNames {
+		offer(name)
+	}
+	for name := range effectFunctionNames {
+		offer(name)
+	}
+	return candidates
+}
+
 // recordPreludeUse records that file uses name, a prelude name or effect root
 // export, as a value, so the lowering imports it.
 func recordPreludeUse(state *preludeState, file *ast.SourceFile, name string) {

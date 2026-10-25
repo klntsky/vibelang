@@ -1,6 +1,9 @@
 package checker
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/diagnostics"
@@ -185,6 +188,35 @@ var nameResolutionHooks []NameResolutionHook
 // is not synchronized.
 func RegisterNameResolutionHook(hook NameResolutionHook) {
 	nameResolutionHooks = append(nameResolutionHooks, hook)
+}
+
+// SpellingCandidatesHook returns names that a "Did you mean" suggestion
+// (TS2552) may offer at location for meaning, besides those in scope: names
+// that a NameResolutionHook supplies, which no symbol table lists.
+type SpellingCandidatesHook func(c *Checker, location *ast.Node, meaning ast.SymbolFlags) []*ast.Symbol
+
+var spellingCandidatesHooks []SpellingCandidatesHook
+
+// RegisterSpellingCandidatesHook adds hook to every checker. Call it only
+// from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterSpellingCandidatesHook(hook SpellingCandidatesHook) {
+	spellingCandidatesHooks = append(spellingCandidatesHooks, hook)
+}
+
+// suggestBeforeGlobals is the suggestion resolver's step before the global
+// scope: the closest of the hooks' candidates and the globals, so that a
+// supplied name competes with a global one by distance. It returns nil when
+// no hook offers a candidate, and the globals are searched as usual.
+func (c *Checker) suggestBeforeGlobals(location *ast.Node, name string, meaning ast.SymbolFlags) *ast.Symbol {
+	var candidates []*ast.Symbol
+	for _, hook := range spellingCandidatesHooks {
+		candidates = append(candidates, hook(c, location, meaning)...)
+	}
+	if len(candidates) == 0 {
+		return nil
+	}
+	return c.getSpellingSuggestionForName(name, core.ConcatenateSeq(slices.Values(candidates), maps.Values(c.globals)), meaning)
 }
 
 func (c *Checker) resolveBeforeGlobals(location *ast.Node, name string, meaning ast.SymbolFlags) *ast.Symbol {

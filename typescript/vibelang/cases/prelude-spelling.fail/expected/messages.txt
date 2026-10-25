@@ -1,0 +1,3 @@
+Cannot find name 'Consle'. Did you mean 'Console'?
+Cannot find name 'sleeep'. Did you mean 'sleep'?
+Cannot find name 'Mat'. Did you mean 'Math'?

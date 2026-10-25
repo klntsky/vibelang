@@ -45,6 +45,7 @@ func init() {
 	checker.RegisterInferTypeHook(inferChannel)
 	declarations.RegisterTypeAnnotationHook(hasInferredChannel)
 	checker.RegisterNameResolutionHook(resolvePreludeName)
+	checker.RegisterSpellingCandidatesHook(preludeSpellingCandidates)
 	checker.RegisterEntityNameVisibilityHook(preludeNameVisible)
 	checker.RegisterTypeParametersHook(extraTypeParameters)
 	checker.RegisterParameterTypeHook(callbackParameterType)
