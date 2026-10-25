@@ -17,9 +17,7 @@ func TestDynamicDataMethods(t *testing.T) {
 	root, err := filepath.Abs("../../../..")
 	assert.NilError(t, err)
 	stock := filepath.Join(root, "packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261010.1/node_modules/.bin/tsc")
-	if _, err := os.Stat(stock); err != nil {
-		t.Skip("stock TypeScript is installed by e2e")
-	}
+	requireStockTypeScript(t, stock)
 	dir := t.TempDir()
 	dataMethodTestDependencies(t, root, dir, stock)
 	assert.NilError(t, os.WriteFile(filepath.Join(dir, "package.json"), []byte(`{"name":"vibelang-ts-mapper","type":"module","exports":{"./prelude":"./prelude.d.ts"}}`), 0600))

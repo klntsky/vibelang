@@ -19,6 +19,7 @@ func TestStockProjectionGoldens(t *testing.T) {
 	for name, source := range cases {
 		t.Run(name, func(t *testing.T) {
 			dir, stock := stockBuiltinProject(t)
+			requireStockTypeScript(t, stock)
 			for rendering, projection := range map[string]Projection{"checking": Project(source, testContext), "executable": Executable(source, testContext)} {
 				if len(projection.Diagnostics) != 0 {
 					t.Fatalf("%s: %v", rendering, projection.Diagnostics)

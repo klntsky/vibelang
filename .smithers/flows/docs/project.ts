@@ -112,6 +112,8 @@ The compiler cases and the doc snippet check also need the pinned packages in \`
       heading: "Test your change",
       body: `{{tests}}
 
+The Go suites run from \`typescript/tsc/\`. Install Effect with \`(cd experiments && bun install)\` (or set \`EFFECT_NODE_MODULES\` to its \`node_modules\` directory), and install the pinned stock compiler with \`npm install --prefix packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261010.1 --no-audit --no-fund typescript@7.1.0-dev.20261010.1\` from the repository root. Mapper tests build their own compiler and runtime scope. Upstream parser, formatter and tsoptions fixture checks additionally use \`typescript/tsc/testdata/fixtures/\` (including \`compiler/\` and \`typescript/tests/baselines/reference/config/commandLineParsing/\`), which this checkout omits; restore the matching upstream testdata checkout to run them. A test missing these optional fixtures or dependencies skips with the exact missing path and setup instruction.
+
 The end-to-end check runs setup, then scaffolds, installs, builds, runs and tests a temporary app, and stops at the first failing step. A compiler case is a directory under \`typescript/vibelang/cases/\`; \`typescript/vibelang/harness.mjs\` describes the format. A passing check doesn't prove every language feature works, so list the checks you ran, the ones that failed and the ones you couldn't run.`
     },
     {

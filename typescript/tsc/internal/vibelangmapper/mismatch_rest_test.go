@@ -58,6 +58,7 @@ export function main() { return { phases: [phase("a"), phase("b")], scoped: scop
 	}
 	write("main.ts", projection.Text)
 	stock := filepath.Join(root, "packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261010.1/node_modules/.bin/tsc")
+	requireStockTypeScript(t, stock)
 	cmd := exec.Command(stock, "--ignoreConfig", "--declaration", "--emitDeclarationOnly", "--strict", "--skipLibCheck", "--target", "esnext", "--module", "nodenext", "main.ts")
 	cmd.Dir = dir
 	if out, err := cmd.CombinedOutput(); err != nil {

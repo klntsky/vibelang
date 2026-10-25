@@ -34,6 +34,15 @@ func TestMain(m *testing.M) {
 // run. One build serves all tests, including parallel runtime tests.
 func mapperTestScope(t *testing.T, root string) string {
 	t.Helper()
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("missing Node.js prerequisite for mapper execution tests; install Node and put node on PATH")
+	}
+	effectPackage := filepath.Join(mapperEffectModules(root), "effect/package.json")
+	if _, err := os.Stat(effectPackage); os.IsNotExist(err) {
+		t.Skipf("missing effect 4.0.5 prerequisite %s; run (cd experiments && bun install), or set EFFECT_NODE_MODULES to an installed node_modules directory", effectPackage)
+	} else if err != nil {
+		t.Fatal(err)
+	}
 	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work")
 	if _, err := os.Stat(filepath.Join(scope, "node_modules/vibelang-runtime/dist/index.js")); err == nil {
 		return scope
@@ -72,17 +81,7 @@ func buildMapperTestScope(root string) error {
 		}
 		return nil
 	}
-	effectModules := os.Getenv("EFFECT_NODE_MODULES")
-	if effectModules == "" {
-		effectModules = filepath.Join(root, "experiments/node_modules")
-		if _, err := os.Stat(filepath.Join(effectModules, "effect/package.json")); err != nil {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				return err
-			}
-			effectModules = filepath.Join(home, "effectscript/experiments/node_modules")
-		}
-	}
+	effectModules := mapperEffectModules(root)
 	effect, err := filepath.EvalSymlinks(filepath.Join(effectModules, "effect"))
 	if err != nil {
 		return err
@@ -114,7 +113,7 @@ func buildMapperTestScope(root string) error {
 		}
 	}
 	for _, tool := range []string{"tsc", "vibelang-mapper"} {
-		if err := run(filepath.Join(root, "typescript/tsc"), "go", "build", "-buildvcs=false", "-o", filepath.Join(scope, "bin", tool), "./cmd/"+tool); err != nil {
+		if err := run(filepath.Join(root, "typescript/tsc"), "go", "build", "-p", "8", "-trimpath", "-buildvcs=false", "-o", filepath.Join(scope, "bin", tool), "./cmd/"+tool); err != nil {
 			return err
 		}
 	}
@@ -141,4 +140,20 @@ func buildMapperTestScope(root string) error {
 		return err
 	}
 	return run(scope, filepath.Join(scope, "bin/tsc"), "-p", filepath.Join(scope, "runtime-build/tsconfig.json"), "--outDir", filepath.Join(scope, "node_modules/vibelang-runtime/dist"))
+}
+
+func mapperEffectModules(root string) string {
+	if modules := os.Getenv("EFFECT_NODE_MODULES"); modules != "" {
+		return modules
+	}
+	return filepath.Join(root, "experiments/node_modules")
+}
+
+func requireStockTypeScript(t *testing.T, stock string) {
+	t.Helper()
+	if _, err := os.Stat(stock); os.IsNotExist(err) {
+		t.Skipf("missing pinned stock TypeScript compiler %s; from the repository root run npm install --prefix packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261010.1 --no-audit --no-fund typescript@7.1.0-dev.20261010.1", stock)
+	} else if err != nil {
+		t.Fatalf("cannot inspect stock TypeScript compiler %s: %v", stock, err)
+	}
 }

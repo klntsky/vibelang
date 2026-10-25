@@ -19,6 +19,7 @@ func TestS7AssertedProgramProjection(t *testing.T) {
 		t.Fatal(projection.Text)
 	}
 	dir, stock := stockBuiltinProject(t)
+	requireStockTypeScript(t, stock)
 	text := projection.Text + `
 import type { Effect as Program } from "effect/Effect";
 type Success<T> = T extends Program<infer A, any, any> ? A : never;
@@ -75,6 +76,7 @@ func TestS7AssertedProgramMixedTopic(t *testing.T) {
 // A value parameter still sees an assertion of the completed value (TS2352).
 func TestS7AssertedProgramValuePosition(t *testing.T) {
 	dir, stock := stockBuiltinProject(t)
+	requireStockTypeScript(t, stock)
 	source := `import { Effect } from "effect"; function known() { return 1 }; export function valuePosition() { return (known() as Effect.Effect<number>) |> Effect.succeed(%) }`
 	projection := Project(source, testContext)
 	if len(projection.Diagnostics) != 0 {

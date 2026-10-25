@@ -68,6 +68,7 @@ export function value() { try { return wide() } catch (e) { return match (e) { w
 func catchTagStock(t *testing.T, source string) (string, string, error) {
 	t.Helper()
 	dir, stock := stockBuiltinProject(t)
+	requireStockTypeScript(t, stock)
 	projection := Project(source, testContext)
 	if len(projection.Diagnostics) != 0 {
 		t.Fatal(projection.Diagnostics)

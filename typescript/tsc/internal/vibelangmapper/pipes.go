@@ -12,6 +12,14 @@ func isPipeExpression(node *ast.Node) bool {
 // program at a by-name parameter. Each execution owns its binding, so nested
 // thunks and returned lambdas retain the evaluation that created them.
 func (p *projector) pipeExpression(node *ast.Node, e env) {
+	binary := node.AsBinaryExpression()
+	if ast.NodeIsMissing(binary.Left) || ast.NodeIsMissing(binary.Right) {
+		// Parser recovery uses zero-width operands. Replacing their surrounding
+		// tokens would overlap the wrapper inserted at the same position. Keep
+		// this incomplete expression verbatim for the host's syntax diagnostics,
+		// while still lowering the valid statements that follow it.
+		return
+	}
 	if !p.pipeValueTopics(node) {
 		return
 	}
@@ -34,7 +42,6 @@ func (p *projector) pipeExpression(node *ast.Node, e env) {
 		p.plan.insert(start, "(() => ")
 	}
 	p.plan.insert(start, "{ const "+topic+" = ")
-	binary := node.AsBinaryExpression()
 	byName := p.pipeProgramTopic(node)
 	if byName {
 		p.delayedProgram(binary.Left)

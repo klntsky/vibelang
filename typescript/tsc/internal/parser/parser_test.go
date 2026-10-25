@@ -87,7 +87,7 @@ func FuzzParser(f *testing.F) {
 	}
 
 	roots := []string{
-		filepath.Join(repo.TestDataPath(), "fixtures"),
+		fixtures.Require(f, "fixtures"),
 	}
 	for _, root := range roots {
 		for file := range allParsableFiles(f, root) {

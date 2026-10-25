@@ -2,7 +2,6 @@ package format_test
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -12,7 +11,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/ls/lsutil"
 	"github.com/microsoft/TypeScript/tsc/internal/parser"
 	"github.com/microsoft/TypeScript/tsc/internal/printer"
-	"github.com/microsoft/TypeScript/tsc/internal/repo"
+	"github.com/microsoft/TypeScript/tsc/internal/testutil/fixtures"
 	"gotest.tools/v3/assert"
 )
 
@@ -49,7 +48,7 @@ func TestFormat(t *testing.T) {
 			TrimTrailingWhitespace:          core.TSTrue,
 			InsertSpaceBeforeTypeAnnotation: core.TSTrue,
 		}, "\n")
-		filePath := filepath.Join(repo.TestDataPath(), "fixtures/compiler/checker.ts")
+		filePath := fixtures.Require(t, "fixtures/compiler/checker.ts")
 		fileContent, err := os.ReadFile(filePath)
 		assert.NilError(t, err)
 		text := string(fileContent)
@@ -75,7 +74,7 @@ func BenchmarkFormat(b *testing.B) {
 		TrimTrailingWhitespace:          core.TSTrue,
 		InsertSpaceBeforeTypeAnnotation: core.TSTrue,
 	}, "\n")
-	filePath := filepath.Join(repo.TestDataPath(), "fixtures/compiler/checker.ts")
+	filePath := fixtures.Require(b, "fixtures/compiler/checker.ts")
 	fileContent, err := os.ReadFile(filePath)
 	assert.NilError(b, err)
 	text := string(fileContent)

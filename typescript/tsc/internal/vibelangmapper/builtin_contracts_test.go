@@ -63,6 +63,7 @@ func stockBuiltinProject(t *testing.T) (string, string) {
 // let the data guard invent a Config/Exit intersection for an any-valued call.
 func TestD251PlainCast(t *testing.T) {
 	dir, stock := stockBuiltinProject(t)
+	requireStockTypeScript(t, stock)
 	source := `import { $gen, $run } from "./prelude.js";
 export function parsed(text: string) { return $gen(function* () { return (yield* $run(JSON.parse(text))) as { port: number } }) }
 export function plain(text: string) { return $gen(function* () { return yield* $run({ port: 80 }) }) }
@@ -107,6 +108,7 @@ import { Exit } from "effect";
 // and emitted JavaScript so static and runtime switch behavior stay aligned.
 func TestBuiltinContractsCase(t *testing.T) {
 	dir, stock := stockBuiltinProject(t)
+	requireStockTypeScript(t, stock)
 	source, err := os.ReadFile("../../../vibelang/cases/builtin-contracts/main.vibe")
 	if err != nil {
 		t.Fatal(err)

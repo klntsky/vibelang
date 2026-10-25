@@ -59,6 +59,7 @@ func TestD268PipeGenericStagesProjection(t *testing.T) {
 // contextual inference for Match.exhaustive rather than becoming unknown.
 func TestD268UnbrandedGenericTypes(t *testing.T) {
 	dir, stock := stockBuiltinProject(t)
+	requireStockTypeScript(t, stock)
 	source := `import { Match } from "effect"
 const describe = pipe(Match.type<number | string>(), Match.when(Match.number, (n) => String(n)), Match.when(Match.string, (s) => s), Match.exhaustive)
 export function main() { return { numbers: describe(1), strings: describe("a") } }`

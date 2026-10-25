@@ -118,9 +118,7 @@ func TestD268CrossFileTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 	stock := filepath.Join(root, "packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261010.1/node_modules/.bin/tsc")
-	if _, err := os.Stat(stock); err != nil {
-		t.Skip("stock TypeScript is installed by e2e")
-	}
+	requireStockTypeScript(t, stock)
 	dir := t.TempDir()
 	dataMethodTestDependencies(t, root, dir, stock)
 	prelude, err := os.ReadFile(filepath.Join(root, "packages/ts-mapper/prelude.d.ts"))

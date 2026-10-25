@@ -121,3 +121,30 @@ func FuzzProjectionSpans(f *testing.F) {
 		}
 	})
 }
+
+// A recovered missing operand must not produce overlapping edits that discard
+// the valid functions after the incomplete statement (malformed-pipe-topic).
+func TestIncompletePipePreservesFollowingFunction(t *testing.T) {
+	for _, source := range []string{
+		"const e = |> %; export function main() { return 1 }",
+		"const e = 1 |> ; export function main() { return 1 }",
+	} {
+		checking := Project(source, testContext)
+		executable := Executable(source, testContext)
+		for _, projection := range []Projection{checking, executable} {
+			assertValidMap(t, projection, source)
+			for _, diagnostic := range projection.Diagnostics {
+				if strings.Contains(diagnostic.Message, "invalid or overlapping edits") {
+					t.Fatalf("incomplete pipe corrupted the lowering plan: %+v", diagnostic)
+				}
+			}
+		}
+		if !strings.Contains(executable.Text, "function main$direct(") {
+			t.Fatalf("incomplete pipe lost the following pure function: %s", executable.Text)
+		}
+		_, _, diagnostics := Emit(source, testContext)
+		if len(diagnostics) == 0 {
+			t.Fatal("the incomplete pipe must still be rejected")
+		}
+	}
+}
