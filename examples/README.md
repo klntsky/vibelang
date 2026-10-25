@@ -1,7 +1,8 @@
 # VibeLang examples
 
 Each project has exact Effect 4.0.5 dependencies, `.vibe` sources in `src`,
-Node ESM output in `dist`, and a short README with an Effect TypeScript equivalent.
+and a short README. The Node examples emit ESM to `dist`; the frontend
+examples build browser bundles with Vite.
 
 | Example | Shows |
 | --- | --- |
@@ -16,61 +17,17 @@ Node ESM output in `dist`, and a short README with an Effect TypeScript equivale
 | [vue-vite](vue-vite/) | A Vue single-file component over a VibeLang layer whose setup holds the todo list. |
 | [svelte-vite](svelte-vite/) | A Svelte 5 `{#await}` block over quotes that `await.all` runs concurrently. |
 
-Set up the repository's local compiler and runtime first using the repository
-setup instructions. The manifests install `vibelang` from
-`../../packages/compiler` and `vibelang-runtime` from the tarball that setup
-packs, `../../packages/runtime/vibelang-runtime.tgz`, so the runtime and the
-example load one copy of `effect`. Run repository setup before installing the
-examples, and after rerunning it, run `bun update vibelang-runtime` in an
-example you installed before.
-Then, in an example directory, run `bun install`,
-`bun run build`, and `bun run start`. The users, http-api, and resilience
+Each example pins the published VibeLang packages; no compiler source build or Go installation is needed.
+In a Node example directory, run `bun install`,
+`bun run build`, and `bun run start`. In a frontend example, run
+`bun install`, `bun run dev`, or `bun run test` to check and build it. The users, http-api, and resilience
 projects also have `bun run test`; Vitest compiles their `.vibe` sources
 through `vibelang-vite`, with source maps for assertion stacks.
 Run file-tree from its own directory to find the bundled fixtures.
 
-From the repository root, `scripts/check-examples.sh` compiles every project
-and compares the six finite programs with their output fixtures. It compiles
-http-api without starting its persistent server. Set `VIBELANG=/path/to/vibelang` to
+From the repository root, `scripts/check-examples.sh` stages disposable copies with this checkout's compiler, packed runtime and Vite plugin, installs dependencies, and checks every project. It compares the six finite programs with their output fixtures. It runs the available source tests and frontend production builds, and compiles
+http-api without starting its persistent server. Build the local compiler and runtime with
+`sh scripts/setup.sh` before running this repository check. Set `VIBELANG=/path/to/vibelang` to
 select a compiler; otherwise it uses `vibelang` on PATH, then `typescript/built/local/tsc`.
 Each project gets one status line. A failure returns exit code 1 and leaves
 diagnostics in `.cache/check-examples/`. Execution has a 15-second bound.
-
-The executable language reference provides a separate check during compiler work:
-
-```sh
-(cd experiments && bun install)
-(cd packages/runtime && bun install)
-ln -s ../../experiments/node_modules prototype/esc/node_modules # once
-# Install dependencies in each example directory with bun install.
-bun scripts/check-examples-prototype.ts
-```
-
-The prototype check compiles all seven main modules, runs each exported `main`,
-compares finite output,
-and runs the six `it.effect` tests. It creates disposable `.prototype` directories
-inside each example and writes each project's diagnostics to `.prototype/check.log`.
-Project sources use `.vibe` imports per D31; the compiler rewrites them to `.js`.
-It runs a main module through a TypeScript harness, except hello, whose module
-already contains its runner. The CLI's `run` command would run hello twice.
-File-tree's main runs. The prototype widens an inferred recursive E and R to
-`unknown`; file-tree's recursive function writes out its contract instead.
-
-The setup lane provides `sh scripts/setup.sh` to build the local compiler and
-runtime. Both local package directories must exist before installing an example;
-otherwise `bun install` reports their missing `package.json` files.
-
-The initial real-compiler snapshot on `main` at `79130dda` rejects all seven projects:
-
-| Example | First missing support |
-| --- | --- |
-| hello | A runner argument written as a zero-argument program function. |
-| users | Prelude types, abstract service lookup, and layer composition. |
-| http-api | The Schema/TaggedError prelude and abstract services. |
-| file-tree | Methods called through imported FileSystem and Path service keys. |
-| resilience | The Effect/TaggedError prelude and program arguments. |
-| approval | Control declarations, handlers, and the prelude. |
-| pipeline | Producer-to-Stream conversion and Stream iteration. |
-
-These are compiler targets. `noEmitOnError` prevents running partially emitted code.
-Rerun the checker after compiler lanes land; the snapshot above remains historical.

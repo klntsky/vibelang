@@ -19,14 +19,41 @@ case "$compiler" in
   /*) ;;
   */*) compiler="$(pwd)/$compiler" ;;
 esac
+work=$(mktemp -d "${TMPDIR:-/tmp}/vibelang-examples.XXXXXX")
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+# Pack the built runtime so the example and runtime resolve the same Effect.
+runtime=$(cd "$root/packages/runtime" && npm pack --pack-destination "$work" --ignore-scripts --silent)
+node "$root/scripts/prepare-examples.mjs" "$root" "$work" "$work/$runtime"
 failed=0
-for name in hello users http-api file-tree resilience approval pipeline; do
-  dir="$root/examples/$name"
+for name in hello users http-api file-tree resilience approval pipeline react-vite vue-vite svelte-vite; do
+  dir="$work/$name"
   log="$logs/$name.log"
-  if ! (cd "$dir" && "$compiler" -p .) >"$log" 2>&1; then
+  if ! (cd "$dir" && bun install --no-cache) >"$log" 2>&1; then
+    printf 'FAIL %-10s install (see .cache/check-examples/%s.log)\n' "$name" "$name"
+    failed=1
+    continue
+  fi
+  case "$name" in
+    *-vite)
+      if (cd "$dir" && bun run test) >>"$log" 2>&1; then
+        printf 'OK   %-10s typecheck, tests and production build\n' "$name"
+      else
+        printf 'FAIL %-10s typecheck, tests or build (see .cache/check-examples/%s.log)\n' "$name" "$name"
+        failed=1
+      fi
+      continue ;;
+  esac
+  if ! (cd "$dir" && "$compiler" -p .) >>"$log" 2>&1; then
     printf 'FAIL %-10s compile (see .cache/check-examples/%s.log)\n' "$name" "$name"
     failed=1
     continue
+  fi
+  if node -e 'process.exit(JSON.parse(require("node:fs").readFileSync(process.argv[1])).scripts?.test ? 0 : 1)' "$dir/package.json"; then
+    if ! (cd "$dir" && bun run test) >>"$log" 2>&1; then
+      printf 'FAIL %-10s tests (see .cache/check-examples/%s.log)\n' "$name" "$name"
+      failed=1
+      continue
+    fi
   fi
   if [ ! -f "$dir/expected-output.txt" ]; then
     printf 'OK   %-10s compile (long-running server; use bun run test)\n' "$name"
@@ -45,10 +72,10 @@ process.stderr.write(result.stderr ?? "")
 if (result.error) console.error(result.error.message)
 process.exit(result.status ?? 1)
 JS
-  ) >"$log" 2>&1; then
-    printf 'FAIL %-10s run (see .cache/check-examples/%s.log)\n' "$name" "$name"
+  ) >"$logs/$name.output" 2>&1; then
+    printf 'FAIL %-10s run (see .cache/check-examples/%s.output)\n' "$name" "$name"
     failed=1
-  elif ! diff -u "$dir/expected-output.txt" "$log" >"$logs/$name.diff"; then
+  elif ! diff -u "$dir/expected-output.txt" "$logs/$name.output" >"$logs/$name.diff"; then
     printf 'FAIL %-10s output (see .cache/check-examples/%s.diff)\n' "$name" "$name"
     failed=1
   else

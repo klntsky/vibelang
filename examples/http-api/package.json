@@ -10,13 +10,16 @@
   "dependencies": {
     "effect": "4.0.5",
     "@effect/platform-node": "4.0.5",
-    "vibelang-runtime": "file:../../packages/runtime/vibelang-runtime.tgz"
+    "vibelang-runtime": "0.0.6"
   },
   "devDependencies": {
     "@effect/vitest": "4.0.5",
     "vitest": "5.0.5",
-    "vibelang": "file:../../packages/compiler",
-    "vibelang-vite": "file:../../packages/vite",
+    "vibelang": "0.0.6",
+    "vibelang-vite": "0.0.6",
     "@types/node": "26.6.5"
+  },
+  "overrides": {
+    "@effect/platform-node-shared": "4.0.5"
   }
 }

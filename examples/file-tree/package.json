@@ -9,9 +9,12 @@
   "dependencies": {
     "effect": "4.0.5",
     "@effect/platform-node": "4.0.5",
-    "vibelang-runtime": "file:../../packages/runtime/vibelang-runtime.tgz"
+    "vibelang-runtime": "0.0.6"
   },
   "devDependencies": {
-    "vibelang": "file:../../packages/compiler"
+    "vibelang": "0.0.6"
+  },
+  "overrides": {
+    "@effect/platform-node-shared": "4.0.5"
   }
 }

@@ -42,6 +42,29 @@ export function releaseDocsProblems(repository = root, write = false) {
   const runtime = join(repository, "packages/runtime/package.json")
   const effect = existsSync(runtime) ? JSON.parse(readFileSync(runtime, "utf8")).peerDependencies?.effect : undefined
   const problems = []
+  const examples = join(repository, "examples")
+  if (existsSync(examples)) for (const entry of readdirSync(examples, { withFileTypes: true })) {
+    const file = join(examples, entry.name, "package.json")
+    if (!entry.isDirectory() || !existsSync(file)) continue
+    const manifest = JSON.parse(readFileSync(file, "utf8"))
+    let changed = false
+    for (const section of ["dependencies", "devDependencies"]) {
+      for (const name of ["vibelang", "vibelang-runtime", "vibelang-vite"]) {
+        if (manifest[section]?.[name] && manifest[section][name] !== version) {
+          manifest[section][name] = version
+          changed = true
+        }
+      }
+    }
+    if (effect && manifest.dependencies?.["@effect/platform-node"] && manifest.overrides?.["@effect/platform-node-shared"] !== effect) {
+      manifest.overrides = { ...manifest.overrides, "@effect/platform-node-shared": effect }
+      changed = true
+    }
+    if (changed) {
+      if (write) writeFileSync(file, JSON.stringify(manifest, null, 2) + "\n")
+      else problems.push(relative(repository, file) + ": example package pins must match the release and Effect manifests")
+    }
+  }
   for (const path of releasePaths(repository)) {
     const file = join(repository, path)
     const current = readFileSync(file, "utf8")

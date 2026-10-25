@@ -78,3 +78,23 @@ test("the starter and existing-project instructions pin the transitive Effect pe
   assert.equal(renderReleasePage("page.md", '{"overrides":{"@effect/platform-node-shared": "4.0.6"}}', "9.8.7", effect),
     '{"overrides":{"@effect/platform-node-shared": "' + effect + '"}}')
 })
+
+test("example installs use published pins and the release gate updates them", () => {
+  const root = fileURLToPath(new URL("../../", import.meta.url))
+  const repo = mkdtempSync(join(tmpdir(), "example-release-"))
+  const put = (path, value) => { mkdirSync(dirname(join(repo, path)), {recursive:true}); writeFileSync(join(repo, path), JSON.stringify(value)) }
+  try {
+    put("packages/compiler/package.json", { version:"9.8.7" })
+    put("packages/runtime/package.json", { peerDependencies:{effect:"4.0.5"} })
+    put("examples/hello/package.json", {dependencies:{effect:"4.0.5","@effect/platform-node":"4.0.5","vibelang-runtime":"file:../../packages/runtime/vibelang-runtime.tgz"},devDependencies:{vibelang:"0.0.1","vibelang-vite":"0.0.2"}})
+    assert.match(releaseDocsProblems(repo).join("\n"), /example package pins/)
+    releaseDocsProblems(repo, true)
+    const app = JSON.parse(readFileSync(join(repo,"examples/hello/package.json"),"utf8"))
+    assert.equal(app.dependencies["vibelang-runtime"],"9.8.7")
+    assert.equal(app.devDependencies.vibelang,"9.8.7")
+    assert.equal(app.devDependencies["vibelang-vite"],"9.8.7")
+    assert.equal(app.overrides["@effect/platform-node-shared"],"4.0.5")
+    assert.deepEqual(releaseDocsProblems(repo),[])
+    assert.deepEqual(releaseDocsProblems(root),[])
+  } finally { rmSync(repo,{recursive:true,force:true}) }
+})
