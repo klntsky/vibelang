@@ -61,6 +61,11 @@ func (d *ASTDiagnostic) RelatedInformation() []Diagnostic {
 	return result
 }
 
+// File returns the file d renders against. Every diagnostic of one file
+// returns the same FileLike, by value, so that WriteErrorSummaryText counts
+// the file once: an external diagnostic (Source != "", such as VibeLang's EK
+// codes) in a file with no content mapper returns the file itself, as the
+// compiler's own diagnostics there do.
 func (d *ASTDiagnostic) File() FileLike {
 	file := d.Diagnostic.File()
 	if file == nil {
@@ -70,14 +75,15 @@ func (d *ASTDiagnostic) File() FileLike {
 	if canonical := file.CanonicalSourceFile(); canonical != nil {
 		fileName = canonical.FileName()
 	}
-	if d.resolve().useOriginal {
+	if d.resolve().useOriginal && file.ContentMapper() != "" {
 		// The mapper's own diagnostics (Source != "") already carry original ranges; compiler
 		// diagnostics have their transformed ranges mapped back. Both render against the original,
 		// untransformed text. Diagnostics in synthesized code (see resolve) keep the virtual text.
-		return newOriginalTextFile(file, fileName)
+		// Without a content mapper, the original text is the file's text.
+		return originalTextFile{file: file, fileName: fileName}
 	}
 	if fileName != file.FileName() {
-		return &renamedFile{file: file, fileName: fileName}
+		return renamedFile{file: file, fileName: fileName}
 	}
 	return file
 }
@@ -120,35 +126,28 @@ func (d *ASTDiagnostic) resolve() resolvedLocation {
 	}
 }
 
-// originalTextFile presents a source file's original (untransformed) text as a FileLike, so that
-// diagnostics whose ranges point into that text render at the correct locations.
+// originalTextFile presents a content-mapped source file's original (untransformed) text as a
+// FileLike, so that diagnostics whose ranges point into that text render at the correct locations.
+// It is a comparable value: two diagnostics of one file get equal FileLikes.
 type originalTextFile struct {
+	file     *ast.SourceFile
 	fileName tspath.RootedFilePath
-	text     string
-	lineMap  []core.TextPos
 }
 
-func newOriginalTextFile(file *ast.SourceFile, fileName tspath.RootedFilePath) *originalTextFile {
-	text := file.OriginalText()
-	return &originalTextFile{
-		fileName: fileName,
-		text:     text,
-		lineMap:  []core.TextPos(core.ComputeECMALineStarts(text)),
-	}
-}
+func (f originalTextFile) FileName() tspath.RootedFilePath { return f.fileName }
+func (f originalTextFile) Text() string                    { return f.file.OriginalText() }
+func (f originalTextFile) ECMALineMap() []core.TextPos     { return f.file.OriginalECMALineMap() }
 
-func (f *originalTextFile) FileName() tspath.RootedFilePath { return f.fileName }
-func (f *originalTextFile) Text() string                    { return f.text }
-func (f *originalTextFile) ECMALineMap() []core.TextPos     { return f.lineMap }
-
+// renamedFile presents a supplemental source file under its canonical file's name. It is a
+// comparable value, as originalTextFile is.
 type renamedFile struct {
 	file     *ast.SourceFile
 	fileName tspath.RootedFilePath
 }
 
-func (f *renamedFile) FileName() tspath.RootedFilePath { return f.fileName }
-func (f *renamedFile) Text() string                    { return f.file.Text() }
-func (f *renamedFile) ECMALineMap() []core.TextPos     { return f.file.ECMALineMap() }
+func (f renamedFile) FileName() tspath.RootedFilePath { return f.fileName }
+func (f renamedFile) Text() string                    { return f.file.Text() }
+func (f renamedFile) ECMALineMap() []core.TextPos     { return f.file.ECMALineMap() }
 
 func (d *ASTDiagnostic) MessageChain() []Diagnostic {
 	chain := d.Diagnostic.MessageChain()

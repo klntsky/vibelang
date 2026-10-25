@@ -2431,6 +2431,9 @@ type SourceFile struct {
 	ecmaLineMapMu sync.RWMutex
 	ecmaLineMap   []core.TextPos
 
+	originalECMALineMapOnce sync.Once
+	originalECMALineMap     []core.TextPos // the line starts of OriginalText, for a content-mapped file
+
 	// Fields set by language service
 
 	Hash             xxh3.Uint128
@@ -2775,6 +2778,18 @@ func (node *SourceFile) ECMALineMap() []core.TextPos {
 		}
 	}
 	return lineMap
+}
+
+// OriginalECMALineMap returns the line starts of OriginalText: of the file's
+// text, unless a content mapper produced the file.
+func (node *SourceFile) OriginalECMALineMap() []core.TextPos {
+	if node.ContentMapper() == "" {
+		return node.ECMALineMap()
+	}
+	node.originalECMALineMapOnce.Do(func() {
+		node.originalECMALineMap = core.ComputeECMALineStarts(node.OriginalText())
+	})
+	return node.originalECMALineMap
 }
 
 // GetNameTable returns a map of all names in the file to their positions.
