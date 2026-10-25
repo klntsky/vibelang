@@ -82,6 +82,10 @@ export const sidebar = [
         "link": "/setup"
       },
       {
+        "text": "Known limitations",
+        "link": "/setup/known-limitations"
+      },
+      {
         "text": "Start a project",
         "collapsed": false,
         "items": [
