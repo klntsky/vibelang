@@ -47,7 +47,3 @@ bun add -d vibelang@latest vibelang-vite@latest
 Keep `effect`, `@effect/platform-node`, and `@effect/vitest` at 4.0.5: the
 runtime requires that exact Effect version.
 
-If this project came from a local VibeLang checkout through `scripts/setup.sh`,
-its VibeLang packages are `file:` paths into that checkout. Rerun setup there
-after updating the checkout, then run
-`bun update vibelang-runtime vibelang vibelang-vite` here.

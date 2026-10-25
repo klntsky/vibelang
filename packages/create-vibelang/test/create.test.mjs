@@ -203,3 +203,19 @@ test("the packaged template restores dotfiles and excludes generated artifacts",
     assert.ok(!existsSync(join(app, ignored)), ignored)
   }
 })
+
+
+test("new apps start at 0.0.0 and their README describes an installed starter", (t) => {
+  const directory = scratch(t)
+  const result = run(directory, "app", "--no-install")
+  assert.equal(result.status, 0, result.stderr)
+  const app = join(directory, "app")
+  assert.equal(JSON.parse(readFileSync(join(app, "package.json"), "utf8")).version, "0.0.0")
+})
+
+test("new app READMEs omit repository setup instructions", (t) => {
+  const directory = scratch(t)
+  const result = run(directory, "app", "--no-install")
+  assert.equal(result.status, 0, result.stderr)
+  assert.doesNotMatch(readFileSync(join(directory, "app/README.md"), "utf8"), /scripts\/setup\.sh|local VibeLang checkout/)
+})

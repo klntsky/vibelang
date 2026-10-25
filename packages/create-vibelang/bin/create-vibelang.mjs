@@ -49,6 +49,7 @@ for (const name of ["gitignore", "gitattributes"]) {
 const manifestPath = join(directory, "package.json")
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
 manifest.name = packageName(basename(directory))
+manifest.version = "0.0.0"
 manifest.dependencies["vibelang-runtime"] = own.version
 manifest.devDependencies["vibelang"] = own.version
 manifest.devDependencies["vibelang-vite"] = own.version
