@@ -111,8 +111,8 @@ test("assembles every package in publish order with pinned versions, platform bi
   for (const name of ["vibelang-runtime", "vibelang-vite", "vibelang-unplugin", "create-vibelang"]) {
     const license = archive(root, name, "LICENSE").toString()
     assert.equal(license.split("\n")[0], "MIT License", name + ": LICENSE must start at the MIT heading")
-    const expected = readFileSync(join(repo, "LICENSE"), "utf8").split("\nMIT License\n")[1]
-    assert.equal(license, "MIT License\n" + expected)
+    assert.equal(createHash("sha256").update(license).digest("hex"), "812b2af11bfeb9214e0428f91357a87316996b779e32c58b19319a59af38e1e9", name + ": unchanged standard MIT text")
+    assert.doesNotMatch(license, /VibeLang is licensed under/)
   }
 })
 
@@ -188,5 +188,23 @@ test("package READMEs teach the Node 26 floor", () => {
     const readme = readFileSync(join(repo, "packages", name, "README.md"), "utf8")
     assert.doesNotMatch(readme, /Node (?:22|24)(?:\.\d+)? or later/, name)
     assert.match(readme, /Node 26(?:\s|\.)/, name)
+  }
+})
+
+test("the root license starts with standard MIT text", () => {
+  assert.ok(readFileSync(join(repo, "LICENSE"), "utf8").startsWith("MIT License\n"))
+})
+
+test("packs only MIT text when the root license is MIT first with trailing exceptions", { timeout: 120_000 }, (t) => {
+  const root = fixture(t)
+  const source = readFileSync(join(root, "LICENSE"), "utf8")
+  const start = source.indexOf("MIT License\n")
+  const end = source.indexOf("\nSOFTWARE.", start) + "\nSOFTWARE.".length
+  const mit = source.slice(start, end) + "\n"
+  writeFileSync(join(root, "LICENSE"), mit + "\nCompiler exceptions: see typescript/LICENSE.txt.\n")
+  const result = assemble(root)
+  assert.equal(result.status, 0, result.stderr)
+  for (const name of ["vibelang-runtime", "vibelang-vite", "vibelang-unplugin", "create-vibelang"]) {
+    assert.equal(archive(root, name, "LICENSE").toString(), mit)
   }
 })

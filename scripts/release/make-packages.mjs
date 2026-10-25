@@ -100,9 +100,10 @@ rmSync(tarballs, { recursive: true, force: true })
 mkdirSync(tarballs, { recursive: true })
 
 const rootLicense = readFileSync(join(root, "LICENSE"), "utf8")
-const mitStart = rootLicense.indexOf("\nMIT License\n")
-if (mitStart < 0) throw new Error("LICENSE: missing standalone MIT License heading")
-const mit = rootLicense.slice(mitStart + 1)
+// Extract the standard MIT grant without the repository's trailing exceptions.
+// Accept either heading position so older release checkouts remain readable.
+const mit = /^MIT License\r?\n[\s\S]*?^SOFTWARE\.\r?(?:\n|$)/m.exec(rootLicense)?.[0]
+if (!mit) throw new Error("LICENSE: missing standard MIT License text")
 const apache = readFileSync(join(root, "typescript/LICENSE.txt"), "utf8")
 const notice = `VibeLang
 Copyright (c) 2026 the VibeLang authors
