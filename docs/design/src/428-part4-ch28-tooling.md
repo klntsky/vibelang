@@ -199,7 +199,7 @@ does not implement those editor refactors.
 
 #### Diagnostics
 
-Every EK diagnostic before EK4801 is an error, except nine. Each error marks code with no meaning, or whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them (it keeps its TypeScript meaning for TypeScript's own codes). Five warnings mark retired spellings that still compile the same, each with a quick fix: EK1009, EK2112, EK2113, EK2120, and EK2121. Three more, EK2004, EK4403, and EK4409, are policy, not soundness: a project may set each to `"error"`, `"warning"`, or `"off"` in the `vibelang` setting `diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control. The ninth, the warning EK2119, marks a handle clause's return that a `resume`'s type may not cover, which the checker cannot settle without a fixpoint (D97).
+Every EK diagnostic before EK4801 is an error, except ten. Each error marks code with no meaning, or whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them (it keeps its TypeScript meaning for TypeScript's own codes). Five warnings mark retired spellings that still compile the same, each with a quick fix: EK1009, EK2112, EK2113, EK2120, and EK2121. Four more, EK1012, EK2004, EK4403, and EK4409, are policy, not soundness: a project may set each to `"error"`, `"warning"`, or `"off"` in the `vibelang` setting `diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control. The tenth, the warning EK2119, marks a handle clause's return that a `resume`'s type may not cover, which the checker cannot settle without a fixpoint (D97).
 
 EK4801-EK4825 carry the rules of Effect's language service that VibeLang's syntax does not already rule out (D240). They are lint, not soundness: each has a default category (error, warning, or off), and each except EK4813, which stands in for TypeScript's TS2339, can be set in the `vibelang` setting `diagnostics` or by a comment (D241):
 
@@ -215,7 +215,7 @@ A later comment overrides an earlier one; within one comment, a code named on it
 
 | Option in the tsconfig's top-level `vibelang` object, or `compilerOptions.vibelang` (D275) | Values | Default |
 | --- | --- | --- |
-| `diagnostics` | `"EK2004"`, `"EK4403"`, `"EK4409"`, EK4801-EK4825 except `"EK4813"`, and EK4830-EK4837, each `"error"`, `"warning"`, or `"off"` | EK2004 `"warning"`, EK4403 `"error"`; EK48xx as the table below says |
+| `diagnostics` | `"EK1012"`, `"EK2004"`, `"EK4403"`, `"EK4409"`, EK4801-EK4825 except `"EK4813"`, and EK4830-EK4837, each `"error"`, `"warning"`, or `"off"` | EK2004 `"warning"`, EK4403 `"error"`; EK48xx as the table below says |
 | `tracing` | `"none"`: no spans. `"exported"`: exported functions get `Effect.fn` spans. `"all"`: every named lowered function and method gets a span; anonymous lambdas don't (D104) | `"none"` |
 
 `vibelang` exits non-zero when it reports any error. The CLI prints `error EK1003:`; LSP sends source `EK` and numeric code `1003`, which VS Code displays as `EK(1003)` (D61). In the terminal, the editor, and Vite's overlay, diagnostics print at `.vibe` spans in the form this document's examples use.
@@ -238,6 +238,7 @@ coverage. Repairs are suggestions, not shipped code actions:
 | EK1009 | Warning: a `provide` block written with its old keyword, `with` (D172) | Write `provide`; the quick fix replaces the keyword | 4 |
 | EK1010 | An unparenthesized throw expression is a binary operator's left operand (except comma), a conditional's condition, or the operand of `as` or `satisfies` (D186) | Write `throw (…)` to throw the whole expression | 3 |
 | EK1011 | A function compiles to an Effect, but the program cannot find effect's Effect type, because `effect` is not installed where the program resolves it (D4) | Install `effect` | 15 |
+| EK1012 | Warning: a call that runs and never succeeds is stored in a variable, a field, an element or an assignment, which then never holds a value (D147) | Store a function, `() => call()`, or write the declared Effect type (D262, D265, D269); or write the call as a statement | 13 |
 | EK2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | EK2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
 | EK2003 | An Effect return annotation with missing channel slots, a plain annotation on a non-method function whose body runs an Effect (D67, D74), or a plain annotation on a function, or a JavaScript iterator annotation on a generator, whose throw can escape, or a throw that can escape a constructor, an accessor or a class static block, which run as plain JavaScript (D282, D296) | For `Effect<T>`: `T!!` or no annotation; for a bare `T`: `T!!` or `T!Errors`; for an escaping throw, a quick fix writes `T!E!`, or a hatch keeps JavaScript's throw | 14 |

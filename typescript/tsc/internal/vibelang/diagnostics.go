@@ -87,6 +87,8 @@ var (
 	EK1010 = message(1010, errorCategory, "throw takes only {0} here, so the rest of the expression would not be thrown; write throw (…) to throw the whole expression.")
 	// EK1011: a function compiles to an Effect in a program without effect's Effect type. {0} is the function.
 	EK1011 = message(1011, errorCategory, "{0} compiles to an Effect, but this program cannot find effect's Effect type.")
+	// EK1012: a call that runs and never succeeds is stored. {0} is the call, {1} what stores it. A warning a project may adjust (D241).
+	EK1012 = message(1012, warningCategory, "{0} runs here and never succeeds, so {1} never holds a value.")
 	// EK2001: an expected failure escapes the written contract. {0} is the failure, {1} the function, {2} what the contract allows.
 	EK2001 = message(2001, errorCategory, "{0} can escape {1}, but {2}.")
 	// EK2002: a requirement escapes the written contract. {0} is the function, {1} the requirement, {2} the contract's R.
@@ -191,7 +193,7 @@ var registry = map[int32]*Message{}
 
 func init() {
 	for _, m := range []*Message{
-		EK1001, EK1002, EK1003, EK1004, EK1005, EK1006, EK1007, EK1008, EK1009, EK1010, EK1011,
+		EK1001, EK1002, EK1003, EK1004, EK1005, EK1006, EK1007, EK1008, EK1009, EK1010, EK1011, EK1012,
 		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108, EK2109, EK2112, EK2113, EK2115, EK2116, EK2117, EK2118,
 		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204, EK3205,
 		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4405, EK4406, EK4407, EK4408, EK4409, EK4501,

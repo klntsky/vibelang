@@ -1,0 +1,12 @@
+// expect-result: ["held",1,true]
+// The spellings EK1012 names to keep a program that never succeeds: a const
+// with its Effect type holds it (D269), and a function stores it.
+error Missing { id: string }
+
+export function main() {
+  const missing: never!Missing! = Effect.fail(new Missing({ id: "a" }))
+  const stored = { fail: () => throw new Missing({ id: "b" }) }
+  const first = missing() catch "held"
+  const second = stored.fail() catch (e) => e.id.length
+  return [first, second, Effect.isEffect(missing)]
+}

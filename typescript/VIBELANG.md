@@ -660,6 +660,7 @@ The checks so far:
 | EK1003 | `async`, `await`, `for await`, and `await using` in a `.vibe` file; covers TypeScript's errors about them, such as an `await` outside an `async` function | `syntax.go` |
 | EK1004 | `using` that no function encloses, including in a class static block | `syntax.go` |
 | EK1005 | The callee of a runner in code a fiber runs | `runners.go` |
+| EK1012 | A call that runs and never succeeds where a variable, a field, an element or an assignment stores it (D147); a warning, adjustable | `neverstored.go` |
 | EK2001 | The call or `throw` that adds an expected failure the function's contract does not allow | `contracts.go` |
 | EK2002 | The call that adds a requirement the function's contract does not allow | `contracts.go` |
 | EK2003 | A return annotation that leaves a contract channel out, a plain return annotation on a function whose body runs an Effect, or one on a function whose throw can escape, with a quick fix that writes `A!E!` (D282); a JavaScript iterator annotation on a generator whose throw can escape (D296) | `contracts.go`, `plain_failures.go`, `plain_generators.go` |
@@ -689,7 +690,7 @@ The checks so far:
 "vibelang": { "diagnostics": { "EK2004": "off", "EK4403": "warning" }, "tracing": "exported" }
 ```
 
-EK2004, EK4406 and EK4409 default to `"warning"` and EK4403 to `"error"`; the EK48xx rules have their own defaults, and every one but EK4813 is adjustable too (D241), from `core.VibeLangAdjustableCodes`, which both `tsoptions` and the registry read. A `Message` with `Off` set reports nothing until a project or a comment turns it on. `directives.go` reads `// @vibelang-diagnostics EK4801:off` (to the end of the file) and `// @vibelang-diagnostics-next-line EK4801:off` comments for the adjustable codes. Every other EK code is always an error. An unknown key or invalid value is reported at its node in `tsconfig.json` with TypeScript's own messages (TS5023, TS6046). `CompilerOptions.VibeLang.Tracing` selects the functions that compile with spans (see "Tracing"). `tsc --showConfig` prints the block; `.tsbuildinfo` does not record it yet, so changing it does not invalidate an incremental build.
+EK1012, EK2004, EK4406 and EK4409 default to `"warning"` and EK4403 to `"error"`; the EK48xx rules have their own defaults, and every one but EK4813 is adjustable too (D241), from `core.VibeLangAdjustableCodes`, which both `tsoptions` and the registry read. A `Message` with `Off` set reports nothing until a project or a comment turns it on. `directives.go` reads `// @vibelang-diagnostics EK4801:off` (to the end of the file) and `// @vibelang-diagnostics-next-line EK4801:off` comments for the adjustable codes. Every other EK code is always an error. An unknown key or invalid value is reported at its node in `tsconfig.json` with TypeScript's own messages (TS5023, TS6046). `CompilerOptions.VibeLang.Tracing` selects the functions that compile with spans (see "Tracing"). `tsc --showConfig` prints the block; `.tsbuildinfo` does not record it yet, so changing it does not invalidate an incremental build.
 
 ## Services and control operations
 

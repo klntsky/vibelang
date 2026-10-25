@@ -1,0 +1,45 @@
+// expect: EK1012
+// A call runs where it stands (D147), so a call that never succeeds, stored in
+// a binding, a field, an element or an assignment, fails or loops there and
+// stores nothing, where Effect TypeScript stored the program to run later.
+// EK1012 is an error here (tsconfig.json).
+error Missing { id: string }
+
+const followUntil = () => {
+  while (true) {
+    sleep("1 second")
+  }
+}
+const lookup = (id: number) => {
+  sleep("1 millis")
+  return id
+}
+
+export const make = (ok: boolean) => {
+  const missing = Effect.fail(new Missing({ id: "a" }))
+  let retried = Effect.fail(new Missing({ id: "b" }))
+  const programs = [followUntil()]
+  return { follow: followUntil(), check: () => ok ? 1 : missing, retried, programs }
+}
+
+export const reassigned = () => {
+  let current = lookup(0)
+  current = Effect.fail(new Missing({ id: "c" }))
+  return current
+}
+
+// Not reported: a function or a declared Effect type keeps the program, the
+// call runs as a statement, or the call succeeds with a value.
+interface Follower {
+  follow: never!!
+  check: () => number!Missing
+}
+export const kept = (ok: boolean): Follower => {
+  const missing: never!Missing! = Effect.fail(new Missing({ id: "d" }))
+  return { follow: followUntil(), check: () => ok ? 1 : missing() }
+}
+export const later = () => ({ follow: () => followUntil(), id: lookup(1) })
+export const statement = () => {
+  lookup(2)
+  followUntil()
+}
