@@ -10,7 +10,6 @@ Calls run in sequence. Effect's concurrency combinators overlap work, limit conc
 ## Sequential, bounded, and unbounded work
 
 ```vibe
-// run: Console.log(JSON.stringify(runTasks()))
 function task(id: number) {
   Console.log("starting", id)
   sleep("40 millis")
@@ -42,7 +41,6 @@ Sequential is the default; a positive numeric limit bounds active operations. `a
 ## Interrupting computations
 
 ```vibe
-// run: const stopped = cancelWork(); Console.log(stopped.isFailure() && Cause.hasInterrupts(stopped.cause))
 function cancelWork() {
   const worker = fork {
     sleep("1 minute")
@@ -59,7 +57,6 @@ function cancelWork() {
 ## Attaching interruption cleanup
 
 ```vibe
-// run: cancelWithCleanup(); Console.log("interrupt returned")
 function cancelWithCleanup() {
   const worker = fork(Effect.onInterrupt(() => {
     try {
@@ -81,7 +78,6 @@ function cancelWithCleanup() {
 ## Propagating cancellation across concurrent work
 
 ```vibe
-// run: const stopped = Effect.exit(() => cancelBatch()); Console.log(stopped.isFailure() && Cause.hasInterrupts(stopped.cause))
 function cancelBatch() {
   for concurrent (const id of [1, 2, 3]) {
     try {
@@ -106,7 +102,6 @@ function cancelBatch() {
 ## Racing under different winner rules
 
 ```vibe
-// run: Console.log(JSON.stringify(raceExamples()))
 function answer(label: string, delay: Duration.Input) {
   sleep(delay)
   return label
@@ -136,7 +131,6 @@ The await operations (TC39 await operations proposal) behave as the same-named `
 ## Inspecting the winner
 
 ```vibe
-// run: const result = inspectRace(); Console.log(result.outcome.isFailure()); Console.log(JSON.stringify(result.winners))
 function inspectRace() {
   const winners: number[] = []
   const outcome = Effect.result(Effect.raceFirst(

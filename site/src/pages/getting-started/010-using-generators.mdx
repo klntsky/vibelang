@@ -10,7 +10,6 @@ VibeLang sequences computations with ordinary functions and calls, covering the 
 ## Sequence computations
 
 ```vibe
-// run: Console.log(Effect.provide(invoice(3), ConfigProvider.layer(ConfigProvider.fromUnknown({ UNIT_PRICE: 4 }))))
 function invoice(quantity: number) {
   const unitPrice = Config.Finite("UNIT_PRICE")()
   const subtotal = quantity * unitPrice
@@ -26,7 +25,6 @@ Each call completes before the next statement runs. `Config.Finite("UNIT_PRICE")
 ## Relate calls to async functions
 
 ```vibe
-// run: Console.log(greeting())
 function delayedLabel(name: string) {
   sleep("30 millis")
   return name.toUpperCase()
@@ -44,7 +42,6 @@ function greeting() {
 ## Branches and loops
 
 ```vibe
-// run: Console.log(reportEven([1, 2, 3, 4, -1, 6]))
 function reportEven(values: ReadonlyArray<number>) {
   let count = 0
   for (const value of values) {
@@ -65,7 +62,6 @@ Conditions, local variables, `break`, `continue`, and early returns keep JavaScr
 ## Raise failures and stop early
 
 ```vibe
-// run: Console.log(optionalTitle(undefined))
 error MissingTitle
 
 function titleLength(title: string | undefined) {
@@ -91,7 +87,6 @@ When a cause contains several expected failures and no defect or interruption, `
 ## Retain the receiver
 
 ```vibe
-// run: Console.log(label())
 class Prefixer {
   constructor(readonly prefix: string) {}
 
@@ -114,7 +109,6 @@ Method calls preserve `this` and evaluate the receiver once; no nested generator
 ## Generators produce values and streams
 
 ```vibe
-// run: Console.log(JSON.stringify(firstTwo()))
 function* ticks() {
   for (let n = 0; n < 3; n += 1) {
     sleep("10 millis")

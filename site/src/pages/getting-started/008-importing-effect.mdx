@@ -18,7 +18,6 @@ The core package supplies Effect's data types, schedules, concurrency tools, and
 ## Module and namespace imports
 
 ```vibe
-// run: Console.log(Number.isFinite(pauseBeforeRetry()))
 function pauseBeforeRetry() {
   const started = Clock.currentTimeMillis()
   sleep(Duration.millis(25))
@@ -34,7 +33,6 @@ const backoff = Schedule.exponential("50 millis")
 JavaScript's own globals keep their names: `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so import Effect's modules of those names under another name:
 
 ```vibe
-// run: Console.log(JSON.stringify(firstTwo([1, 2, 3])))
 import { Array as Arr } from "effect"
 
 function firstTwo(values: ReadonlyArray<number>) {
@@ -48,7 +46,6 @@ Shared web-standard globals also keep their names: `Request`, `Response`, `Heade
 ## Compose standalone functions
 
 ```vibe
-// run: Console.log(expirationWindow())
 function expirationWindow() {
   const short = Duration.seconds(15)
   return short.toMillis()
@@ -68,7 +65,6 @@ VibeLang's global names are source conveniences: they refer to Effect and langua
 ## Reusable operators
 
 ```vibe
-// run: Console.log(example())
 function withinSecond<A, E, R>(program: () => A!E!R) {
   return timeout(program, "1 second")
 }

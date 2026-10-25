@@ -10,7 +10,6 @@ Many Effect APIs are dual: they take the data then the options (data-first), or 
 ## Data first or data last
 
 ```vibe
-// run: Console.log(JSON.stringify(compare()))
 const source = Stream.make(5, 10, 15)
 const direct = source.map((n) => n / 5)
 const stage = Stream.map((n: number) => n / 5)
@@ -31,7 +30,6 @@ The direct form supplies `source` in the first call; the data-last form builds a
 ## Methods
 
 ```vibe
-// run: Console.log(JSON.stringify(methods()))
 const missing = Cause.fail("missing port")
 
 function methods() {
@@ -64,7 +62,6 @@ Only the data-first overloads are methods: `stream.zipLeft(other)` calls `Stream
 ## Direct calls and program pipelines
 
 ```vibe
-// run: Console.log(directLookup(), pipedLookup())
 function lookup() {
   sleep("10 millis")
   return "found"
@@ -88,7 +85,6 @@ Each `%` stands for the expression before its `|>`. Where `%` is an argument tha
 ## Choosing a form
 
 ```vibe
-// run: Console.log(boundedLookup(), reusableLookup())
 function boundedLookup() {
   return retry(lookup(), { times: 2 })
 }

@@ -10,7 +10,6 @@ description: "Path is Effect's platform-specific path service. Use it to join, s
 ## Requesting the path service
 
 ```vibe
-// run: provide Path.layer { Console.log(pathSeparator()) }
 function pathSeparator() {
   const path = Effect.service(Path.Path)
   return path.sep
@@ -24,7 +23,6 @@ function pathSeparator() {
 ## Manipulating paths portably
 
 ```vibe
-// run: provide Path.layer { Console.log(JSON.stringify(describeReport())) }
 function describeReport() {
   const path = Effect.service(Path.Path)
   const joined = path.join("reports", "weekly.txt")
@@ -57,7 +55,6 @@ Most `Path` methods are plain synchronous TypeScript functions. Effect's own pac
 | `toFileUrl`, `fromFileUrl` | Effectful file-URL conversion |
 
 ```vibe
-// run: provide Path.layer { Console.log(asFileUrl("/reports/weekly.txt")) }
 function asFileUrl(file: string) {
   const path = Effect.service(Path.Path)
   const absolute = path.resolve(file)

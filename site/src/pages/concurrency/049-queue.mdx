@@ -10,7 +10,6 @@ A `Queue` passes values between fibers, delivering each offered value to one con
 ## Choosing an overflow strategy
 
 ```vibe
-// run: const queues = chooseQueues(); Console.log(queues.jobs.capacity, queues.optionalEvents.capacity, queues.recentPositions.capacity, queues.unrestricted.capacity)
 function chooseQueues() {
   const jobs = Queue.bounded<string>(32)
   const optionalEvents = Queue.dropping<string>(32)
@@ -26,7 +25,6 @@ When full, a bounded queue suspends offers until consumers free space, a droppin
 ## Offering values and batches
 
 ```vibe
-// run: Console.log(JSON.stringify([offerWithBackpressure(), rejectedBatch()]))
 function offerWithBackpressure() {
   const queue = Queue.bounded<number>(1)
   queue.offer(10)
@@ -49,7 +47,6 @@ function rejectedBatch() {
 ## Taking, polling, and draining values
 
 ```vibe
-// run: const result = consumeBatches(); Console.log(JSON.stringify([result.first, result.optional.getOrElse(() => 0), result.pair, result.batch, result.empty]))
 function consumeBatches() {
   const queue = Queue.bounded<number>(8)
   queue.offerAll([1, 2, 3, 4, 5, 6])
@@ -68,7 +65,6 @@ function consumeBatches() {
 ## Querying queue state
 
 ```vibe
-// run: Console.log(JSON.stringify(inspectQueue()))
 function inspectQueue() {
   const queue = Queue.bounded<string>(2)
   queue.offer("task")
@@ -87,7 +83,6 @@ Size counts buffered messages; capacity is the configured limit. Both are observ
 ## Shutting down and awaiting closure
 
 ```vibe
-// run: Console.log(JSON.stringify(finishNormally())); const stopped = stopImmediately(); Console.log(stopped.isFailure() && Cause.hasInterrupts(stopped.cause))
 function finishNormally() {
   const queue = Queue.bounded<number, Cause.Done>(4)
   queue.offerAll([7, 8])
@@ -121,7 +116,6 @@ Ordinary block exit doesn't close a queue. When consumers and producers must sto
 ## Restricting producer and consumer capabilities
 
 ```vibe
-// run: Console.log(handoff())
 function send(outbox: Queue.Enqueue<string>, message: string) {
   return outbox.offer(message)
 }

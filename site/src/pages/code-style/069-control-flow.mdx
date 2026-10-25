@@ -10,7 +10,6 @@ VibeLang uses ordinary branches and loops for sequential work. Effect's operator
 ## Branching and conditional computations
 
 ```vibe
-// run: Console.log(optionalSize(-1).isNone(), optionalSize(3).getOrNull(), requiredSize(3)); try { requiredSize(-1) } catch (error) { Console.log(error._tag, error.size) }; Console.log(announceIfEnabled(false).isNone()); Console.log(announceIfEnabled(true).getOrNull())
 error InvalidSize {
   size: number
 }
@@ -47,7 +46,6 @@ announced
 ## Combining two results
 
 ```vibe
-// run: Console.log(JSON.stringify([sequentialPair(), concurrentPair(), formattedPair()]))
 function amount() {
   sleep("30 millis")
   return 18
@@ -86,7 +84,6 @@ function formattedPair() {
 ## Repeating work in loops
 
 ```vibe
-// run: Console.log(JSON.stringify(inspectPages())); logAttempts()
 function inspectPages() {
   const inspected: number[] = []
   let page = 1
@@ -112,7 +109,6 @@ function logAttempts() {
 A loop can call services, pause, fail, and use `break` or `continue`. Accumulate results only when the caller needs them; a loop without an explicit return completes with `void`. Each run of the function recreates its local state.
 
 ```vibe
-// run: operatorLoop()
 function operatorLoop() {
   let index = 0
   Effect.whileLoop({
@@ -134,7 +130,6 @@ In Effect 4.0.5, `whileLoop` takes one options object and returns `void`. `body`
 ## Traversing collections and discarding values
 
 ```vibe
-// run: Console.log(JSON.stringify(prepareAll())); logAll()
 function prepare(id: number) {
   sleep("10 millis")
   return `prepared-${id}`
@@ -167,7 +162,6 @@ id 8
 ## Collecting programs
 
 ```vibe
-// run: Console.log(JSON.stringify(collected()))
 function collected() {
   const tuple = all([() => 12, () => "ready"] as const)
   const object = all({ count: () => 12, status: () => "ready" })
@@ -186,7 +180,6 @@ function collected() {
 ## Early termination and alternate collection modes
 
 ```vibe
-// run: try { stopAtFailure() } catch (error) { Console.log(error._tag) }; Console.log(JSON.stringify(collectOutcomes().map((result) => result.isSuccess() ? result.success : result.failure._tag)))
 error Unavailable {
   id: number
 }

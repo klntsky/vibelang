@@ -10,7 +10,6 @@ A `Deferred<A, E>` is a result another fiber can complete once. Use it to signal
 ## Creating a one-time result
 
 ```vibe
-// run: const signal = makeStartupSignal(); Console.log(signal.isDone()); Console.log(signal.poll().isNone())
 error StartupFailed {
   stage: string
 }
@@ -28,7 +27,6 @@ A new deferred is empty, holding neither a success nor a failure. Creating it is
 ## Waiting for completion
 
 ```vibe
-// run: Console.log(waitForAddress())
 function waitForAddress() {
   const address = Deferred.make<string>()
   const listener = fork address.await()
@@ -43,7 +41,6 @@ function waitForAddress() {
 ## Completing with success or failure
 
 ```vibe
-// run: Console.log(JSON.stringify(completeOnce())); Console.log(shareFailure())
 function completeOnce() {
   const result = Deferred.make<number, string>()
   const accepted = result.succeed(25)
@@ -72,7 +69,6 @@ The first completion wins; later completions return `false`. `Deferred.done` tak
 ## Polling completion state
 
 ```vibe
-// run: Console.log(JSON.stringify(inspectWithoutWaiting()))
 function inspectWithoutWaiting() {
   const result = Deferred.make<number>()
   const before = result.isDone() // false
@@ -92,7 +88,6 @@ function inspectWithoutWaiting() {
 ## Coordinating work across fibers
 
 ```vibe
-// run: Console.log(coordinate())
 function coordinate() {
   const prepared = Deferred.make<ReadonlyArray<string>>()
   const producer = fork {

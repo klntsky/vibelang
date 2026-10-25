@@ -10,7 +10,6 @@ description: "Hash works in VibeLang exactly as in Effect. It gives equality-awa
 ## Connecting hashing to equality
 
 ```vibe
-// run: Console.log(JSON.stringify([Equal.equals(first, same), Hash.hash(first) === Hash.hash(same)]))
 const first = { section: "billing", page: 2 }
 const same = { section: "billing", page: 2 }
 Equal.equals(first, same) // true
@@ -23,7 +22,6 @@ Equal values must have equal hashes, but equal hashes do not prove equality: dif
 ## Implementing the hashing protocol
 
 ```vibe
-// run: Console.log(JSON.stringify([Hash.hash(new GridCell(3, 7)) === Hash.hash(new GridCell(3, 7)), Equal.equals(new GridCell(3, 7), new GridCell(3, 8))]))
 class GridCell implements Equal.Equal {
   constructor(readonly row: number, readonly column: number) {}
 
@@ -49,7 +47,6 @@ It compiles to a plain JavaScript method because `[Hash.symbol]` is typed as a p
 ## Keeping equal values hash-consistent
 
 ```vibe
-// run: Console.log(JSON.stringify([cells.size(), Hash.hash(first) === Hash.hash(equivalent)]))
 const first = new GridCell(3, 7)
 const equivalent = new GridCell(3, 7)
 const cells = HashSet.make(first, equivalent)

@@ -11,7 +11,6 @@ Compiler diagnostics show VibeLang contracts and catch failures or requirements 
 
 ```vibe
 // example.vibe
-// run: Console.log(sample())
 function sample() {
   sleep("5 millis")
   return "sample"
@@ -39,7 +38,6 @@ For GitHub highlighting, add `*.vibe linguist-language=TypeScript` to `.gitattri
 ## Inspect inferred information
 
 ```vibe
-// run: Console.log(accepted(2))
 error Rejected
 
 function accepted(value: number) {
@@ -75,7 +73,6 @@ The server exposes TypeScript completions through the VibeLang checker, service 
 ## Configure compiler checks
 
 ```vibe
-// run: Console.log(checked(2))
 function checked(value: number): number!Rejected! {
   return accepted(value)
 }
@@ -136,7 +133,6 @@ The table accounts for the 108 diagnostics and editor features in `@effect/langu
 EK4801-EK4825 are lint. Each has a default, error, warning, or off, and all but EK4813 can be set in the `vibelang` setting `diagnostics` or by a comment (D241). A later comment overrides an earlier one; within one comment, a code named on its own overrides `*`. Words after the codes are prose, and punctuation ends a category, so `// @vibelang-diagnostics-next-line EK4801:off: returned unrun` keeps its reason:
 
 ```vibe
-// run: Console.log(discard(() => { Console.log("unused") ; return 42 }))
 function discard(program: Effect.Effect<number>) {
   // @vibelang-diagnostics-next-line EK4801:off
   program
@@ -312,7 +308,6 @@ The other forms keep the TypeScript the checker reads: a block param is an arrow
 ## Debugging in editors
 
 ```vibe
-// run: Console.log(tracedSample())
 function tracedSample() {
   return withSpan(sample(), "sample")
 }

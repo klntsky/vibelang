@@ -10,7 +10,6 @@ A `Stream` produces values on demand. Use it for large inputs, ongoing events, a
 ## Element, error, and service types
 
 ```vibe
-// run: provide Feed = { next: () => "message" } { Console.log(JSON.stringify(preview())) }
 error FeedUnavailable
 
 service Feed {
@@ -34,7 +33,6 @@ Effect's Stream, Filter, and Cause value builders are trusted library calls: cal
 ## Choosing a streaming use case
 
 ```vibe
-// run: Console.log(JSON.stringify(firstFiveTickets()))
 function firstFiveTickets() {
   const tickets = Stream.iterate(100, (n) => n + 1)
   return tickets.take(5).runCollect()
@@ -48,7 +46,6 @@ The source never ends; the consumer takes only five elements. Log tails, paginat
 ## Streams and individual effects
 
 ```vibe
-// run: Console.log(JSON.stringify([oneResult(), noReadings.runCollect(), oneReading.runCollect(), ...compare()]))
 function oneResult() {
   return [12, 24, 36]
 }
@@ -73,7 +70,6 @@ A successful call returns one result, even an array. A stream emits zero or more
 ## Incremental production and backpressure
 
 ```vibe
-// run: printReadings()
 function printReadings() {
   const source = Stream.range(20, 25).mapEffect((n) => {
     Console.log(`prepare ${n}`)
@@ -101,7 +97,6 @@ function printReadings() {
 The consumer controls demand, so production slows when consumption does. Streams exchange internal batches, so a source can prepare several elements per pull, and buffering and concurrency add explicit read-ahead: backpressure does not mean one element at a time in memory.
 
 ```vibe
-// run: Effect.provide(printFirstReading(), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]))
 function* readings() {
   for (let n = 1; n <= 3; n++) {
     sleep("50 millis")

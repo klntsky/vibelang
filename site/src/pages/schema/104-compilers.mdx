@@ -11,7 +11,6 @@ Effect's experimental Schema compilers work behind the ordinary Schema APIs. The
 
 ```vibe
 // schemas/Parcel.vibe
-// run: Console.log(JSON.stringify(readParcel({ reference: "pkg-94", count: 2 }))); try { readParcel({ reference: "pkg-94", count: "2" }) } catch (error) { Console.log(error._tag) }
 import { Console } from "effect"
 export const Parcel = Schema.Struct({
   reference: Schema.String,
@@ -36,7 +35,6 @@ Compilation must be active for the AST and operation before a consumer captures 
 
 ```vibe
 // main.vibe
-// run: Console.log(JSON.stringify(receiveCompiled({ reference: "pkg-94", count: 2 }))); try { receiveCompiled({}) } catch (error) { Console.log(error.message) }
 import "effect/schema/SchemaJITCompiler/enable"
 
 const CompiledParcel = Schema.Struct({
@@ -58,7 +56,6 @@ Missing key
 Put the enabling import before code that creates or runs parsers; importing the compiler namespace alone does not enable it. Operations compile lazily on first use, without eagerly running every check or default.
 
 ```vibe
-// run: enableSelectedDirections(); Console.log(Schema.decodeEffect(Schema.FiniteFromString)("2")); Console.log(Schema.is(Schema.toType(Schema.FiniteFromString))(2)); Console.log(Schema.encodeEffect(Schema.FiniteFromString)(2))
 import { SchemaJITCompiler } from "effect/schema"
 
 function enableSelectedDirections() {
@@ -83,7 +80,6 @@ JIT constructs functions dynamically. When the engine or Content Security Policy
 ```ts
 // TypeScript (.ts)
 // build-schema-aot.ts
-// run: return Effect.flatMap(buildSchemas(), (result) => Console.log(`Prepared ${result.schemas} schema exports`))
 import { fileURLToPath } from "node:url"
 import { Console, Effect } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
@@ -108,7 +104,6 @@ Prepared 1 schema exports
 
 ```vibe
 // build.vibe
-// run: main()
 import { buildSchemas } from "./build-schema-aot.ts"
 
 export function main() {
@@ -153,7 +148,6 @@ Load the generated module before using the schemas, and ensure the bundler prese
 ## Using lower-level compiler APIs
 
 ```vibe
-// run: Console.log(generateSource().includes("export function install"))
 import * as SchemaAOTCompiler from "effect/schema/SchemaAOTCompiler"
 
 function generateSource() {
@@ -183,7 +177,6 @@ The low-level API calls directional parsing `decode`, the flipped encoding path 
 ## Specialized operations, registries, startup behavior, and limits
 
 ```vibe
-// run: Console.log(JSON.stringify(parseNormally({ reference: "pkg-94", count: 2 }))); try { parseNormally({ reference: "pkg-94", count: 2, extra: true }) } catch (error) { Console.log(error.message) }
 function parseNormally(input: unknown) {
   return Schema.decodeUnknownEffect(Parcel)(input, {
     errors: "all", onExcessProperty: "error"

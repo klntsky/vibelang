@@ -11,7 +11,6 @@ Matching turns an outcome into one value or selects the next computation. Use ty
 ## Folding success and failure into values
 
 ```vibe
-// run: Console.log(countLabel(3)); Console.log(countLabel(-1))
 error InvalidCount
 
 function itemCount(raw: number) {
@@ -38,7 +37,6 @@ Count unavailable
 ## Choosing effectful branches
 
 ```vibe
-// run: Console.log(reportCount(3)); Console.log(reportCount(-1))
 function reportCount(raw: number) {
   return Effect.matchEffect(() => itemCount(raw), {
     onFailure: () => {
@@ -65,7 +63,6 @@ Count unavailable
 ## Matching complete failure causes
 
 ```vibe
-// run: Console.log(outcomeLabel()); Console.log(reportOutcome())
 function outcomeLabel() {
   return Effect.matchCause(die(new Error("index invariant")), {
     onFailure: (cause) => cause.hasDies() ? "Index defect" : "Index stopped",
@@ -95,7 +92,6 @@ Unavailable
 ## Discarding failures or all causes
 
 ```vibe
-// run: ignoreRejectedCount(); discardBoundaryOutcome()
 function ignoreRejectedCount() {
   Effect.ignore(itemCount(-2))
 }

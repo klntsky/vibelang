@@ -10,7 +10,6 @@ description: "Brand provides Effect's branded types: a brand distinguishes domai
 ## Distinguishing identical representations
 
 ```vibe
-// run: Console.log(invoiceUrl("inv-3" as InvoiceId), customerUrl("customer-5" as CustomerId))
 type InvoiceId = string & Brand.Brand<"InvoiceId">
 type CustomerId = string & Brand.Brand<"CustomerId">
 
@@ -32,7 +31,6 @@ Two plain aliases for `string` stay interchangeable; these branded types differ 
 ## Nominal brands
 
 ```vibe
-// run: Console.log(JSON.stringify(knownInvoice("inv-3")))
 type InvoiceId = string & Brand.Brand<"InvoiceId">
 const InvoiceId = Brand.nominal<InvoiceId>()
 
@@ -51,7 +49,6 @@ function knownInvoice(raw: string) {
 ## Refined brands and validation
 
 ```vibe
-// run: Console.log(parseAmount(125)); try { parseAmount(1.5) } catch (error) { Console.log(error._tag) }
 type WholeCents = number & Brand.Brand<"WholeCents">
 const WholeCents = Brand.make<WholeCents>((n) =>
   Number.isSafeInteger(n) || "amount must be a safe integer"
@@ -75,7 +72,6 @@ InvalidAmount
 `Brand.make` takes a synchronous check that returns `true` for valid input or an explanation for invalid input. Its constructor throws a `Brand.BrandError` when validation fails. Escaping into Effect code, the exception is a defect that Effect catch doesn't see; a plain function's catch doesn't see it either (D282). Here `result` avoids throwing, and ordinary `catch` maps its expected failure to `InvalidAmount`.
 
 ```vibe
-// run: const valid = inspectAmount(125); const invalid = inspectAmount(1.5); Console.log(valid.optional.isSome(), valid.result.isSuccess(), valid.valid); Console.log(invalid.optional.isNone(), invalid.result.isFailure(), invalid.valid)
 function inspectAmount(raw: number) {
   const optional = WholeCents.option(raw)
   const result = WholeCents.result(raw)
@@ -94,7 +90,6 @@ true true false
 ## Composing constraints
 
 ```vibe
-// run: Console.log(chargeAmount(125)); for (const input of [-5, 1.5]) { try { chargeAmount(input) } catch (error) { Console.log(error._tag) } }
 type WholeCents = number & Brand.Brand<"WholeCents">
 const WholeCents = Brand.make<WholeCents>((n) =>
   Number.isSafeInteger(n) || "amount must be a safe integer"

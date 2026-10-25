@@ -10,7 +10,6 @@ Effect's structured logging records progress, failures, and diagnostic context. 
 ## Emitting structured records
 
 ```vibe
-// run: const records: unknown[] = []; const capture = Logger.make(({ logLevel, message }) => { records.push([logLevel, message]) }); provide Logger.layer([capture]) { reportProgress() }; Console.log(JSON.stringify(records))
 function reportProgress() {
   log("export started", { format: "csv", stage: "prepare" })
   logInfo("export completed", { rows: 240 })
@@ -26,7 +25,6 @@ function reportProgress() {
 ## Selecting severity thresholds
 
 ```vibe
-// run: const records: unknown[] = []; const capture = Logger.make(({ logLevel, message }) => { records.push([logLevel, message]) }); provide Logger.layer([capture]) { diagnostics() }; Console.log(JSON.stringify(records))
 function diagnostics() {
   Effect.provideService(References.MinimumLogLevel, "Debug") {
     Effect.logTrace("entered parser")
@@ -48,7 +46,6 @@ The default threshold, Info, filters Debug and Trace. Providing Debug enables De
 ## Annotating logs and scoped regions
 
 ```vibe
-// run: const records: unknown[] = []; const capture = Logger.make(({ message, fiber }) => { records.push([message, fiber.getRef(References.CurrentLogAnnotations)]) }); provide Logger.layer([capture]) { annotatedExport(); scopedAnnotations() }; Console.log(JSON.stringify(records))
 function annotatedExport() {
   Effect.annotateLogs({ operation: "weekly-export", format: "csv" }) {
     logInfo("preparing")
@@ -76,7 +73,6 @@ function scopedAnnotations() {
 ## Measuring log spans
 
 ```vibe
-// run: const records: unknown[] = []; const capture = Logger.make(({ message, fiber, date }) => { records.push([message, fiber.getRef(References.CurrentLogSpans).map(([label, start]) => [label, date.getTime() - start])]) }); provide TestClock.layer() { TestClock.setTime(0); provide Logger.layer([capture]) { const worker = fork(() => timedExport()); TestClock.adjust("30 millis"); join worker } }; Console.log(JSON.stringify(records))
 import { TestClock } from "effect/testing"
 
 function timedExport() {
@@ -97,7 +93,6 @@ Each record inside the log span carries the time elapsed since the span began, s
 ## Disabling and configuring logging
 
 ```vibe
-// run: const records: unknown[] = []; const capture = Logger.make(({ logLevel, message }) => { records.push([logLevel, message]) }); provide Logger.layer([capture]) { quiet(); provide ConfigProvider.layer(ConfigProvider.fromUnknown({ LOG_LEVEL: "Debug" })) { configured() } }; Console.log(JSON.stringify(records))
 import { ConfigProvider } from "effect"
 
 const Silent = Layer.succeed(References.MinimumLogLevel, "None")
@@ -126,7 +121,6 @@ The None threshold silences the provided region. `Config.LogLevel` builds a conf
 ## Defining a custom output handler
 
 ```vibe
-// run: Console.log(JSON.stringify(captureLogs()))
 function captureLogs() {
   const records: Array<{ level: string; message: unknown }> = []
   const capture = Logger.make(({ logLevel, message }) => {
@@ -149,7 +143,6 @@ function captureLogs() {
 ## Choosing text, structured, and JSON formats
 
 ```vibe
-// run: const records: unknown[] = []; const original = Effect.service(Console.Console); Effect.provideService(() => jsonExample(), Console.Console, { ...original, log: (line: string) => { const record = JSON.parse(line); records.push([record.level, record.message]) } }); Console.log(JSON.stringify(records))
 const TextLogs = Logger.layer([Logger.consoleLogFmt, Logger.tracerLogger])
 const PrettyLogs = Logger.layer([Logger.consolePretty(), Logger.tracerLogger])
 const ObjectLogs = Logger.layer([Logger.consoleStructured, Logger.tracerLogger])
@@ -169,7 +162,6 @@ The default logger emits readable text, LogFmt compact key/value pairs, and Pret
 ## Sending records to multiple destinations
 
 ```vibe
-// run: const lines: unknown[][] = []; const original = Effect.service(Console.Console); const audit = Effect.provideService(() => consoleAndCapture(), Console.Console, { ...original, log: (...args: ReadonlyArray<unknown>) => { lines.push([...args]) } }); Console.log(JSON.stringify(audit), lines.length, JSON.stringify(lines).includes("job finished"))
 function consoleAndCapture() {
   const auditMessages: unknown[] = []
   const audit = Logger.make(({ message }) => { auditMessages.push(message) })

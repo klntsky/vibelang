@@ -54,7 +54,6 @@ it.effect("a deadline returns the fallback") {
 `it.effect` provides the test services, virtual time included. `adjust` advances by a duration and runs sleepers whose deadlines fall within it; `setTime` sets an absolute timestamp in milliseconds. Fork the timed work first so the test's own fiber stays free to adjust the clock. The block owns `pending` and interrupts it if the test exits early.
 
 ```vibe
-// run: Console.log(standaloneClockExample())
 import { TestClock } from "effect/testing"
 
 function standaloneClockExample() {

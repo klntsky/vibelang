@@ -72,7 +72,6 @@ Create `src/todos.vibe`. The `TodosLive` layer keeps the list in a `Map` that it
 
 ```vibe
 // src/todos.vibe
-// run: provide TodosLive { Console.log(JSON.stringify(loadBoard())); try { Todos.complete(99) } catch (error) { Console.log(error._tag, error.id) } }
 export schema Todo { id: number; title: string; done: boolean }
 
 export error TodoNotFound { id: number }
@@ -132,7 +131,6 @@ Create `src/runtime.ts`. One `ManagedRuntime` builds `TodosLive` once and runs e
 ```ts
 // TypeScript (.ts)
 // src/runtime.ts
-// run: return import("./todos.vibe").then(({ completeTodo, loadBoard }) => runtime.runPromise(completeTodo(3)).then(() => runtime.runPromise(loadBoard()))).then((board) => console.log(JSON.stringify(board))).finally(() => runtime.dispose())
 import { ManagedRuntime } from "effect"
 import { TodosLive } from "./todos.vibe"
 

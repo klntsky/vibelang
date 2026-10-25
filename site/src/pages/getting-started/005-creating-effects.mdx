@@ -10,7 +10,6 @@ An ordinary function describes a VibeLang computation: return a value to succeed
 ## Success and failure
 
 ```vibe
-// run: Console.log(reserve("notebook", true).item)
 error Unavailable {
   item: string
 }
@@ -28,7 +27,6 @@ The compiler records the returned object in `A` and `Unavailable` in `E`. `Effec
 ## Track errors as values
 
 ```vibe
-// run: Console.log(attemptReservation("notebook", false))
 function attemptReservation(item: string, available: boolean) {
   const outcome = Effect.result(reserve(item, available))
   if (outcome.isFailure()) return outcome.failure.item
@@ -43,7 +41,6 @@ function attemptReservation(item: string, available: boolean) {
 ## Wrap synchronous operations
 
 ```vibe
-// run: Console.log(randomBytes(16).length)
 error RandomBytesFailed {
   cause: unknown
 }
@@ -71,7 +68,6 @@ In Effect code, `catch` sees expected failures only, not defects from `Option.ge
 String computation needs no hatch:
 
 ```vibe
-// run: Console.log(slug("Hello VibeLang"))
 function slug(title: string) {
   let s = title.trim().toLowerCase()
   s = s.replaceAll(/[^a-z0-9]+/g, "-")
@@ -83,7 +79,6 @@ function slug(title: string) {
 ## Create effects from promises
 
 ```vibe
-// run: Console.log(digest("parcel").byteLength)
 error DigestFailed {
   cause: unknown
 }
@@ -106,7 +101,6 @@ function digest(text: string) {
 
 ```vibe
 // A one-shot read ends its registration when either callback fires.
-// run: Console.log(readAndReport({ read: (onValue: (n: number) => void) => { onValue(7); return () => {} } }))
 type Source = {
   read: (onValue: (n: number) => void, onError: (e: Error) => void) => () => void
 }
@@ -133,7 +127,6 @@ For resource acquisition, cancellation must also release a resource that arrives
 ## Write TypeScript in a module declaration
 
 ```vibe
-// run: Console.log(/^[-0-9a-f]{36}$/.test(requestId()))
 module platform {
   export function randomId(): string {
     return crypto.randomUUID()
@@ -155,7 +148,6 @@ Declare modules at a file's top level. In a `.vibe` file `module` never declares
 ## Suspend work
 
 ```vibe
-// run: Console.log(JSON.stringify(counters()))
 function nextCounter() {
   let count = 0
   return () => {
@@ -175,7 +167,6 @@ function counters() {
 The returned function delays its body until each call. For retry to create new state each time, wrap the whole computation, mutable setup included. `Effect.suspend` still delays building an Effect in TypeScript adapters; in VibeLang, passing a program already delays its body.
 
 ```vibe
-// run: Console.log(countdown(3))
 function countdown(n: number): number!! {
   if (n <= 0) return 0
   sleep("1 millis")

@@ -10,7 +10,6 @@ A schedule decides when work runs again and when it stops. `Schedule` values wor
 ## Repeating successful computations
 
 ```vibe
-// run: provide TestClock.layer() { const worker = fork heartbeat(); TestClock.adjust("46 seconds"); worker.interrupt() }
 import { TestClock } from "effect/testing"
 
 function heartbeat() {
@@ -30,7 +29,6 @@ function heartbeat() {
 ## Stopping based on a result
 
 ```vibe
-// run: Console.log(JSON.stringify(waitForBuild()))
 function waitForBuild() {
   let checks = 0
   const status = repeat({
@@ -52,7 +50,6 @@ The initial check is separate from the seven permitted repetitions, so the loop 
 ## Delaying the initial run
 
 ```vibe
-// run: provide TestClock.layer() { const worker = fork delayedCleanup(); Console.log("before first sweep"); TestClock.adjust("60 minutes"); worker.interrupt() }
 function delayedCleanup() {
   Effect.schedule(
     Console.log("sweeping expired sessions"),
@@ -69,7 +66,6 @@ function delayedCleanup() {
 ## Retrying failed computations
 
 ```vibe
-// run: Console.log(reserveSlot())
 error Busy
 
 function reserveSlot() {
@@ -89,7 +85,6 @@ function reserveSlot() {
 ## Handling failures while repeating
 
 ```vibe
-// run: let reads = 0; provide Layer.mergeAll(TestClock.layer(), Layer.succeed(Sensor, { read: () => { reads++; if (reads !== 2) throw new SensorOffline(); return 22 } })) { const worker = fork sampleContinuously(); TestClock.adjust("11 seconds"); worker.interrupt() }
 error SensorOffline
 
 service Sensor {

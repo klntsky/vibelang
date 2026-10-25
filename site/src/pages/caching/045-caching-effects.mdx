@@ -10,7 +10,6 @@ Caching shares a computation's outcome across callers instead of repeating the w
 ## Memoizing parameterized computations
 
 ```vibe
-// run: Console.log(JSON.stringify(memoizeLengths()))
 function memoizeLengths() {
   let lookups = 0
   const cache = Cache.make({
@@ -36,7 +35,6 @@ Each key stores its own outcome: repeated calls for the key reuse it, and concur
 ## Reusing one computed result
 
 ```vibe
-// run: Console.log(JSON.stringify(cachedSettings()))
 function cachedSettings() {
   let loads = 0
   const settings = Effect.cached {
@@ -57,7 +55,6 @@ Calling `Effect.cached` allocates a reusable Effect value; calling that value ru
 ## Expiring results after a duration
 
 ```vibe
-// run: Console.log(JSON.stringify(expiringSnapshot()))
 function expiringSnapshot() {
   let revision = 0
   const snapshot = Effect.cachedWithTTL(() => ++revision, "100 millis")
@@ -75,7 +72,6 @@ The TTL bounds how long an outcome is reused. Expiration starts no background re
 ## Invalidating explicitly
 
 ```vibe
-// run: Console.log(JSON.stringify(reloadableSnapshot()))
 function reloadableSnapshot() {
   let revision = 0
   const [snapshot, invalidate] = Effect.cachedInvalidateWithTTL(

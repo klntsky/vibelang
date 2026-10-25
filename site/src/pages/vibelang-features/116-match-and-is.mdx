@@ -10,7 +10,6 @@ description: "match picks the first arm whose pattern fits a value; is tests a v
 ## match
 
 ```vibe
-// run: Console.log(JSON.stringify([describe(new NotFound({ id: "7" })), describe(new Timeout()), describe(new Denied({ user: "Ada", reason: "admin" })), describe(new Denied({ user: "Ada", reason: "other" }))]))
 error NotFound { id: string }
 error Timeout
 error Denied { user: string; reason: string }
@@ -33,7 +32,6 @@ Each arm, `when pattern: expression;`, is tried in order; the first match gives 
 An arm is one expression. Use `do { }` for several statements; its value is its last statement's:
 
 ```vibe
-// run: Console.log(retryDelay(new Timeout())); Console.log(retryDelay(new NotFound({ id: "7" })))
 function retryDelay(failure: Failure) {
   return match (failure) {
     when Timeout: do {
@@ -64,7 +62,6 @@ A function named `match` still works. Only `match (value) {` followed by `when`,
 | Guard | A condition that is true | `when [let n] and if (n > 0):` |
 
 ```vibe
-// run: Console.log(JSON.stringify([shape([]), shape([2]), shape([2, 3, 4]), shape({ kind: "box", size: 5 }), shape({ kind: "point", size: 1 }), shape({ kind: "other" })]))
 function shape(value: ReadonlyArray<number> | { kind: string; size?: number }) {
   return match (value) {
     when []: "empty";
@@ -92,7 +89,6 @@ These matchers compile to the module's own test, so the bindings have exact type
 | `String`, `Number`, `Boolean`, `BigInt`, `Symbol` | `typeof` | the value |
 
 ```vibe
-// run: Console.log(greeting(Option.some("Ada"))); Console.log(greeting(Option.none())); Console.log(report("ada")); Console.log(report("").includes("NotFound"))
 function greeting(name: Option.Option<string>) {
   return match (name) {
     when Option.Some(let n): `Hello, ${n}`;
@@ -125,7 +121,6 @@ An `error` class matches its own instances by `instanceof`, so two classes with 
 A value with a `[customMatcher]` method decides for itself. `customMatcher` is the proposal's `Symbol.customMatcher`:
 
 ```vibe
-// run: Console.log([parity(2), parity(3)].join(", "))
 const Even = {
   [customMatcher](subject: unknown) {
     return typeof subject === "number" && subject % 2 === 0
@@ -148,7 +143,6 @@ For an extractor, the method receives `{ matchType: "extractor" }` as its second
 `and` requires both patterns, `or` accepts either, and `not` rejects its pattern. A guard, `if (condition)`, tests any expression and sees the bindings before it:
 
 ```vibe
-// run: Console.log(JSON.stringify([classify({ status: "failed", attempts: 3 }), classify({ status: "failed", attempts: 1 }), classify({ status: "queued", attempts: 0 }), classify({ status: "done", attempts: 0 }), classify({ status: "cancelled", attempts: 0 })]))
 function classify(job: { status: string; attempts: number }) {
   return match (job) {
     when { status: "failed", attempts: let n } and if (n >= 3): "escalate";
@@ -167,7 +161,6 @@ function classify(job: { status: string; attempts: number }) {
 `value is pattern` is `true` when the pattern matches. It binds as tightly as `instanceof`:
 
 ```vibe
-// run: Console.log(JSON.stringify([isRetryable(new Timeout()), isRetryable(new Denied({ user: "Ada", reason: "root" })), isRetryable(new NotFound({ id: "7" }))]))
 function isRetryable(failure: Failure) {
   return failure is Timeout or Denied
 }
@@ -177,7 +170,6 @@ function isRetryable(failure: Failure) {
 In an `if` or `while` condition, joined by `&&`, the pattern can bind names, scoped to the rest of the condition and the `if`'s first branch or the loop's body:
 
 ```vibe
-// run: Console.log(firstFailure("ada")); Console.log(firstFailure("").includes("NotFound"))
 function firstFailure(id: string) {
   const outcome = exit(getUser(id))
   if (outcome is Exit.Failure(let cause) && Cause.hasFails(cause)) {

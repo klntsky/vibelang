@@ -10,7 +10,6 @@ description: "Redacted works in VibeLang exactly as in Effect. It hides a sensit
 ## Wrapping sensitive values
 
 ```vibe
-// run: Console.log(String(exampleKey)); reportConfiguration(); Console.log(JSON.stringify(exampleKey))
 const exampleKey = Redacted.make("example-key-not-a-real-secret")
 String(exampleKey) // "<redacted>"
 
@@ -30,7 +29,6 @@ function reportConfiguration() {
 ## Revealing values deliberately
 
 ```vibe
-// run: provide Layer.succeed(CredentialsClient, { authenticate: (token) => token === "example-token" }) { Console.log(authenticate(Redacted.make("example-token")), authenticate(Redacted.make("wrong-token"))) }
 service CredentialsClient {
   authenticate(token: string): boolean!!
 }
@@ -50,7 +48,6 @@ true false
 ## Wiping stored secrets
 
 ```vibe
-// run: provide Layer.succeed(CredentialsClient, { authenticate: (token) => token === "example-token" }) { Console.log(useOnce("example-token")) }; const wiped = Redacted.make("example-token"); Redacted.wipeUnsafe(wiped); const failed = Effect.exit(() => Redacted.value(wiped)); Console.log(failed.isFailure(), String(wiped))
 function useOnce(raw: string) {
   const token = Redacted.make(raw)
   try {
@@ -71,7 +68,6 @@ true <redacted>
 ## Comparing protected values
 
 ```vibe
-// run: Console.log(same(first, second), same(first, third))
 const same = Redacted.makeEquivalence(Equivalence.String)
 const first = Redacted.make("example-a")
 const second = Redacted.make("example-a")

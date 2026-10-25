@@ -11,7 +11,6 @@ description: "Schema works exactly as in Effect: it describes values, checks dat
 
 ```vibe
 // settings.vibe
-// run: Console.log(JSON.stringify(readSettings({ label: "depot" }))); Console.log(Schema.is(Settings)({ label: "depot", hint: undefined }))
 import { Console } from "effect"
 const Settings = Schema.Struct({
   label: Schema.String,
@@ -36,7 +35,6 @@ Effect's own packages are trusted: synchronous Schema builders, `.pipe` methods,
 ## Understanding schemas and codecs
 
 ```vibe
-// run: Console.log(decodedView === Line, completeView === Line)
 const Quantity = Schema.FiniteFromString
 const Line = Schema.Struct({ sku: Schema.NonEmptyString, quantity: Quantity })
 
@@ -56,7 +54,6 @@ A schema is an immutable description; adding fields, checks, or annotations prod
 ## Distinguishing decoded and encoded views
 
 ```vibe
-// run: Console.log(JSON.stringify(unpack())); Console.log(JSON.stringify(pack({ weight: 3.75 })))
 const Parcel = Schema.Struct({ weight: Schema.FiniteFromString })
 
 type Parcel = typeof Parcel.Type       // { readonly weight: number }
@@ -81,7 +78,6 @@ Decoding goes from `Encoded` to `Type`, encoding from `Type` to `Encoded`. The c
 ## Decoding or encoding unknown inputs
 
 ```vibe
-// run: Console.log(JSON.stringify(inspectBoundary("3.75", 2))); try { inspectBoundary(3, "2") } catch (error) { Console.log(error._tag) }
 function inspectBoundary(incoming: unknown, outgoing: unknown) {
   const quantity = Schema.decodeUnknownEffect(Schema.FiniteFromString)(incoming)
   const text = Schema.encodeUnknownEffect(Schema.FiniteFromString)(outgoing)
@@ -102,7 +98,6 @@ Calling an Effect-returning parser runs it: it returns the decoded or encoded va
 ## Reasoning about conversion round trips
 
 ```vibe
-// run: Console.log(roundTrip(3.75)); Console.log(normalizeText())
 function roundTrip(value: number) {
   const wire = Schema.encodeEffect(Schema.FiniteFromString)(value)
   return Schema.decodeEffect(Schema.FiniteFromString)(wire)

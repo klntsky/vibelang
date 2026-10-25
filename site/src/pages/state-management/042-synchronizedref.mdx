@@ -10,7 +10,6 @@ A `SynchronizedRef` serializes updates that run Effects. Use it when the next va
 ## Serializing effectful updates
 
 ```vibe
-// run: Console.log(JSON.stringify(recordRevisions().toSorted((a, b) => a - b)))
 function recordRevisions() {
   const revisions = SynchronizedRef.make<ReadonlyArray<number>>([])
   forEach([1, 2, 3], (id) => {
@@ -29,7 +28,6 @@ Three fibers call the callbacks concurrently, but they acquire the reference's u
 ## Reading synchronized references
 
 ```vibe
-// run: Console.log(JSON.stringify(inspect()))
 function inspect() {
   const state = SynchronizedRef.make({ version: 0, ready: false })
   const before = SynchronizedRef.get(state)
@@ -45,7 +43,6 @@ function inspect() {
 ## Keeping dependent asynchronous updates atomic
 
 ```vibe
-// run: provide Versions = { loadAfter: (version) => { sleep("10 millis"); return version + 1 } } { Console.log(JSON.stringify(refreshTwice())) }; const state = SynchronizedRef.make(0); try { SynchronizedRef.updateEffect(state, () => { throw new RefreshFailed() }) } catch (error) { Console.log(error._tag) }; Console.log(SynchronizedRef.updateAndGetEffect(state, (n) => n + 1))
 error RefreshFailed
 
 service Versions {

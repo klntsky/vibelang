@@ -11,7 +11,6 @@ Effect gives the clock, random generation, console output, configuration sources
 ## Using the clock, random, and console
 
 ```vibe
-// run: provide Random = { nextDoubleUnsafe: () => 0.25, nextIntUnsafe: () => 12 }, Clock = { ...Clock.Clock(), currentTimeMillis: () => 1000, currentTimeMillisUnsafe: () => 1000 } { startupMessage() }
 function startupMessage() {
   const started = Clock.currentTimeMillis()
   const sample = Random.next()
@@ -26,7 +25,6 @@ function startupMessage() {
 Default references include `Clock.Clock`, `ConfigProvider.ConfigProvider`, `Console.Console`, `Random.Random`, `Tracer.Tracer`, and `Scheduler.Scheduler`; their modules need no import in `.vibe` files. These defaults are why the example's `R` is `never` though it reads time and random state.
 
 ```vibe
-// run: provide ConfigProvider.layer(ConfigProvider.fromUnknown({})) { Console.log(configuredPort()) }
 const Port = Config.withDefault(Config.Port("PORT"), 3000)
 
 function configuredPort() {
@@ -41,7 +39,6 @@ function configuredPort() {
 ## Replacing default implementations
 
 ```vibe
-// run: Console.log(fixedRandomSample())
 function fixedRandomSample() {
   return Effect.provideService(Random.next(), Random.Random, {
     nextDoubleUnsafe: () => 0.25,
@@ -56,7 +53,6 @@ function fixedRandomSample() {
 An override holds across pauses, is inherited by new child fibers, and leaves unrelated programs unchanged. Prefer a module helper when it supplies the behavior without implementing a whole service.
 
 ```vibe
-// run: Console.log(defaultLabel(17)); provide DisplaySettings = { prefix: "Order" } { Console.log(defaultLabel(17)) }
 service DisplaySettings {
   prefix: string
   static readonly default: DisplaySettings = { prefix: "Ticket" }
@@ -75,7 +71,6 @@ A service with `static readonly default` compiles to a `Context.Reference`, so u
 ## Reproducible random computations
 
 ```vibe
-// run: const pairs = reproduciblePairs(); Console.log(JSON.stringify(pairs.first) === JSON.stringify(pairs.second), pairs.first[0] !== pairs.first[1])
 function pair() {
   return [Random.next(), Random.next()]
 }

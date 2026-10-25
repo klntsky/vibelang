@@ -10,7 +10,6 @@ Effect's runtime executes computations, carries service implementations, schedul
 ## Execution infrastructure
 
 ```vibe
-// run: const result = Effect.promise(() => outcome); Console.log(result._tag); if (result.isSuccess()) Console.log(result.value)
 function operation() {
   sleep("10 millis")
   return "complete"
@@ -28,7 +27,6 @@ A function value is a description until called or handed to a runner. A VibeLang
 ## Run with an explicit service context
 
 ```vibe
-// run: Console.log(result)
 service Labels {
   format(value: string): string!!
 }
@@ -54,7 +52,6 @@ Most applications build their context from layers. Use an explicit context when 
 ## Change runtime behavior within a region
 
 ```vibe
-// run: Effect.provide(startup(), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]))
 const Quiet = Logger.layer([])
 
 function startup() {
@@ -75,7 +72,6 @@ For another format, supply a logger such as `Logger.consoleJson` through `Logger
 ## Replace a runtime service for a block
 
 ```vibe
-// run: Console.log(roll())
 const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
 
 function roll(): number!! {
@@ -91,7 +87,6 @@ function roll(): number!! {
 ## Build and dispose managed runtimes
 
 ```vibe
-// run: provide Notifications.layer { notify("direct event") }
 // notifications.vibe
 export service Notifications {
   send(message: string): void!!
@@ -110,7 +105,6 @@ export function notify(message: string) {
 ```ts
 // TypeScript (.ts)
 // host.ts
-// run: return example()
 import { ManagedRuntime } from "effect"
 import { Notifications, notify } from "./notifications.js"
 
@@ -137,7 +131,6 @@ Each `Effect.provide` builds its layers once per invocation, so repeating `provi
 ```ts
 // TypeScript (.ts)
 // notification-host.ts
-// run: const host = makeNotificationHost(); return host.onMessage("framework event").finally(() => host.close())
 import { ManagedRuntime } from "effect"
 import { Notifications, notify } from "./notifications.js"
 

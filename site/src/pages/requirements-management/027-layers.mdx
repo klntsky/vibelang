@@ -11,7 +11,6 @@ A layer describes how to build services: their dependencies, initialization erro
 ## Describing a dependency graph
 
 ```vibe
-// run: provide Reports = { render: (title) => `report/${title}` } { Console.log(report("Inventory")) }
 service Settings {
   prefix: string
 }
@@ -34,7 +33,6 @@ On this page, `Printer` depends on `Settings`, and `Reports` on both. `Layer.Lay
 ## Preventing dependency leakage
 
 ```vibe
-// run: provide Settings = { prefix: "test" } { provide PrinterLive { Printer.print("ready") } }
 const PrinterLive = Layer.effect(Printer) {
   const settings = Settings()
   return {
@@ -54,7 +52,6 @@ Keep method requirements at `never` when dependencies are implementation details
 ## Constructing service layers
 
 ```vibe
-// run: provide SettingsLive { provide PrinterLive { provide ReportsLive { Console.log(report("Inventory")) } } }
 const SettingsLive = Layer.succeed(Settings, {
   prefix: "reports"
 })
@@ -82,7 +79,6 @@ A factory can register `Effect.addFinalizer` or acquire with `Effect.acquireRele
 ## Merging independent layers
 
 ```vibe
-// run: provide SettingsLive { provide PrinterLive { provide Merged { Printer.print("merged") }; provide Many { Console.log(report("many")) } } }
 const Merged = Layer.merge(SettingsLive, PrinterLive)
 // Layer<Settings | Printer, never, Settings>
 
@@ -98,7 +94,6 @@ Merging combines outputs and inputs and can initialize independent branches conc
 ## Wiring dependent layers
 
 ```vibe
-// run: provide PrinterReady { Printer.print("ready") }; provide PrinterAndSettings { Console.log(Settings().prefix) }; provide ReportsReady { Console.log(report("wired")) }; provide AppLive { Console.log(report("app")) }
 const PrinterReady = Layer.provide(PrinterLive, SettingsLive)
 // Layer<Printer, never, never>
 
@@ -127,7 +122,6 @@ Reuse one layer value when several paths need a shared instance: equivalent reco
 ## Providing and building layers
 
 ```vibe
-// run: Console.log(JSON.stringify(main())); Console.log(withBuiltContext())
 function main() {
   provide AppLive {
     const first = report("Inventory")
@@ -157,7 +151,6 @@ function withBuiltContext() {
 ## Observing initialization and recovering failures
 
 ```vibe
-// run: provide ResilientReports { Console.log(report("Inventory")) }
 error InitializationFailed
 
 const ReportsUnavailable = Layer.effect(Reports) {
@@ -184,7 +177,6 @@ When a larger graph fails to initialize, acquired resources still release. Initi
 ## Declaring service factories and dependencies
 
 ```vibe
-// run: provide Banner.layer { Console.log(Banner.text("Orders")) }
 service Banner {
   text(title: string): string!!
 
@@ -205,7 +197,6 @@ Static members stay on the service class. `static make()` builds the implementat
 ## Replacing services in tests
 
 ```vibe
-// run: Console.log(JSON.stringify([testBannerDependency(), testBannerDirectly(), testBannerWithInlineSettings()]))
 const SettingsTest = Layer.succeed(Settings, {
   prefix: "test"
 })

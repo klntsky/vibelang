@@ -11,7 +11,6 @@ Error-channel operations transform, observe, or expose failures without immediat
 ## Mapping failures or both outcomes
 
 ```vibe
-// run: Console.log(publicQuantity(2)); Console.log(Effect.flip(() => publicQuantity(0))); Console.log(quantityMessage(2)); Console.log(Effect.flip(() => quantityMessage(0)))
 error InvalidQuantity {
   value: number
 }
@@ -54,7 +53,6 @@ These combinators keep Effect's own failure-selection policy: mapping a mixed ca
 ## Rejecting successes with a predicate
 
 ```vibe
-// run: Console.log(boundedQuantity(20)); Console.log(Effect.flip(() => boundedQuantity(21))); Console.log(cappedQuantity(21)); Console.log(Effect.flip(() => cappedQuantity(0))._tag)
 function boundedQuantity(value: number) {
   return Effect.filterOrFail(
     () => quantity(value),
@@ -86,7 +84,6 @@ The statement form is an `if` followed by `throw`. Neither form changes the sour
 ## Observing errors, tags, causes, and defects
 
 ```vibe
-// run: Console.log(observeQuantity(2)); Console.log(Effect.flip(() => observeQuantity(0))._tag); Console.log(Effect.matchCause(() => observeDefect(), { onFailure: (cause) => cause.hasDies(), onSuccess: () => false }))
 function observeQuantity(value: number) {
   return quantity(value)
     |> Effect.tapError(%, (error) => Console.log(`Rejected quantity ${error.value}`))
@@ -121,7 +118,6 @@ A failing observation can change the resulting cause, so observe with code that 
 ## Exposing failures as successes
 
 ```vibe
-// run: Console.log(JSON.stringify(inspectQuantity(2))); Console.log(JSON.stringify(inspectQuantity(0))); Console.log(quantityOrErrorValue(2)); const value = quantityOrErrorValue(0); Console.log(typeof value === "number" ? value : value._tag)
 function inspectQuantity(value: number) {
   const result = Effect.result(quantity(value))
   const summary = result.match({
@@ -150,7 +146,6 @@ InvalidQuantity
 ## Swapping channels
 
 ```vibe
-// run: Console.log(rejectedQuantity()._tag)
 function rejectedQuantity() {
   return Effect.flip(() => quantity(0))
 }

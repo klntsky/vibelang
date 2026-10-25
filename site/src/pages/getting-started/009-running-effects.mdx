@@ -46,7 +46,6 @@ The starter's `main.vibe` exports `main`, so `node dist/main.js` runs it with `N
 ## Execute synchronous computations
 
 ```vibe
-// run: Console.log(total)
 function subtotal() {
   return 7 * 8
 }
@@ -61,7 +60,6 @@ const total = Effect.runSync(subtotal())
 ## Run promise-based computations
 
 ```vibe
-// run: Console.log(sync((value: Promise<string>) => value, pending))
 function preparedMessage() {
   sleep("15 millis")
   return "prepared"
@@ -77,7 +75,6 @@ const pending = Effect.runPromise(preparedMessage())
 ## Collect complete execution results
 
 ```vibe
-// run: Console.log(immediate._tag)
 error BadInput
 
 function validate(input: string) {
@@ -97,7 +94,6 @@ An `Exit` is a success with a value or a failure with a `Cause`, which keeps exp
 ## Start and interrupt a fiber
 
 ```vibe
-// run: Console.log(Exit.isFailure(Fiber.await(running)))
 function heartbeat() {
   repeat(log("alive"), Schedule.spaced("200 millis"))
 }

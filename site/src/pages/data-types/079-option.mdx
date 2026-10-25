@@ -10,7 +10,6 @@ description: "Option works in VibeLang exactly as in Effect. It represents a pre
 ## Representing optional values and properties
 
 ```vibe
-// run: Console.log(named.nickname.getOrNull(), unnamed.nickname.isNone())
 interface Contact {
   name: string
   nickname: Option.Option<string>
@@ -29,7 +28,6 @@ The `nickname` property always exists and its value records presence; an optiona
 ## Constructing and identifying variants
 
 ```vibe
-// run: Console.log(positive(-2).isNone(), present.isSome(), absent.isNone()); Console.log(label(present)); Console.log(label(absent))
 const present = Option.some(24)
 const absent = Option.none<number>()
 const positive = Option.liftPredicate((n: number) => n > 0)
@@ -52,7 +50,6 @@ No limit
 `some` wraps a value; `none` carries no payload. `liftPredicate` makes a function that returns `Some` only for values that pass its predicate. Guards narrow the union; only `Some` has `.value`.
 
 ```vibe
-// run: Console.log(describe(Option.some("Mina"))); Console.log(describe(Option.none()))
 function describe(value: Option.Option<string>) {
   return value.match({
     onNone: () => "Anonymous",
@@ -71,7 +68,6 @@ Anonymous
 ## Mapping, sequencing, and filtering present values
 
 ```vibe
-// run: Console.log(streetLabel(Option.some({ street: Option.some(" Main St ") })).getOrNull()); Console.log(streetLabel(Option.some({ street: Option.some(" ") })).isNone(), streetLabel(Option.none()).isNone())
 interface Address {
   street: Option.Option<string>
 }
@@ -93,7 +89,6 @@ true true
 ## Extracting values with defaults or exceptions
 
 ```vibe
-// run: Console.log(JSON.stringify([extract(Option.some("Mina")), extract(Option.none())])); Console.log(certain); const failed = Effect.exit(() => Option.none().getOrThrow()); if (failed.isFailure()) Console.log(failed.cause.hasDies(), failed.cause.hasFails())
 function extract(value: Option.Option<string>) {
   return {
     defaulted: value.getOrElse(() => "Guest"),
@@ -116,7 +111,6 @@ true false
 ## Choosing fallback options
 
 ```vibe
-// run: Console.log(choose(Option.some("preferred"), Option.some("backup")).getOrNull(), choose(Option.none(), Option.some("backup")).getOrNull(), first.getOrNull())
 function choose(
   preferred: Option.Option<string>,
   backup: Option.Option<string>
@@ -138,7 +132,6 @@ preferred backup regional
 ## Adapting nullable values
 
 ```vibe
-// run: Console.log(Option.fromNullishOr(null).isNone(), Option.fromNullishOr(undefined).isNone(), Option.fromNullishOr(0).getOrNull(), JSON.stringify(Option.fromNullishOr("").getOrNull()))
 Option.fromNullishOr(null) // None
 Option.fromNullishOr(undefined) // None
 Option.fromNullishOr(0) // Some containing 0
@@ -154,7 +147,6 @@ true true 0 ""
 ## Converting options into effects
 
 ```vibe
-// run: Console.log(JSON.stringify(requiredPair())); try { requiredName(Option.none()) } catch (error) { Console.log(error._tag) }
 function requiredName(name: Option.Option<string>) {
   return Effect.fromOption(name)
 }
@@ -178,7 +170,6 @@ NoSuchElementError
 ## Combining options
 
 ```vibe
-// run: const result = combine(Option.some("Mina"), Option.some(3)); Console.log(JSON.stringify([result.record.getOrNull(), result.tuple.getOrNull(), result.fields.getOrNull()])); const absent = combine(Option.none(), Option.some(3)); Console.log(absent.record.isNone(), absent.tuple.isNone(), absent.fields.isNone())
 function combine(
   name: Option.Option<string>,
   count: Option.Option<number>
@@ -202,7 +193,6 @@ true true true
 ```ts
 // TypeScript (.ts)
 // combine-options.ts
-// run: console.log(JSON.stringify(Option.getOrNull(combineOptions(Option.some(" Daily "), Option.some(3))))); console.log(Option.isNone(combineOptions(Option.none(), Option.some(3))))
 import { Option } from "effect"
 
 export function combineOptions(
@@ -223,7 +213,6 @@ true
 ```
 
 ```vibe
-// run: Console.log(JSON.stringify(combinedData().getOrNull()))
 function combinedData() {
   return Option.all([Option.some(" Daily "), Option.some(3)]).map(([title, total]) => ({
     title: title.trim(), total
@@ -240,7 +229,6 @@ function combinedData() {
 ## Deriving equality and ordering
 
 ```vibe
-// run: Console.log(same(Option.some(4), Option.some(4)), same(Option.none(), Option.some(4))); Console.log(JSON.stringify([sorted.map((item) => item.getOrNull()), descending.map((item) => item.getOrNull())]))
 import { Array as Arr } from "effect"
 const same = Option.makeEquivalence(Equivalence.Number)
 same(Option.some(4), Option.some(4)) // true

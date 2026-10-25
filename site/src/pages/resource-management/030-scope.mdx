@@ -11,7 +11,6 @@ A scope owns registered finalizers and runs them when its lifetime ends. Use `us
 ## Registering finalizers
 
 ```vibe
-// run: Console.log(runRegisteredWork())
 function registeredWork() {
   Effect.addFinalizer((exit) => {
     Console.log(`Work scope closed with ${exit._tag}`)
@@ -35,7 +34,6 @@ Finalizers run in reverse registration order by default, with interruption defer
 ## Opening and closing scopes explicitly
 
 ```vibe
-// run: Console.log(manuallyManagedWork())
 function manuallyManagedWork() {
   return Effect.acquireUseRelease(
     () => Scope.make(),
@@ -60,7 +58,6 @@ function manuallyManagedWork() {
 ## Acquiring resources with automatic release
 
 ```vibe
-// run: Console.log(copyLabels())
 function openBuffer(label: string) {
   return Effect.acquireRelease(
     () => {
@@ -110,7 +107,6 @@ This example requests interruption while acquisition is waiting and still
 disposes the handle:
 
 ```vibe
-// run: Console.log(JSON.stringify(safePendingAcquisition()))
 function safePendingAcquisition() {
   const events: string[] = []
   const entered = Deferred.make<void>()
@@ -141,7 +137,6 @@ function safePendingAcquisition() {
 ## Arranging nested resource lifetimes
 
 ```vibe
-// run: nestedLifetimes(); observeOwnership()
 function nestedLifetimes() {
   using outer = openBuffer("session")
   {
@@ -187,7 +182,6 @@ A block that calls `fork` also owns a scope region, even without `using`: its ch
 ## Sequencing scoped operations with rollback
 
 ```vibe
-// run: provide ProjectSteps = { create: (stage) => { Console.log(`create ${stage}`); return stage }, remove: (id) => Console.log(`remove ${id}`), finish: () => "ready" } { Console.log(setupProject()) }; provide ProjectSteps = { create: (stage) => { Console.log(`create ${stage}`); if (stage === "index") throw new SetupFailed({ stage }); return stage }, remove: (id) => Console.log(`remove ${id}`), finish: () => "ready" } { try { setupProject() } catch (error) { Console.log(error.stage) } }
 error SetupFailed {
   stage: string
 }
@@ -231,7 +225,6 @@ Neither reservation uses lexical `using`, so both register in the same scope. A 
 The finalizers see the whole setup's exit, so defects and interruption trigger the same rollback. Nested `using` blocks would end those lifetimes earlier and withhold the overall outcome from the finalizers. This compensates for successful steps; it is not an atomic transaction with an external system.
 
 ```vibe
-// run: const result = exerciseRollback(); Console.log(JSON.stringify({ outcome: result.outcome._tag, removed: result.removed }))
 function exerciseRollback() {
   const removed: string[] = []
   const testLayer = Layer.succeed(ProjectSteps, {

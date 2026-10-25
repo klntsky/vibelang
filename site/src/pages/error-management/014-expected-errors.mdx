@@ -11,7 +11,6 @@ Expected errors are situations callers can handle: invalid input, a denied opera
 ## Constructing typed failures
 
 ```vibe
-// run: Console.log(normalizeCode(" pen ")); Console.log(Effect.flip(() => normalizeCode(" "))._tag)
 error InvalidCode {
   input: string
 }
@@ -39,7 +38,6 @@ In Effect functions, trusted built-ins can add expected failures too: `JSON.pars
 `throw` is a typed failure everywhere outside a hatch, and `catch` receives typed failures only (D282). A function with a plain return annotation is plain JavaScript because it never fails and needs nothing. It may throw what its own `catch` handles, and it still returns a value:
 
 ```vibe
-// run: Console.log(quantityOr("3", 0)); Console.log(quantityOr("x", 0))
 error InvalidQuantity { text: string }
 
 function quantityOr(text: string, fallback: number): number {
@@ -91,7 +89,6 @@ export function parseQuantity(text: string): number {
 ```
 
 ```vibe
-// run: Console.log(quantity("3")); Console.log(Effect.flip(() => quantity("x"))._tag)
 import { trusted } from "vibelang-runtime"
 import { InvalidQuantity, parseQuantity } from "./quantity.ts"
 
@@ -109,7 +106,6 @@ InvalidQuantity
 ## Failing in an expression
 
 ```vibe
-// run: Console.log(port(new Map([["PORT", "3000"]]))); Console.log(Effect.flip(() => port(new Map()))._tag)
 error MissingPort
 
 function port(env: Map<string, string>) {
@@ -128,7 +124,6 @@ MissingPort
 ## Tracking several error cases
 
 ```vibe
-// run: Console.log(findItem("pen").label); Console.log(Effect.flip(() => findItem("book"))._tag); Console.log(Effect.flip(() => findItem(""))._tag)
 function findItem(input: string) {
   const code = normalizeCode(input)
   if (code !== "PEN") throw new ItemMissing({ code })
@@ -148,7 +143,6 @@ A function collects the failures it throws and those its calls can produce. Sequ
 ## Turning failures into values
 
 ```vibe
-// run: Console.log(inspectItem("pen")); Console.log(inspectItem("")); Console.log(inspectItem("book")); Console.log(optionalItem("pen")); Console.log(optionalItem("book"))
 function inspectItem(input: string) {
   const result = Effect.result(findItem(input))
   return result.match({
@@ -176,7 +170,6 @@ No item
 ## Recovering all failures
 
 ```vibe
-// run: Console.log(itemLabel("pen")); Console.log(itemLabel("")); Console.log(itemLabel("book"))
 function itemLabel(input: string) {
   try {
     return findItem(input).label
@@ -196,7 +189,6 @@ Unavailable (ItemMissing)
 The catch receives `InvalidCode | ItemMissing` and handles both, but only in causes with no defect or interruption; given several expected failures together, it receives the first and handles their whole cause.
 
 ```vibe
-// run: Console.log(itemLabelInline("pen")); Console.log(itemLabelInline("")); Console.log(itemLabelInline("book"))
 function itemLabelInline(input: string) {
   return findItem(input).label catch (error) => `Unavailable (${error._tag})`
 }
@@ -216,7 +208,6 @@ After an expression, `x catch (error) => handler` runs `x` and passes an expecte
 ## Recovering selected failures
 
 ```vibe
-// run: Console.log(labelOrMissing("book")); Console.log(Effect.flip(() => labelOrMissing(""))._tag); Console.log(labelByTag("book").label); Console.log(Effect.flip(() => labelByTag(""))._tag)
 function labelOrMissing(input: string) {
   try {
     return findItem(input).label
@@ -248,7 +239,6 @@ InvalidCode
 Catch, then `match` on the failure: an arm such as `when ItemMissing:` handles that error class, and `default: throw error` passes the others on with their types (`string!InvalidCode!`). The expression form takes the same `match`: `findItem(input).label catch (error) => match (error) { when ItemMissing: "Out of catalog"; default: throw error; }`. A `match` without `default` must handle every failure the `try` block can raise (compile error EK4701), so a complete match needs no rethrow. `error is ItemMissing` tests one class in an `if`. `Effect.catchTag` removes the selected tagged case, and accepts a nonempty array of tags for one handler; `Effect.catchTags` takes a table of separate handlers.
 
 ```vibe
-// run: Console.log(withTagTable("").label); Console.log(withFilter("book").label); Console.log(withPredicate("book").label); Console.log(Effect.flip(() => withFilter(""))._tag); Console.log(Effect.flip(() => withPredicate(""))._tag)
 function withTagTable(input: string) {
   return Effect.catchTags(findItem(input), {
     InvalidCode: () => ({ code: "", label: "Enter a code" }),
@@ -286,7 +276,6 @@ InvalidCode
 ## Filtering nested reasons
 
 ```vibe
-// run: Console.log(explainBusy()); Console.log(explainReasons()); Console.log(Effect.flip(() => exposeReasons())._tag)
 error Busy { seconds: number }
 error Rejected
 error CatalogError {
@@ -328,7 +317,6 @@ These operators inspect the tagged error's readonly `reason` field. `catchReason
 ## Errors are classes
 
 ```vibe
-// run: Console.log(describeFailure(new Missing({ code: "E1", path: "/a" }))); Console.log(describeFailure(new Expired({ code: "E2" }))); Console.log(new Missing({ code: "E1", path: "/a" }) is AppError); Console.log(new Normalized(" pen ").label)
 /** The base of a family: each subclass carries its own tag. */
 error AppError {
   _tag: string
@@ -377,7 +365,6 @@ Every error class is tagged with its own bare name, a subclass included, so `cat
 ## Errors that encode
 
 ```vibe
-// run: Console.log(JSON.stringify(Schema.encodeSync(StoreError)(new NotStored({ key: "a", attempts: 2 })))); Console.log(Schema.decodeUnknownSync(StoreError)({ _tag: "NotStored", key: "b", attempts: 1 }) is NotStored)
 schema error StoreError {
   _tag: string
   key: string

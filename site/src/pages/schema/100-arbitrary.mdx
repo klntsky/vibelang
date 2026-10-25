@@ -10,7 +10,6 @@ Effect's native `Arbitrary` module derives generators and shrinkers from schemas
 ## Generating schema-conforming random values
 
 ```vibe
-// run: const values = sampleParcels(); Console.log(values.length, values.every(Schema.is(Parcel)))
 import { Console } from "effect"
 const Parcel = Schema.Struct({
   label: Schema.NonEmptyString,
@@ -32,7 +31,6 @@ function sampleParcels() {
 ## Translating filters into generation constraints
 
 ```vibe
-// run: const generator = Arbitrary.schema(EvenCapacity); const values = Arbitrary.sampleEffect(generator, { count: 12, seed: 17 }); Console.log(values.length, values.every(Schema.is(EvenCapacity)))
 const EvenCapacity = Schema.Number.check(Schema.makeFilter(
   (value) => Number.isInteger(value) && value >= 2 && value <= 40 && value % 2 === 0,
   {
@@ -56,7 +54,6 @@ Built-in bounds, lengths, patterns, property counts, and uniqueness checks give 
 ## Handling opaque checks and transformed values
 
 ```vibe
-// run: const values = sampleRepresentations(); Console.log(values.numbers.length, values.numbers.every(Number.isFinite)); Console.log(values.strings.length, values.strings.every((value) => typeof value === "string")); Console.log(values.strings.some((value) => Schema.decodeUnknownResult(Schema.FiniteFromString)(value).isFailure()))
 function sampleRepresentations() {
   const decoded = Arbitrary.schema(Schema.FiniteFromString)
   const encoded = Arbitrary.schema(Schema.toEncoded(Schema.FiniteFromString))
@@ -77,7 +74,6 @@ Generation targets the decoded type, so a string-to-number codec generates numbe
 ## Checking properties
 
 ```vibe
-// run: Console.log(checkCountRoundTrip()._tag)
 function checkCountRoundTrip() {
   const Count = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))
   const generator = Arbitrary.schema(Count)
@@ -100,7 +96,6 @@ A falsification includes `shrunkInput` and a `replay` token. To reproduce it, ca
 ## Composing generators and customizing shrinking
 
 ```vibe
-// run: const values = sampleDispatchPlans(); Console.log(values.length, values.every((plan) => plan.label === "test-dispatch" && Number.isInteger(plan.count) && plan.count >= 0 && plan.count <= 32))
 function sampleDispatchPlans() {
   const counts = Arbitrary.schema(Schema.Int.check(
     Schema.isBetween({ minimum: 0, maximum: 32 })
@@ -126,7 +121,6 @@ A custom `shrink` replaces the derived shrink strategy, not root generation. It 
 ## Supporting custom declarations
 
 ```vibe
-// run: const values = sampleShelves(); Console.log(values.length, values.every((shelf) => shelf instanceof ShelfRef && shelf.code.startsWith("shelf_")))
 class ShelfRef {
   constructor(readonly code: `shelf_${string}`) {}
 }
@@ -155,7 +149,6 @@ An opaque declaration needs a generatable representation through `toCodecArbitra
 ## Diagnosing derivation failures
 
 ```vibe
-// run: reportImpossibleGenerator()
 function reportImpossibleGenerator() {
   const outcome = exit(() => Arbitrary.schema(Schema.Never))
   if (outcome is Exit.Failure) {

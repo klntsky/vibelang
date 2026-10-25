@@ -10,7 +10,6 @@ description: "Data works in VibeLang exactly as in Effect. Use it for classes, t
 ## Creating values with structural equality
 
 ```vibe
-// run: Console.log(Equal.equals(first, second), Equal.equals(["inbox", 5] as const, ["inbox", 5] as const), Equal.equals([2, 4, 6], [2, 4, 6]), Equal.equals(makeRoute("inbox"), makeRoute("inbox")))
 const first = { route: "inbox", filters: { unread: true } }
 const second = { route: "inbox", filters: { unread: true } }
 Equal.equals(first, second) // true
@@ -32,7 +31,6 @@ In Effect 4, plain records, tuples, arrays, maps, and sets already compare struc
 ## Building ordinary and tagged classes
 
 ```vibe
-// run: Console.log(label.upper, Equal.equals(label, new Label({ text: "pending" })), new Archived({ documentId: "doc-3" })._tag)
 class Label extends Data.Class<{ text: string }> {
   get upper() { return this.text.toUpperCase() }
 }
@@ -56,7 +54,6 @@ PENDING true Archived
 ## Defining tagged unions with matching helpers
 
 ```vibe
-// run: Console.log(isSent(sent)); Console.log(describe(waiting)); Console.log(describe(sent)); Console.log(describe(rejected))
 type Delivery = Data.TaggedEnum<{
   Waiting: {}
   Sent: { tracking: string }
@@ -90,7 +87,6 @@ Rejected: address missing
 ## Adding generic union cases
 
 ```vibe
-// run: Console.log(JSON.stringify([loaded, failed, idle]))
 type LoadState<A, E> = Data.TaggedEnum<{
   Idle: {}
   Ready: { value: A }
@@ -116,7 +112,6 @@ const idle = LoadState.Idle()
 ## Defining ordinary and tagged errors
 
 ```vibe
-// run: Console.log(new InvalidDocument({ message: "invalid", line: 3 }).line); Console.log(JSON.stringify([documentOrDraft("doc-3"), documentOrDraft("")])); try { requireDocument("") } catch (error) { Console.log(error._tag) }
 class InvalidDocument extends Data.Error<{
   message: string
   line: number
@@ -152,7 +147,6 @@ DocumentMissing
 ## Preserving native error causes
 
 ```vibe
-// run: Console.log(JSON.stringify(decodeDocument("{\"id\":3}"))); try { decodeDocument("{") } catch (error) { Console.log(error._tag, error.cause instanceof SyntaxError) }
 error DocumentDecodeError {
   cause: unknown
 }

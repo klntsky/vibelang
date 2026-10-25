@@ -10,7 +10,6 @@ A `SubscriptionRef` combines shared state with a stream of changes. Use it for o
 ## Combining state with subscriptions
 
 ```vibe
-// run: const progress = makeProgress(); advance(progress); Console.log(JSON.stringify(SubscriptionRef.get(progress)))
 function makeProgress() {
   return SubscriptionRef.make({ completed: 0, total: 12 })
 }
@@ -32,7 +31,6 @@ Creating the reference sets its initial state. An update through `SubscriptionRe
 ## Reading and updating observable state
 
 ```vibe
-// run: Console.log(JSON.stringify(renameStatus()))
 function renameStatus() {
   const status = SubscriptionRef.make("starting")
   const before = SubscriptionRef.get(status)
@@ -49,7 +47,6 @@ function renameStatus() {
 ## Consuming current and future values
 
 ```vibe
-// run: Console.log(JSON.stringify(currentSnapshot()))
 function currentSnapshot() {
   const count = SubscriptionRef.make(7)
   const changes = SubscriptionRef.changes(count)
@@ -63,7 +60,6 @@ function currentSnapshot() {
 ## Coordinating concurrent subscribers
 
 ```vibe
-// run: observeTwoClients()
 function observeTwoClients() {
   const count = SubscriptionRef.make(0)
   const firstReady = Deferred.make<void>()

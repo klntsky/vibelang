@@ -10,7 +10,6 @@ Projections work exactly as in Effect: they turn one side of a codec into a sche
 ## Projecting a codec to its decoded schema
 
 ```vibe
-// run: Console.log(inspectCount(4)); for (const value of ["4", 0, 1.5]) { try { inspectCount(value) } catch (error) { Console.log(error._tag) } }
 import { Console } from "effect"
 const CountFromText = Schema.FiniteFromString.check(
   Schema.isInt(), Schema.isGreaterThanOrEqualTo(1)
@@ -35,7 +34,6 @@ SchemaError
 ## Projecting a codec to its encoded schema
 
 ```vibe
-// run: Console.log(JSON.stringify(inspectWireName(" x ")))
 const Name = Schema.String.check(Schema.isMinLength(3)).pipe(
   Schema.decodeTo(Schema.Trim)
 )
@@ -56,7 +54,6 @@ function inspectWireName(input: unknown) {
 ## Retaining checks appropriate to each side
 
 ```vibe
-// run: Console.log(JSON.stringify(compareViews())); try { Schema.decodeUnknownEffect(ParcelCount)("00") } catch (error) { Console.log(error._tag) }
 const ParcelCount = Schema.String.check(Schema.isMinLength(2)).pipe(
   Schema.decodeTo(Schema.FiniteFromString),
   Schema.check(Schema.isGreaterThan(5))

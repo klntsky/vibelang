@@ -11,7 +11,6 @@ Effect shares repeated uses of one layer value within a build graph, and VibeLan
 ## Sharing acquisition across a graph
 
 ```vibe
-// run: Console.log(JSON.stringify(documentLabels()))
 service Prefix {
   value: string
 }
@@ -60,7 +59,6 @@ Sharing lasts for the graph's managed lifetime, not process-wide. Scoped acquisi
 ## Requesting fresh acquisition
 
 ```vibe
-// run: Console.log(JSON.stringify(isolatedLabels()))
 const Separate = Layer.merge(
   Layer.provide(HeadingLive, Layer.fresh(PrefixLive)),
   Layer.provide(FooterLive, Layer.fresh(PrefixLive))
@@ -79,7 +77,6 @@ function isolatedLabels() {
 ## Local provision boundaries
 
 ```vibe
-// run: Console.log(JSON.stringify(twoLocalReads())); Console.log(JSON.stringify(oneSharedReadBoundary()))
 function twoLocalReads() {
   const first = Effect.provide(() => Prefix().value, PrefixLive)
   const second = Effect.provide(() => Prefix().value, PrefixLive)
@@ -105,7 +102,6 @@ Each `Effect.provide` starts its own build boundary, so `twoLocalReads` builds t
 ## Controlling memoization explicitly
 
 ```vibe
-// run: Console.log(JSON.stringify(manualSharing()))
 function manualSharing() {
   return Effect.scoped {
     const memoMap = Layer.makeMemoMap()

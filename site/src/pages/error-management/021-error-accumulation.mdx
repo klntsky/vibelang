@@ -11,7 +11,6 @@ Independent checks often must report every problem in one response. Validation c
 ## Validating every computation
 
 ```vibe
-// run: Console.log(validateHandle(" RIVER ")); Console.log(JSON.stringify(Effect.flip(() => validateTeam()).map((error) => error.input)))
 error InvalidHandle {
   input: string
 }
@@ -40,7 +39,6 @@ river
 `Effect.validate` runs each input's computation even when others fail with typed errors. If any fail, the error channel holds a nonempty array of every domain error and the successes are discarded; otherwise it returns an array of successes.
 
 ```vibe
-// run: checkTeamOnly(); Console.log("All handles valid")
 function checkTeamOnly() {
   Effect.validate(["RIVER", "SKY"], (input) => validateHandle(input), {
     discard: true,
@@ -58,7 +56,6 @@ All handles valid
 ## Partitioning successes and failures
 
 ```vibe
-// run: Console.log(JSON.stringify(inspectTeam()))
 function inspectTeam() {
   const [handles, errors] = Effect.partition(
     ["Jo", "RIVER", ""],

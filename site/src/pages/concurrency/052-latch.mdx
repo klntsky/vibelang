@@ -10,7 +10,6 @@ A latch is a reusable gate for fibers: closed, it makes callers wait; open, it l
 ## Waiting at a reusable gate
 
 ```vibe
-// run: Console.log(initializeThenWork())
 function initializeThenWork() {
   const ready = Latch.make()
   const worker = fork {
@@ -29,7 +28,6 @@ function initializeThenWork() {
 ## Opening and closing
 
 ```vibe
-// run: Console.log(reopenGate())
 function reopenGate() {
   const gate = Latch.make(true)
   Latch.await(gate) // Passes immediately.
@@ -46,7 +44,6 @@ Opening releases current waiters and lets future callers through. Closing makes 
 ## Choosing the initial state
 
 ```vibe
-// run: const gates = createGates(); Console.log(gates.starting.isOpen(), gates.paused.isOpen(), gates.active.isOpen())
 function createGates() {
   const starting = Latch.make()      // Closed by default.
   const paused = Latch.make(false)   // Explicitly closed.
@@ -61,7 +58,6 @@ Create the latch once and share it with every operation the condition controls. 
 ## Choosing a latch or a permit pool
 
 ```vibe
-// run: gatedExclusiveWork()
 function gatedExclusiveWork() {
   const initialized = Latch.make(true)
   const exclusive = Semaphore.make(1)

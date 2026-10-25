@@ -19,6 +19,7 @@
 // link appears once. The script fails on a page
 // missing from the inventory, an inventory entry with no page, or a link it
 // cannot resolve.
+import { stripRunDirectives } from './user-docs.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 import { convertText, readFences, fence, LABELS } from './docs-markdown.mjs'
@@ -118,7 +119,7 @@ function convertLink(href, fromRel) {
 }
 
 function convertPage(rel) {
-  const raw = fs.readFileSync(path.join(srcDir, rel), 'utf8')
+  const raw = stripRunDirectives(fs.readFileSync(path.join(srcDir, rel), 'utf8'))
   const parts = readFences(raw.split('\n'))
   const out = []
   for (let i = 0; i < parts.length; i++) {

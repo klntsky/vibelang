@@ -10,7 +10,6 @@ VibeLang matches values with `match` and tests them with `is`, from the TC39 pat
 ## Matching values
 
 ```vibe
-// run: Console.log(describeInput(3)); Console.log(describeInput("news")); Console.log(describeJob({ state: "queued", attempts: 2 })); Console.log(describeJob({ state: "done", attempts: 1 }))
 function describeInput(input: number | string) {
   return match (input) {
     when Number: `count ${input}`;
@@ -38,7 +37,6 @@ Arms are tried in order; the first that matches gives the value. `Number` and `S
 ## Shapes, guards, and tags
 
 ```vibe
-// run: Console.log(classifyRetry({ status: "failed", attempts: 3 }), classifyRetry({ status: "failed", attempts: 2 }), classifyRetry({ status: "done", attempts: 5 })); Console.log(jobLabel({ _tag: "Queued" })); Console.log(jobLabel({ _tag: "Running", worker: "w-1" })); Console.log(jobLabel({ _tag: "Done", output: "report.csv" }))
 function classifyRetry(input: { status: string; attempts: number }) {
   return match (input) {
     when { status: "failed", attempts: let n } and if (n >= 3): "escalate";
@@ -73,7 +71,6 @@ report.csv
 ## Negating and combining patterns
 
 ```vibe
-// run: Console.log(availability("active"), availability("paused"), availability("closed")); Console.log(weekend("Saturday"), weekend("Sunday"), weekend("Monday"))
 function availability(status: "active" | "paused" | "closed") {
   return match (status) {
     when not "closed": "can reopen";
@@ -99,7 +96,6 @@ true true false
 ## Fixing the return type
 
 ```vibe
-// run: Console.log(display(3), display(true), display(false))
 function display(input: number | boolean): string {
   return match (input) {
     when Number: input.toFixed(1);
@@ -117,7 +113,6 @@ A match's type is the union of its arms' types. Annotate the return type to requ
 ## Exhaustive handling
 
 ```vibe
-// run: Console.log(phaseLabel("draft"), phaseLabel("published"))
 type Phase = "draft" | "published"
 
 function phaseLabel(phase: Phase) {
@@ -137,7 +132,6 @@ Without a `default` arm, a match over a finite union (literals, `error` classes,
 ## Defaults, optional outputs, and result outputs
 
 ```vibe
-// run: Console.log(withDefault("start"), withDefault("stop")); Console.log(optionalCommand("start").getOrNull(), optionalCommand("help").isNone()); Console.log(commandResult("start").getOrElse((error) => error), commandResult("help").getOrElse((error) => error))
 type Command = "start" | "stop" | "help"
 
 function withDefault(command: Command) {
@@ -173,7 +167,6 @@ A `default` arm comes last and receives every unmatched input, narrowed to the c
 ## Reusable matchers with the Match module
 
 ```vibe
-// run: Console.log(JSON.stringify(describeAll([3, "news"])))
 const describe = pipe(
   Match.type<number | string>(),
   Match.when(Match.number, (n) => `count ${n}`),

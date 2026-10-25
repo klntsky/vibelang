@@ -10,7 +10,6 @@ description: "Exit works in VibeLang exactly as in Effect. Use Exit<A, E> to ins
 ## Representing full outcomes
 
 ```vibe
-// run: Console.log(inspectExport())
 error ExportRejected {
   reason: string
 }
@@ -33,7 +32,6 @@ An exit is `Success` with `.value` or `Failure` with `.cause`. `Effect.exit` run
 ## Creating success and cause-based failure exits
 
 ```vibe
-// run: const outcomes = sampleOutcomes(); Console.log(outcomes.successful.isSuccess(), outcomes.failed.isFailure(), constantSuccess().isSuccess()); if (outcomes.failed.isFailure()) Console.log(JSON.stringify(outcomes.failed.cause.reasons.map((reason) => reason._tag)))
 function sampleOutcomes() {
   const successful = Exit.succeed(12)
   const failed = Exit.failCause(
@@ -58,7 +56,6 @@ true true true
 ## Matching exit variants
 
 ```vibe
-// run: Console.log(describe(Exit.succeed(12))); Console.log(describe(Exit.failCause(Cause.empty)) === "")
 function describe<A, E>(outcome: Exit.Exit<A, E>) {
   return match (outcome) {
     when Exit.Success(let value): `Completed: ${String(value)}`;
@@ -77,7 +74,6 @@ true
 ## Relating exits to results
 
 ```vibe
-// run: Console.log(asResult(Exit.succeed(12)).getOrThrow()); const failed = asResult(Exit.failCause(Cause.fail("rejected").combine(Cause.die("broken")))); if (failed.isFailure()) Console.log(JSON.stringify(failed.failure.reasons.map((reason) => reason._tag)))
 function asResult<A, E>(outcome: Exit.Exit<A, E>) {
   if (outcome.isSuccess()) return Result.succeed(outcome.value)
   return Result.fail(outcome.cause)
@@ -95,7 +91,6 @@ An exit carries roughly the information of `Result<A, Cause<E>>`; a `Result<A, E
 ## Relating exits to effects
 
 ```vibe
-// run: Console.log(replay(Exit.succeed(12))); const failed = Effect.exit(() => replay(Exit.failCause(Cause.fail("rejected").combine(Cause.die("broken"))))); if (failed.isFailure()) Console.log(JSON.stringify(failed.cause.reasons.map((reason) => reason._tag)))
 function replay<A, E>(outcome: Exit.Exit<A, E>) {
   return outcome()
 }

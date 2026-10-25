@@ -34,7 +34,6 @@ Create `src/greet.vibe`:
 
 ```vibe
 // src/greet.vibe
-// run: Console.log(greet("Vite"))
 export function greet(name: string) {
   return `Hello, ${name}!`
 }
@@ -46,7 +45,6 @@ Import it from `.ts` or `.vibe` modules by its source name, `./greet.vibe`. Type
 ```ts
 // TypeScript (.ts)
 // src/use-greet.ts
-// run: console.log(message)
 import { Effect } from "effect"
 import { greet } from "./greet.vibe"
 

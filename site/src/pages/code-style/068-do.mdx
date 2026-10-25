@@ -10,7 +10,6 @@ Dependent computations often need several intermediate values at once. VibeLang 
 ## Recognizing nesting in dependent pipelines
 
 ```vibe
-// run: provide TestClock.layer() { TestClock.setTime(0); const worker = fork(() => example()); TestClock.adjust("40 millis"); Console.log(join worker) }
 import { TestClock } from "effect/testing"
 
 function elapsed<A>(program: () => A) {
@@ -39,7 +38,6 @@ Later statements still see `started` and `value`, with no nested callback to kee
 ## Named bindings with do notation
 
 ```vibe
-// run: provide TestClock.layer() { TestClock.setTime(0); const worker = fork(() => readInterval()); TestClock.adjust("40 millis"); Console.log(JSON.stringify(join worker)) }
 function readInterval() {
   return Effect.Do
     |> Effect.bind(%, "started", () => Clock.currentTimeMillis())
@@ -61,7 +59,6 @@ function readInterval() {
 ## Introducing derived values
 
 ```vibe
-// run: provide TestClock.layer() { TestClock.setTime(0); const worker = fork(() => intervalRecord()); TestClock.adjust("40 millis"); Console.log(JSON.stringify(join worker)) }
 function intervalRecord() {
   return Effect.Do
     |> Effect.bind(%, "started", () => Clock.currentTimeMillis())
@@ -82,7 +79,6 @@ function intervalRecord() {
 ## The sequence as ordinary statements
 
 ```vibe
-// run: provide TestClock.layer() { TestClock.setTime(0); const worker = fork(() => intervalRecord()); TestClock.adjust("40 millis"); Console.log(JSON.stringify(join worker)) }
 function intervalRecord() {
   const started = Clock.currentTimeMillis()
   sleep("40 millis")

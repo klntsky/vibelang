@@ -10,7 +10,6 @@ Choose a Sink for the result you need and run it with `Stream.run`. Sinks are re
 ## Basic consumers and endpoint values
 
 ```vibe
-// run: Console.log(JSON.stringify([endpoints().first.getOrElse(() => ""), endpoints().last.getOrElse(() => ""), endpoints().prefix]))
 function endpoints() {
   const source = Stream.make("opening", "middle", "closing")
   return {
@@ -29,7 +28,6 @@ function endpoints() {
 ## Counting, summing, draining, and timing
 
 ```vibe
-// run: (() => { const result = summarize(); Console.log(JSON.stringify([result.count, result.sum, Duration.isDuration(result.duration)])); drainObserved() })()
 function summarize() {
   const source = Stream.make(6, 10, 14)
   return {
@@ -53,7 +51,6 @@ These sinks consume the whole source. `drain` discards elements but still runs s
 ## Per-element work
 
 ```vibe
-// run: writeRecords()
 const print = Sink.forEach((line: string) => {
   Console.log(`record: ${line}`)
   sleep("10 millis")
@@ -71,7 +68,6 @@ function writeRecords() {
 ## Successful and failed sinks
 
 ```vibe
-// run: (() => { Console.log(immediateResult()); try { rejectInput() } catch (error) { Console.log(error._tag) } })()
 error Rejected
 
 function immediateResult() {
@@ -91,7 +87,6 @@ function rejectInput() {
 ## Collecting by size or condition
 
 ```vibe
-// run: Console.log(JSON.stringify(collectSamples()))
 function collectSamples() {
   const source = Stream.make(8, 5, -1, 13)
   return {
@@ -109,7 +104,6 @@ function collectSamples() {
 ## Uniqueness and key limits
 
 ```vibe
-// run: Console.log(JSON.stringify(Array.from(collectUnique())))
 const unique = Sink.reduce(() => new Set<string>(), (set, value: string) => set.add(value))
 const threeUnique = Sink.reduceWhile(
   () => new Set<string>(),
@@ -127,7 +121,6 @@ function collectUnique() {
 Use a native Set when JavaScript value equality fits. A size limit counts unique values, so duplicates take no extra slot.
 
 ```vibe
-// run: Console.log(JSON.stringify(Array.from(summarizeStations())))
 type Reading = { station: string; count: number }
 
 function addReading(totals: Map<string, number>, reading: Reading) {
@@ -159,7 +152,6 @@ The reducer defines both the grouping key and the merge rule. The limited sink s
 ## Folding with termination and count limits
 
 ```vibe
-// run: Console.log(JSON.stringify(Effect.provide(foldSamples(), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]))))
 const total = Sink.reduce(() => 0, (sum, n: number) => sum + n)
 const budget = Sink.fold(
   () => 0,
@@ -190,7 +182,6 @@ function foldSamples() {
 ## Folding by weight
 
 ```vibe
-// run: Console.log(JSON.stringify(firstBatch()))
 type Packet = { bytes: number }
 type Batch = { packets: ReadonlyArray<Packet>; bytes: number }
 

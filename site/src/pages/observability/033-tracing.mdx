@@ -10,7 +10,6 @@ Tracing records an operation's duration and its relation to other operations. Vi
 ## Relating spans to traces
 
 ```vibe
-// run: const spans: Tracer.NativeSpan[] = []; const tracer = Tracer.make({ span(options) { const span = new Tracer.NativeSpan(options); spans.push(span); return span } }); Console.log(Effect.withTracer(() => requestTrace(), tracer)); Console.log(spans[0].name, spans[0].status._tag, spans[0].parent.isNone())
 import { ConfigProvider, Tracer } from "effect"
 
 function requestTrace() {
@@ -31,7 +30,6 @@ A span describes one operation: name, identifiers, timestamps, status, and attri
 ## Adding spans around computations
 
 ```vibe
-// run: const spans: Tracer.NativeSpan[] = []; const tracer = Tracer.make({ span(options) { const span = new Tracer.NativeSpan(options); spans.push(span); return span } }); Console.log(Effect.withTracer(() => renderReport("csv"), tracer)); Console.log(spans[0].name, spans[0].attributes.get("report.format"), spans[0].status._tag)
 function renderReport(format: string) {
   return withSpan("render-report", { attributes: { "report.format": format } }) {
     sleep("20 millis")
@@ -51,7 +49,6 @@ render-report csv Ended
 ## Exporting spans and SDK boundaries
 
 ```vibe
-// run: const requests: unknown[] = []; const collector: typeof globalThis.fetch = (_input, init) => { requests.push(JSON.parse(new TextDecoder().decode(init?.body as Uint8Array))); return Promise.resolve(new Response(null, { status: 200 })) }; Console.log(Effect.provideService(() => exportedReport(), FetchHttpClient.Fetch, collector)); Console.log(requests.length, JSON.stringify(requests).includes("render-report"), JSON.stringify(requests).includes("report-worker"))
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as OtlpSerialization from "effect/observability/OtlpSerialization"
 import * as OtlpTracer from "effect/observability/OtlpTracer"
@@ -81,7 +78,6 @@ An application that already owns an OpenTelemetry SDK tracer provider initialize
 ## Inspecting failures and attributes
 
 ```vibe
-// run: const spans: Tracer.NativeSpan[] = []; const tracer = Tracer.make({ span(options) { const span = new Tracer.NativeSpan(options); spans.push(span); return span } }); const result = Effect.withTracer(() => Effect.provide(() => failingRender(), Logger.layer([])), tracer); Console.log(result.isFailure(), spans[0].attributes.get("report.format")); if (spans[0].status._tag === "Ended") Console.log(spans[0].status.exit.isFailure())
 error RenderFailed {
   format: string
 }
@@ -106,7 +102,6 @@ An exported failure carries error status and failure details; attributes identif
 ## Representing logs as span events
 
 ```vibe
-// run: const spans: Tracer.NativeSpan[] = []; const tracer = Tracer.make({ span(options) { const span = new Tracer.NativeSpan(options); spans.push(span); return span } }); const original = Effect.service(Console.Console); Effect.withTracer(() => Effect.provideService(() => tracedLogs(), Console.Console, { ...original, log: () => {} }), tracer); Console.log(JSON.stringify(spans[0].events.map(([name]) => name)), spans[0].status._tag)
 function tracedLogs() {
   Effect.provide(() => withSpan("generate-artifact") {
     logInfo("input validated")
@@ -128,7 +123,6 @@ The tracer logger records logs inside an active span as timestamped events, a ti
 ## Nesting operations
 
 ```vibe
-// run: const spans: Tracer.NativeSpan[] = []; const tracer = Tracer.make({ span(options) { const span = new Tracer.NativeSpan(options); spans.push(span); return span } }); Console.log(JSON.stringify(Effect.withTracer(() => generate(), tracer))); Console.log(JSON.stringify(spans.map((span) => [span.name, span.parent.map((parent) => parent.spanId === spans[0].spanId).getOrElse(() => false), span.traceId === spans[0].traceId, span.status._tag])))
 function loadTemplate() {
   return withSpan("load-template") {
     sleep("10 millis")
@@ -155,7 +149,6 @@ The inner spans take the outer span as parent and share its trace ID; each has i
 ## Viewing traces locally
 
 ```vibe
-// run: const requests: unknown[] = []; const collector: typeof globalThis.fetch = (_input, init) => { requests.push(JSON.parse(new TextDecoder().decode(init?.body as Uint8Array))); return Promise.resolve(new Response(null, { status: 200 })) }; Effect.provideService(() => demonstration(), FetchHttpClient.Fetch, collector); Console.log(requests.length, JSON.stringify(requests).includes("generate-report"), JSON.stringify(requests).includes("load-template"), JSON.stringify(requests).includes("render-report"))
 function demonstration() {
   provide Tracing { generate() }
 }
@@ -174,7 +167,6 @@ Open a `generate-report` trace to compare parent and child durations, attributes
 ## Connecting external tracing services
 
 ```vibe
-// run: const requests: unknown[] = []; const collector: typeof globalThis.fetch = (_input, init) => { requests.push(JSON.parse(new TextDecoder().decode(init?.body as Uint8Array))); return Promise.resolve(new Response(null, { status: 200 })) }; provide ConfigProvider.layer(ConfigProvider.fromUnknown({ TRACE_ENDPOINT: "http://collector.invalid/v1/traces" })) { Console.log(JSON.stringify(Effect.provideService(() => productionReport(), FetchHttpClient.Fetch, collector))) }; Console.log(requests.length, JSON.stringify(requests).includes("generate-report"))
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as OtlpSerialization from "effect/observability/OtlpSerialization"
 import * as OtlpTracer from "effect/observability/OtlpTracer"

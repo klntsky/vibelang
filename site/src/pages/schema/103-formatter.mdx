@@ -10,7 +10,6 @@ Value formatters work exactly as in Effect. A schema-derived formatter renders d
 ## Deriving value formatters from schemas
 
 ```vibe
-// run: Console.log(displayDispatch({ depot: "east", counts: [2, 4] }))
 import { Console } from "effect"
 const Dispatch = Schema.Struct({
   depot: Schema.String,
@@ -33,7 +32,6 @@ function displayDispatch(input: unknown) {
 ## Customizing formatting at selected syntax-tree nodes
 
 ```vibe
-// run: Console.log(displayManifest({ label: "crate", weight: 2 }))
 const Weight = Schema.Finite.pipe(Schema.overrideToFormatter(
   () => (value) => `${value} kg`
 ))

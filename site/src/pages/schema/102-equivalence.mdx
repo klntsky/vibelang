@@ -10,7 +10,6 @@ Schema-derived equivalence works exactly as in Effect. It compares decoded value
 ## Deriving equality from schemas
 
 ```vibe
-// run: Console.log(sameShipment({ reference: "pkg-94", stops: ["east"], extra: 1 }, { reference: "pkg-94", stops: ["east"], extra: 2 })); Console.log(sameShipment({ reference: "pkg-94", stops: ["east"] }, { reference: "pkg-94", stops: ["west"] }))
 import { Console } from "effect"
 schema Shipment {
   reference: string
@@ -34,7 +33,6 @@ false
 ## Handling broad schemas and custom declarations
 
 ```vibe
-// run: Console.log(sameUnknown({ stops: ["east"] }, { stops: ["east"] })); Console.log(sameRef())
 function sameUnknown(left: unknown, right: unknown) {
   return Schema.toEquivalence(Schema.Unknown)(left, right)
 }
@@ -63,7 +61,6 @@ true
 ## Overriding generated comparison behavior
 
 ```vibe
-// run: Console.log(sameIdentity({ reference: "pkg-94", stops: ["east"] }, { reference: "pkg-94", stops: ["west"] })); Console.log(sameIdentity({ reference: "pkg-94", stops: [] }, { reference: "pkg-95", stops: [] }))
 const ShipmentIdentity = Shipment.pipe(Schema.overrideToEquivalence(
   () => (left, right) => left.reference === right.reference
 ))

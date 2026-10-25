@@ -10,7 +10,6 @@ Schema constructors work as in Effect, on decoded values: they apply constructor
 ## Constructing structs and records
 
 ```vibe
-// run: Console.log(JSON.stringify(makeLabels()))
 import { Console } from "effect"
 const Label = Schema.Struct({ text: Schema.NonEmptyString })
 const LabelsById = Schema.Record(Schema.String, Schema.NonEmptyString)
@@ -31,7 +30,6 @@ Every schema has `make`, `makeOption`, and `makeEffect`. Each takes the schema's
 ## Applying filters and brands during construction
 
 ```vibe
-// run: Console.log(makeCaseCount(6)); try { makeCaseCount(0) } catch (issue) { Console.log(issue._tag) }
 const CaseCount = Schema.FiniteFromString.check(
   Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 48 })
 ).pipe(Schema.brand("CaseCount"))
@@ -51,7 +49,6 @@ Filters run during construction as well as parsing. A filter leaves the static t
 ## Handling constructor failures
 
 ```vibe
-// run: Console.log(constructOrExplain(6)); Console.log(constructAsOption(0).isNone()); try { constructWithExpectedFailure(0) } catch (error) { Console.log("Construction rejected") }
 function constructOrExplain(value: number) {
   try {
     return String(CaseCount.makeEffect(value))
@@ -80,7 +77,6 @@ In local Effect 4.0.5, `makeEffect` fails with a raw `SchemaIssue.Issue`, not th
 ## Setting nested and lazy defaults
 
 ```vibe
-// run: const first = makePacking(); const second = makePacking(); Console.log(JSON.stringify(first)); Console.log(first.labels === second.labels)
 const Packing = Schema.Struct({
   handling: Schema.String.pipe(Schema.withConstructorDefault(() => "standard")),
   dimensions: Schema.Struct({
@@ -108,7 +104,6 @@ A default program may fail with schema issues but cannot require services; read 
 ## Reusing defaults
 
 ```vibe
-// run: Console.log(JSON.stringify(makeReturnPacking()))
 const ReturnPacking = Schema.Struct({
   reason: Schema.String,
   handling: Packing.fields.handling,
@@ -129,7 +124,6 @@ Defaults belong to field descriptions, so reusing a field carries its constructo
 ## Initializing schema-backed classes
 
 ```vibe
-// run: const value = createPackingRequest("pkg-94"); Console.log(value instanceof PackingRequest); Console.log(JSON.stringify(value))
 class PackingRequest extends Schema.Class<PackingRequest>("PackingRequest")({
   reference: Schema.String,
   handling: Packing.fields.handling,

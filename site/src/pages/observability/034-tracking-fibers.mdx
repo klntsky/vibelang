@@ -10,7 +10,6 @@ description: "FiberSet and FiberMap track groups of running fibers and clean the
 ## Managing groups of running fibers
 
 ```vibe
-// run: Console.log(JSON.stringify(runGroup()))
 function runGroup() {
   using workers = FiberSet.make<number>()
   const first = FiberSet.run(workers) {
@@ -36,7 +35,6 @@ tracked workers 2
 ## Tracking fibers by key
 
 ```vibe
-// run: Console.log(replacePreview())
 function replacePreview() {
   using previews = FiberMap.make<string, string>()
   FiberMap.run(previews, "editor-1") {
@@ -60,7 +58,6 @@ Running a fiber under an existing key interrupts that key's previous fiber: late
 ## Removing completed work
 
 ```vibe
-// run: Console.log(waitForAllTracked())
 function waitForAllTracked() {
   using workers = FiberSet.make<void>()
   FiberSet.run(workers, sleep("10 millis"))
@@ -79,7 +76,6 @@ Sets and maps remove completed fibers automatically, so a long-lived owner doesn
 ## Interrupting tracked work on scope closure
 
 ```vibe
-// run: serveBriefly()
 function serveBriefly() {
   {
     using workers = FiberSet.make<void>()

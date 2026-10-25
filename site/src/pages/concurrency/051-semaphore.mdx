@@ -10,7 +10,6 @@ A semaphore limits access to a shared resource with a pool of permits. One permi
 ## Creating a permit pool
 
 ```vibe
-// run: const limit = makeUploadLimit(); Console.log(Semaphore.withPermits(limit, 3, () => "three permits acquired"))
 function makeUploadLimit() {
   return Semaphore.make(3)
 }
@@ -23,7 +22,6 @@ Create the pool once for the callers that share a limit: a pool allocated inside
 ## Limiting concurrent access
 
 ```vibe
-// run: Console.log(JSON.stringify(uploadAll()))
 function uploadAll() {
   const uploads = Semaphore.make(2)
   return forEach(["a.csv", "b.csv", "c.csv", "d.csv"], (file) => {
@@ -46,7 +44,6 @@ The traversal can start all four callers, but only two enter the permit-protecte
 ## Acquiring several permits around work
 
 ```vibe
-// run: Console.log(JSON.stringify(weightedJobs()))
 function weightedJobs() {
   const memoryBudget = Semaphore.make(4)
   return forEach([1, 2, 3], (weight) => {
@@ -64,7 +61,6 @@ An operation waits until it can acquire all its requested permits together, whic
 ## Releasing permits safely
 
 ```vibe
-// run: Console.log(releaseOnFailure())
 error Rejected
 
 function releaseOnFailure() {

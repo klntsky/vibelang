@@ -10,7 +10,6 @@ description: "Cause works in VibeLang exactly as in Effect. It records every rea
 ## Representing failure reasons
 
 ```vibe
-// run: Console.log(expected.reasons[0]._tag, defect.reasons[0]._tag, interrupted.reasons[0]._tag, empty.reasons.length)
 const expected = Cause.fail("record missing")
 const defect = Cause.die(new Error("invariant broken"))
 const interrupted = Cause.interrupt(17)
@@ -27,7 +26,6 @@ Fail Die Interrupt 0
 ## Combining reasons
 
 ```vibe
-// run: Console.log(JSON.stringify(combined.reasons.map((reason) => reason._tag))); Console.log(Cause.fail("same error").combine(Cause.fail("same error")).reasons.length)
 const combined = Cause.fail("export failed").combine(Cause.die(new Error("cleanup failed")))
 combined.reasons.map((reason) => reason._tag) // ["Fail", "Die"]
 Cause.fail("same error").combine(Cause.fail("same error")).reasons.length // 1
@@ -43,7 +41,6 @@ Effect 4 stores reasons in a flat array: `combine` merges both sets and drops eq
 ## Extracting a computation's cause
 
 ```vibe
-// run: Console.log(diagnose().split("\n")[0].trim())
 error MissingRecord {
   id: string
 }
@@ -68,7 +65,6 @@ MissingRecord:
 ## Identifying reason variants
 
 ```vibe
-// run: Console.log(JSON.stringify(classify(Cause.fail("missing").combine(Cause.die("broken")).combine(Cause.interrupt(17))))); Console.log(JSON.stringify(classify(Cause.empty)))
 function classify<E>(cause: Cause.Cause<E>) {
   const summary = {
     failed: cause.hasFails(),
@@ -100,7 +96,6 @@ Cause predicates test whether a kind of reason is present. Reason guards narrow 
 ## Formatting and inspecting errors
 
 ```vibe
-// run: const result = inspect(Cause.fail("missing").combine(Cause.die("broken"))); Console.log(JSON.stringify({ failures: result.failures, defects: result.defects })); Console.log(JSON.stringify(inspect(Cause.empty)))
 function inspect<E>(cause: Cause.Cause<E>) {
   const failures = cause.reasons
     .filter(Cause.isFailReason)

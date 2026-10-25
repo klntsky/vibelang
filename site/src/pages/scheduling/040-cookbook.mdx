@@ -10,7 +10,6 @@ These recipes use ordinary functions as repeatable programs. Each bounds its att
 ## Honoring server retry hints
 
 ```vibe
-// run: provide TestClock.layer() { const worker = fork download(); TestClock.adjust("5 seconds"); Console.log(join worker) }
 import { TestClock } from "effect/testing"
 
 error Throttled {
@@ -43,7 +42,6 @@ Parse the response's retry hint into a duration at the HTTP boundary. The policy
 ## Polling with response-dependent delays
 
 ```vibe
-// run: provide TestClock.layer() { const worker = fork waitForArchive(); TestClock.adjust("1 second"); Console.log(join worker) }
 type Status =
   | { _tag: "Pending"; pollAfter: Duration.Duration }
   | { _tag: "Ready"; path: string }
@@ -80,7 +78,6 @@ A pending response is a success, so it feeds `repeat`, not `retry`. This simulat
 ## Bounding the whole retry operation
 
 ```vibe
-// run: provide TestClock.layer() { const worker = fork Effect.result(() => readWithDeadline()); TestClock.adjust("1 second"); const result = join worker; if (result.isFailure()) Console.log(result.failure._tag) }
 error Offline
 
 function readWithDeadline() {
@@ -98,7 +95,6 @@ The outer timeout covers the first attempt, every wait, and every retry; a timeo
 ## Switching from rapid to slower retries
 
 ```vibe
-// run: provide TestClock.layer() { const worker = fork reconnect(); TestClock.adjust("5 seconds"); Console.log(join worker) }
 error Disconnected
 
 function reconnect() {
@@ -118,7 +114,6 @@ The first two retries wait briefly; later ones wait four seconds. This simulatio
 ## Recording retry decisions
 
 ```vibe
-// run: provide TestClock.layer() { const worker = fork observedRequest(); TestClock.adjust("1 second"); Console.log(join worker) }
 error Unavailable {
   status: number
 }

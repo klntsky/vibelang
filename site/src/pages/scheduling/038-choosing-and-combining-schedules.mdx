@@ -10,7 +10,6 @@ description: "Schedule works in VibeLang exactly as in Effect. Start with the ti
 ## Choosing a starting rule
 
 ```vibe
-// run: const rules: ReadonlyArray<Schedule.Schedule<unknown, unknown, Cron.CronParseError>> = [immediate, afterCompletion, cadence, backoff, calendar]; for (const rule of rules) { const step = Schedule.toStep(rule); const result = Effect.result(step(Date.parse("2026-11-02T00:00:00Z"), undefined)); if (result.isSuccess()) Console.log(result.success[1].toMillis()) }
 import { TestClock } from "effect/testing"
 
 const immediate = Schedule.recurs(4)
@@ -40,7 +39,6 @@ These declarations build reusable values and run no work. Choose a rule by requi
 ## Understanding schedule steps
 
 ```vibe
-// run: provide TestClock.layer() { const worker = fork runChecks(); TestClock.adjust("18 seconds"); join worker }
 function runChecks() {
   repeat(Schedule.spaced("6 seconds").upTo({ times: 2 })) {
     Console.log("checking", Clock.currentTimeMillis())
@@ -59,7 +57,6 @@ A schedule step takes input and produces output plus timing metadata. The input 
 ## Limiting duration and adjusting delays
 
 ```vibe
-// run: Random.withSeed(() => { const rules: ReadonlyArray<Schedule.Schedule<unknown>> = [bounded, firstThree]; for (const rule of rules) { const step = Schedule.toStep(rule); let now = 0; const waits: number[] = []; for (let i = 0; i < 10; i++) { const result = Effect.result(step(now, undefined)); if (result.isFailure()) break; const ms = result.success[1].toMillis(); waits.push(ms); now += ms }; Console.log(waits.length, waits.every((ms) => ms >= 0 && ms <= 9600)) } }, "docs-schedule")
 import { Random } from "effect"
 
 const bounded = Schedule.exponential("300 millis")
@@ -80,7 +77,6 @@ const firstThree = Schedule.while(
 ## Requiring every timing rule
 
 ```vibe
-// run: const step = Schedule.toStep(policy); let now = 0; const waits: number[] = []; for (let i = 0; i < 5; i++) { const result = Effect.result(step(now, undefined)); if (result.isFailure()) break; const ms = result.success[1].toMillis(); waits.push(ms); now += ms }; Console.log(JSON.stringify(waits))
 const policy = Schedule.max([
     Schedule.exponential("400 millis"),
     Schedule.spaced("2 seconds")
@@ -93,7 +89,6 @@ const policy = Schedule.max([
 ## Accepting any timing rule
 
 ```vibe
-// run: const step = Schedule.toStep(startupAndSteady); let now = 0; const waits: number[] = []; for (let i = 0; i < 5; i++) { const result = Effect.result(step(now, undefined)); if (result.isFailure()) break; const ms = result.success[1].toMillis(); waits.push(ms); now += ms }; Console.log(JSON.stringify(waits))
 const startupAndSteady = Schedule.min([
   Schedule.spaced("500 millis").upTo({ times: 2 }),
   Schedule.fixed("12 seconds")
@@ -106,7 +101,6 @@ const startupAndSteady = Schedule.min([
 ## Switching rules in phases
 
 ```vibe
-// run: const step = Schedule.toStep(reconnect); let now = 0; const waits: number[] = []; for (let i = 0; i < 8; i++) { const result = Effect.result(step(now, undefined)); if (result.isFailure()) break; const ms = result.success[1].toMillis(); waits.push(ms); now += ms }; Console.log(JSON.stringify(waits))
 const reconnect = Schedule.spaced("150 millis").upTo({ times: 2 }).concat(Schedule.spaced("3 seconds").upTo({ times: 5 }))
 // Output: [150,150,3000,3000,3000,3000,3000]
 ```

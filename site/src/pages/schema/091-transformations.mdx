@@ -10,7 +10,6 @@ Transformations work as in Effect: a codec validates one representation, convert
 ## Defining reversible infallible conversions
 
 ```vibe
-// run: Console.log(readAvailability("ready"), readAvailability("held")); Console.log(Schema.encodeEffect(Availability)(true))
 import { Console } from "effect"
 const Availability = Schema.Literals(["ready", "held"]).pipe(
   Schema.decodeTo(Schema.Boolean, SchemaTransformation.transform({
@@ -34,7 +33,6 @@ ready
 ## Understanding transformation inputs and outputs
 
 ```vibe
-// run: Console.log(readNumericAvailability()); Console.log(Schema.encodeEffect(NumericAvailability)(true))
 const NumericAvailability = Schema.FiniteFromString.pipe(
   Schema.decodeTo(Availability, SchemaTransformation.transform({
     decode: (quantity) => quantity > 0 ? "ready" : "held",
@@ -59,7 +57,6 @@ The middle functions above handle a number and a status string, though the compl
 ## Defining fallible conversions
 
 ```vibe
-// run: Console.log(Schema.decodeUnknownEffect(DeliveryMode)(" RAIL ")); try { Schema.decodeUnknownEffect(DeliveryMode)("air") } catch (error) { Console.log(error.message) }
 const DeliveryMode = Schema.String.pipe(
   Schema.decodeTo(Schema.Literals(["road", "rail"]), {
     decode: SchemaGetter.transformEffect<"road" | "rail", string>((text) => {
@@ -82,7 +79,6 @@ Choose road or rail
 ## Running asynchronous conversions with dependencies
 
 ```vibe
-// run: Console.log(previewRoute()); provide Routes = { check(code) { throw new UnknownRoute({ code }) } } { try { readRoute("missing") } catch (error) { Console.log(error.message) } }
 error UnknownRoute {
   code: string
 }
@@ -129,7 +125,6 @@ The getter can pause while its service runs. Decoding requires `Routes`; encodin
 ## Forbidding an encoding direction
 
 ```vibe
-// run: Console.log(readInitial("Ada")); try { Schema.encodeEffect(Initial)("A") } catch (error) { Console.log(error.message) }
 const Initial = Schema.NonEmptyString.pipe(
   Schema.decodeTo(Schema.String, {
     decode: SchemaGetter.transform((name) => name[0]),
@@ -152,7 +147,6 @@ A lossy conversion has no meaningful inverse. `forbidden` reports a schema issue
 ## Composing transformations and effectful checks
 
 ```vibe
-// run: Console.log(JSON.stringify(readNumbers())); Console.log(Schema.decodeEffect(DeferredLabel)("crate")); try { Schema.decodeEffect(DeferredLabel)("x") } catch (error) { Console.log(error.message) }
 const SemicolonNumbers = Schema.String.pipe(
   Schema.decodeTo(Schema.Array(Schema.String), SchemaTransformation.transform({
     decode: (text): ReadonlyArray<string>!! => text.split(";"),
@@ -189,7 +183,6 @@ When converting a collection whose elements are already decoded, use `Schema.toT
 ## Converting string case, JSON, and binary encodings
 
 ```vibe
-// run: Console.log(JSON.stringify(decodeTextFormats()))
 const LowerLabel = Schema.String.pipe(
   Schema.decodeTo(
     Schema.String.check(Schema.isLowercased()),
@@ -219,7 +212,6 @@ function decodeTextFormats() {
 ## Parsing numeric, date, and decimal values
 
 ```vibe
-// run: const value = readManifest({ units: "3.5", sequence: "12", departure: "2026-01-02T00:00:00Z", price: "1.25" }); Console.log(value.units, String(value.sequence), value.departure.toISOString(), BigDecimal.format(value.price)); try { readManifest({ units: "Infinity", sequence: "12", departure: "invalid", price: "bad" }) } catch (error) { Console.log(error._tag) }
 const Manifest = Schema.Struct({
   units: Schema.FiniteFromString,
   sequence: Schema.BigIntFromString,

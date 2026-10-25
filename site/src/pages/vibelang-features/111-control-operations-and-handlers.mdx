@@ -11,7 +11,6 @@ A control operation lets a handler decide how the caller continues. Use one when
 
 ```vibe
 // approval.vibe
-// run: Console.log(handle(() => release("v1"), Approval, { approve: (_request, k) => resume(k, true) }))
 export error ReviewBusy { request: string }
 
 export control Approval {
@@ -35,7 +34,6 @@ export function release(version: string) {
 
 ```vibe
 // policies.vibe
-// run: Console.log(JSON.stringify(comparePolicies()))
 import { Approval, release } from "./approval.vibe"
 
 export function autoApprove(version: string) {
@@ -78,7 +76,6 @@ A continuation can be consumed once; the runtime rejects a second resume. Call `
 
 ```vibe
 // stopping.vibe
-// run: Console.log(stopDeployment())
 import { Approval } from "./approval.vibe"
 
 function deployment() {
@@ -112,7 +109,6 @@ A clause that ends without resuming also stops the try block and cleans it up; t
 
 ```vibe
 // busy.vibe
-// run: Console.log(busyReviewer())
 import { Approval, ReviewBusy } from "./approval.vibe"
 
 export function busyReviewer() {
@@ -137,7 +133,6 @@ The statement is short for the `handle` function, which takes a program and retu
 
 ```vibe
 // expression.vibe
-// run: Console.log(countReleased(["v1", "v2"]))
 import { Approval, release } from "./approval.vibe"
 
 export function countReleased(versions: ReadonlyArray<string>) {
@@ -161,7 +156,6 @@ export function countReleased(versions: ReadonlyArray<string>) {
 
 ```vibe
 // concurrent.vibe
-// run: Console.log(JSON.stringify(approveAll(["staging", "production"])))
 import { Approval } from "./approval.vibe"
 
 export function approveAll(requests: ReadonlyArray<string>) {

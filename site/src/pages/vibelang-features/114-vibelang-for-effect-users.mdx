@@ -8,7 +8,6 @@ description: "Keep Effect's runtime, libraries, layers, and error channels; in .
 Keep Effect's runtime, libraries, layers, and error channels; in `.vibe` files, write sequential work as ordinary functions and statements. The [cheat sheet](/vibelang-features/115-cheat-sheet) shows every change beside its Effect code, and the [specification](/spec/000-intro) gives the rules behind each.
 
 ```vibe
-// run: Console.log(main())
 function greet(name: string) {
   sleep("10 millis")
   const message = `Hello, ${name}`
@@ -121,7 +120,6 @@ Effect declarations and combinator calls ported from TypeScript compile in a `.v
 ## Calls run; programs stay cold
 
 ```vibe
-// run: Console.log(JSON.stringify([sequential(), concurrent()]))
 function sequential() {
   const first = greet("Ada")
   const second = greet("Grace")
@@ -179,7 +177,6 @@ Every export of Effect's root, including `Console`, `Clock`, `Option`, `Schedule
 ## Keep platform work in Effect
 
 ```vibe
-// run: provide Clock.Clock = { ...Clock.Clock(), currentTimeMillis: () => 123, currentTimeMillisUnsafe: () => 123 } { Console.log(reportTime()) }
 function reportTime() {
   const now = Clock.currentTimeMillis()
   Console.log(now)
@@ -196,7 +193,6 @@ Inside an Effect function, a plain function from your `.ts` code or a foreign pa
 ## Catch expected failures only
 
 ```vibe
-// run: Console.log(JSON.stringify([displayName("ada"), displayName("missing")]))
 error Missing { id: string }
 
 function lookup(id: string) {

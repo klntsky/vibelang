@@ -10,7 +10,6 @@ Schema issue formatters work as in Effect. They render failures as readable stri
 ## Rendering schema issues as readable strings
 
 ```vibe
-// run: Console.log(readableFailure({})); Console.log(readableFailure({ destination: "north", packages: 2 }))
 import { Console } from "effect"
 const Dispatch = Schema.Struct({
   destination: Schema.String,
@@ -38,7 +37,6 @@ Accepted
 ## Reporting several issues
 
 ```vibe
-// run: Console.log(allFailures({}))
 function allFailures(input: unknown) {
   try {
     Schema.decodeUnknownEffect(Dispatch)(input, { errors: "all" })
@@ -62,7 +60,6 @@ Formatting shows only the issues parsing collected; set `errors: "all"` on the p
 ## Formatting Standard Schema validation errors
 
 ```vibe
-// run: Console.log(JSON.stringify(formFailures({})))
 function formFailures(input: unknown) {
   try {
     Schema.decodeUnknownEffect(Dispatch)(input, { errors: "all" })
@@ -83,7 +80,6 @@ The Standard Schema formatter returns a failure object with an `issues` array. E
 ## Customizing leaf messages
 
 ```vibe
-// run: Console.log(JSON.stringify(localizedFailures({}))); Console.log(JSON.stringify(localizedFailures({ destination: 2, packages: 1 })))
 const formFormatter = SchemaIssue.makeFormatterStandardSchemaV1({
   leafHook: (issue) => issue._tag === "MissingKey"
     ? "Complete this field"
@@ -110,7 +106,6 @@ function localizedFailures(input: unknown) {
 ## Connecting validation to form libraries
 
 ```vibe
-// run: Console.log(JSON.stringify(formSchema()["~standard"].validate({})))
 const DispatchForm = Schema.toStandardSchemaV1(Dispatch, {
   parseOptions: { errors: "all" },
   leafHook: (issue) => issue._tag === "MissingKey"

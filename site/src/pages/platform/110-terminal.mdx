@@ -10,7 +10,6 @@ description: "Terminal is Effect's interactive input and output service. Use it 
 ## Requesting terminal services
 
 ```vibe
-// run: provide Terminal.Terminal = Terminal.make({ columns: () => 80, rows: () => 24, readInput: () => Queue.unbounded<Terminal.UserInput>(), readLine: () => " Ada ", display: (text) => Console.log(text.trimEnd()) }) { Console.log(JSON.stringify(dimensions())) }
 function dimensions() {
   const terminal = Effect.service(Terminal.Terminal)
   return { columns: terminal.columns(), rows: terminal.rows() }
@@ -40,7 +39,6 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeTerminal.layer))
 ## Reading standard input
 
 ```vibe
-// run: provide Terminal.Terminal = Terminal.make({ columns: () => 80, rows: () => 24, readInput: () => Queue.unbounded<Terminal.UserInput>(), readLine: () => " Ada ", display: (text) => Console.log(text.trimEnd()) }) { askName() }
 function askName() {
   const terminal = Effect.service(Terminal.Terminal)
   terminal.display("Your name: ")
@@ -57,7 +55,6 @@ function askName() {
 ## Handling terminal quit errors
 
 ```vibe
-// run: provide Terminal.Terminal = Terminal.make({ columns: () => 80, rows: () => 24, readInput: () => Queue.unbounded<Terminal.UserInput>(), readLine: () => throw new Terminal.QuitError(), display: (text) => Console.log(text.trimEnd()) }) { askNameOrQuit(); Console.log("quit handled") }
 function askNameOrQuit() {
   try {
     askName()
@@ -78,7 +75,6 @@ A host SIGINT or SIGTERM is a separate termination path: the runner interrupts t
 
 ```vibe
 // guessing.vibe
-// run: const inputs = ["no", "2", "19", "11"]; provide Random = { nextIntUnsafe: () => 0, nextDoubleUnsafe: () => 0.5 }, Terminal.Terminal = Terminal.make({ columns: () => 80, rows: () => 24, readInput: () => Queue.unbounded<Terminal.UserInput>(), readLine: () => inputs.shift() ?? throw new Terminal.QuitError(), display: (text) => Console.log(text.trimEnd()) }) { main() }
 function parseGuess(input: string) {
   const text = input.trim()
   const number = Number(text)

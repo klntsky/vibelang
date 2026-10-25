@@ -60,7 +60,6 @@ Create `src/cart.vibe`. `quote` reserves a product and recovers from `OutOfStock
 
 ```vibe
 // src/cart.vibe
-// run: provide InventoryLive { Console.log(quoteCart().join("\n")); Console.log(quote("missing", 1)); try { Inventory.reserve("coffee", 3) } catch (error) { Console.log(error._tag, error.sku, error.available) } }
 export schema Product { sku: string; name: string; cents: number; stock: number }
 
 export error OutOfStock { sku: string; available: number }
@@ -112,7 +111,6 @@ Create `src/runtime.ts`. One `ManagedRuntime` builds `InventoryLive` once and ru
 ```ts
 // TypeScript (.ts)
 // src/runtime.ts
-// run: return import("./cart.vibe").then(({ quoteCart }) => runtime.runPromise(quoteCart())).then((lines) => console.log(lines.join("\n"))).finally(() => runtime.dispose())
 import { ManagedRuntime } from "effect"
 import { InventoryLive } from "./cart.vibe"
 

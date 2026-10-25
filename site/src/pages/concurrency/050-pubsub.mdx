@@ -10,7 +10,6 @@ A `PubSub` broadcasts values to independent subscribers: each active subscriber 
 ## Broadcasting to independent subscribers
 
 ```vibe
-// run: Console.log(JSON.stringify(broadcast()))
 function broadcast() {
   const hub = PubSub.bounded<string>(4)
   try {
@@ -31,7 +30,6 @@ Subscribe before publishing a message that must be received: without replay conf
 ## Selecting capacity and overflow behavior
 
 ```vibe
-// run: const hubs = makeHubs(); Console.log(PubSub.capacity(hubs.reliable), PubSub.capacity(hubs.bestEffort), PubSub.capacity(hubs.latest), PubSub.capacity(hubs.unlimited)); for (const hub of Object.values(hubs)) PubSub.shutdown(hub)
 function makeHubs() {
   return {
     reliable: PubSub.bounded<string>(64),
@@ -48,7 +46,6 @@ When the buffer is full, a bounded hub backpressures publishers, so a slow subsc
 ## Managing scoped subscriptions
 
 ```vibe
-// run: const hub = PubSub.bounded<string>(2); const listener = Effect.forkChild(() => listen(hub), { startImmediately: true }); PubSub.publish(hub, "ready"); Fiber.join(listener); PubSub.shutdown(hub)
 function listen(hub: PubSub.PubSub<string>) {
   using subscription = PubSub.subscribe(hub)
   const message = PubSub.take(subscription)
@@ -64,7 +61,6 @@ In Effect 4, consume the returned `PubSub.Subscription` with `PubSub.take` and t
 ## Publishing batches
 
 ```vibe
-// run: Console.log(JSON.stringify(batch()))
 function batch() {
   const hub = PubSub.bounded<string>(3)
   try {
@@ -84,7 +80,6 @@ function batch() {
 ## Inspecting size and capacity
 
 ```vibe
-// run: Console.log(JSON.stringify(inspect()))
 function inspect() {
   const hub = PubSub.bounded<number>(5)
   try {
@@ -108,7 +103,6 @@ Capacity is a plain value; size and fullness queries run Effects. Size counts me
 ## Ending subscriptions and shutting down
 
 ```vibe
-// run: Console.log(ownHub())
 function ownHub() {
   const hub = PubSub.bounded<string>(8)
   try {

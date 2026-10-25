@@ -10,7 +10,6 @@ VibeLang uses Effect's platform services for files, paths, terminals, and applic
 ## Choosing portable platform services
 
 ```vibe
-// run: provide FileSystem.layerNoop({ readFileString: () => "Hello, VibeLang!" }) { Console.log(readGreeting()) }
 export function readGreeting() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./greeting.txt")
@@ -53,7 +52,6 @@ bun add effect@4.0.5 @effect/platform-bun
 
 ```vibe
 // greeting.vibe
-// run: provide FileSystem.layerNoop({ readFileString: () => "  Hello, VibeLang!\n" }) { main() }
 export function main() {
   const fs = Effect.service(FileSystem.FileSystem)
   const greeting = fs.readFileString("./greeting.txt")

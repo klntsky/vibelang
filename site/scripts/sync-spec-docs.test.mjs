@@ -76,7 +76,7 @@ test('CLI validates before writing, writes duplicate introduction, and user sync
   const { root, put } = fixture()
   const site = path.join(root, 'site')
   fs.mkdirSync(path.join(site, 'scripts'), { recursive: true })
-  for (const file of ['sync-spec-docs.mjs', 'sync-user-docs.mjs', 'spec-docs.mjs', 'docs-markdown.mjs']) fs.copyFileSync(fileURLToPath(new URL(file, import.meta.url)), path.join(site, 'scripts', file))
+  for (const file of ['sync-spec-docs.mjs', 'sync-user-docs.mjs', 'spec-docs.mjs', 'docs-markdown.mjs', 'user-docs.mjs']) fs.copyFileSync(fileURLToPath(new URL(file, import.meta.url)), path.join(site, 'scripts', file))
   put('facts.json', JSON.stringify(facts))
   const run = (name, args) => execFileSync(process.execPath, [path.join(site, 'scripts', name), ...args], { stdio: 'pipe' })
   run('sync-spec-docs.mjs', [path.join(root, 'docs'), '--facts', path.join(root, 'facts.json')])

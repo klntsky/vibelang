@@ -11,7 +11,6 @@ Resources need cleanup on success, failure, and cancellation. Use `finally` for 
 ## Guaranteeing cleanup
 
 ```vibe
-// run: Console.log(exportRows(true)); try { exportRows(false) } catch (error) { Console.log(error._tag) }
 error ExportRejected
 
 function exportRows(accepted: boolean) {
@@ -41,7 +40,6 @@ function exportRows(accepted: boolean) {
 ## Finalizing based on the outcome
 
 ```vibe
-// run: Console.log(observedExport(true)); try { observedExport(false) } catch (error) { Console.log(error._tag) }
 function observedExport(accepted: boolean) {
   try {
     return exportRows(accepted)
@@ -68,7 +66,6 @@ function observedExport(accepted: boolean) {
 ## Cleaning up failed work
 
 ```vibe
-// run: Console.log(reportFailedExport(true)); try { reportFailedExport(false) } catch (error) { Console.log(error._tag) }
 function reportFailedExport(accepted: boolean) {
   return Effect.onError(() => exportRows(accepted), (cause) => {
     if (cause.hasInterrupts()) {
@@ -92,7 +89,6 @@ function reportFailedExport(accepted: boolean) {
 ## Bracketing acquisition, use, and release
 
 ```vibe
-// run: provide LeaseStore = { acquire: () => ({ id: "test-lease" }), release: (lease) => Console.log(`Released ${lease.id}`) } { Console.log(withLease()) }
 interface Lease {
   id: string
 }
@@ -130,7 +126,6 @@ Release receives the resource and the use phase's `Exit`. The combined contract 
 ## Giving the caller resource ownership
 
 ```vibe
-// run: Console.log(example()); provide LeaseStore = { acquire: () => ({ id: "owned" }), release: (lease) => Console.log(`Released ${lease.id}`) } { Console.log(leaseId()) }
 function acquireLease() {
   const store = LeaseStore()
   return Effect.acquireRelease(

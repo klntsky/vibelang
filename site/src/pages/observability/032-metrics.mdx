@@ -10,7 +10,6 @@ Effect's `Metric` module counts events, records current values, and measures dis
 ## Recording counters and gauges
 
 ```vibe
-// run: Console.log(JSON.stringify(recordBatch())); Console.log(String(Metric.value(bytes).count)); Console.log(JSON.stringify(recordBatch()))
 const requests = Metric.counter("guide_requests", { incremental: true })
 const queued = Metric.gauge("guide_queued")
 const bytes = Metric.counter("guide_bytes", { bigint: true })
@@ -37,7 +36,6 @@ function recordBatch() {
 A counter accumulates changes; a gauge keeps its latest value. `incremental: true` ignores negative counter inputs; without it, a counter also decrements. Counters and gauges both have bigint variants. Updates to the same metric identity share state, so the totals above accumulate across runs.
 
 ```vibe
-// run: Console.log(instrumentedValue(), Metric.value(completions).count)
 const completions = Metric.withConstantInput(
   Metric.counter("guide_completions", { incremental: true }),
   1
@@ -57,7 +55,6 @@ processed 1
 ## Measuring distributions
 
 ```vibe
-// run: const result = recordSizes(); Console.log(JSON.stringify({ count: result.histogram.count, sum: result.histogram.sum, min: result.histogram.min, max: result.histogram.max, buckets: result.histogram.buckets })); Console.log(result.summary.count, result.summary.sum, result.summary.min, result.summary.max)
 const batchSizes = Metric.histogram("guide_batch_size", {
   boundaries: Metric.linearBoundaries({ start: 0, width: 20, count: 6 })
 })
@@ -89,7 +86,6 @@ A histogram sorts observations into configured buckets and tracks count, sum, mi
 ## Timing computations
 
 ```vibe
-// run: provide TestClock.layer() { const worker = fork(() => render()); TestClock.adjust("30 millis"); Console.log(join worker); const state = Metric.value(renderTime); Console.log(state.count, state.sum, state.min, state.max) }
 import { TestClock } from "effect/testing"
 
 const renderTime = Metric.timer("guide_render_duration", {
@@ -114,7 +110,6 @@ rendered
 ## Counting categorical events
 
 ```vibe
-// run: Console.log(JSON.stringify(Array.from(recordOutcomes()).sort(([a], [b]) => Order.String(a, b))))
 const outcomes = Metric.frequency("guide_validation_outcomes")
 
 function recordOutcomes() {
@@ -134,7 +129,6 @@ A frequency metric counts each observed string. Use a bounded set of categories,
 ## Attaching attributes to metrics and regions
 
 ```vibe
-// run: const result = attributed(); Console.log(result.requests.count, result.failures.count); Console.log(Metric.value(apiRequests).count, Metric.value(failures).count)
 const apiRequests = Metric.withAttributes(
   Metric.counter("guide_api_requests", { incremental: true }),
   { route: "/reports" }

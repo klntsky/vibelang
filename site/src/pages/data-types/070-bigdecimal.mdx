@@ -10,7 +10,6 @@ description: "BigDecimal works in VibeLang exactly as in Effect. Use it for deci
 ## Representing decimal values
 
 ```vibe
-// run: Console.log(BigDecimal.format(unitPrice)); Console.log(BigDecimal.format(bulkPrice))
 const unitPrice = BigDecimal.make(875n, 2)
 const bulkPrice = BigDecimal.make(875n, -1)
 BigDecimal.format(unitPrice) // "8.75"
@@ -27,7 +26,6 @@ A value is an integer coefficient and a scale, meaning coefficient × 10^-scale:
 ## Constructing decimals
 
 ```vibe
-// run: Console.log(parsed.isSome(), invalid.isNone(), BigDecimal.format(whole), fromNumber.isSome())
 const whole = BigDecimal.fromBigInt(42n)
 const parsed = BigDecimal.fromString("18.625")
 const invalid = BigDecimal.fromString("eighteen")
@@ -47,7 +45,6 @@ true true 42 true
 ## Safe and unsafe constructors
 
 ```vibe
-// run: Console.log(BigDecimal.format(parsePrice("18.625")), BigDecimal.format(fixedRate)); try { parsePrice("invalid") } catch (error) { Console.log(error._tag, error.input) }
 error InvalidPrice {
   input: string
 }
@@ -73,7 +70,6 @@ InvalidPrice invalid
 ## Performing arithmetic
 
 ```vibe
-// run: Console.log(JSON.stringify([BigDecimal.format(total), BigDecimal.format(total.sum(discount)), total.divide(quantity).map(BigDecimal.format).getOrNull(), total.remainder(quantity).map(BigDecimal.format).getOrNull(), BigDecimal.sign(BigDecimal.negate(total)), BigDecimal.format(BigDecimal.abs(BigDecimal.negate(total)))]))
 const price = BigDecimal.make(875n, 2)
 const quantity = BigDecimal.fromBigInt(4n)
 const subtotal = price.multiply(quantity)
@@ -97,7 +93,6 @@ BigDecimal.format(BigDecimal.abs(BigDecimal.negate(total))) // "32.5"
 ## Comparing values
 
 ```vibe
-// run: Console.log(JSON.stringify([amount.isLessThan(limit), amount.isLessThanOrEqualTo(amount), limit.isGreaterThan(amount), limit.isGreaterThanOrEqualTo(limit), BigDecimal.format(amount.min(limit)), BigDecimal.format(amount.max(limit)), amount.between({ minimum: BigDecimal.fromBigInt(0n), maximum: limit }), BigDecimal.isZero(amount), BigDecimal.isPositive(amount), BigDecimal.isNegative(amount), BigDecimal.isInteger(amount)]))
 const amount = BigDecimal.make(325n, 1)
 const limit = BigDecimal.fromBigInt(40n)
 amount.isLessThan(limit) // true
@@ -124,7 +119,6 @@ Compare decimals directly, not as numbers. `between` bounds are inclusive. The s
 ## Normalization and equality
 
 ```vibe
-// run: Console.log(padded.equals(BigDecimal.make(875n, 2)), BigDecimal.format(compact), BigDecimal.toExponential(compact))
 const padded = BigDecimal.make(87500n, 4)
 const compact = padded.normalize()
 padded.equals(BigDecimal.make(875n, 2)) // true

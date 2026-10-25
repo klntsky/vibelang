@@ -10,7 +10,6 @@ Use statements for dependent steps and the pipe operator, `|>`, for a series of 
 ## Compose reusable functions
 
 ```vibe
-// run: Console.log(priceLabel())
 function addMargin(n: number) { return n + 3 }
 function double(n: number) { return n * 2 }
 
@@ -26,7 +25,6 @@ Each body reads the previous stage's result through `%`. Here `%` stands for a v
 For program operators, start with the work to run:
 
 ```vibe
-// run: Console.log(preparedPrice())
 function preparedPrice() {
   return priceLabel() |> timeout(%, "1 second") |> withSpan(%, "price-label")
 }
@@ -40,7 +38,6 @@ A pipe passes its left side by name or uses it as a value, not both, and its bod
 ## Map or replace a success
 
 ```vibe
-// run: Console.log(adjustedPrice())
 function adjustedPrice() {
   const price = 24
   return price + 5
@@ -58,7 +55,6 @@ Using the returned value replaces `Effect.map` for local transformations. A late
 ## Sequence dependent computations
 
 ```vibe
-// run: Console.log(total())
 error InvalidRate
 
 function discounted(price: number, percent: number) {
@@ -80,7 +76,6 @@ One call after another expresses the dependency that `flatMap` or `andThen` hand
 ## Integrate Option and Result
 
 ```vibe
-// run: Console.log([positive(2), validated(0)].join(", "))
 function positive(value: number) {
   const optional = value > 0 ? Option.some(value) : Option.none()
   return Effect.fromOption(optional)
@@ -102,7 +97,6 @@ function validated(value: number) {
 ## Call a data type's functions as methods
 
 ```vibe
-// run: Console.log(JSON.stringify([nickname(-1), Stream.runCollect(warnings(Stream.make(24, 26, 30, 28, 40)))]))
 function nickname(id: number) {
   return Option.some(id)
     .filter((n) => n > 0)
@@ -124,7 +118,6 @@ A value of an Effect data type, such as `Option`, `Stream`, `Chunk`, `Duration`,
 A method exists only in a call. To pass the function itself, name its module:
 
 ```vibe
-// run: Console.log(JSON.stringify(totals([Option.some(2), Option.none()])))
 function totals(values: ReadonlyArray<Option.Option<number>>) {
   return values.map(Option.getOrElse(() => 0))
 }
@@ -134,7 +127,6 @@ function totals(values: ReadonlyArray<Option.Option<number>>) {
 ## Observe intermediate results
 
 ```vibe
-// run: Console.log(quotedTotal())
 function quotedTotal() {
   const amount = total()
   Console.log(`quoted amount=${amount}`)
@@ -149,7 +141,6 @@ The local variable stays available after logging, as with `Effect.tap`. An obser
 ## Collect multiple computations
 
 ```vibe
-// run: Console.log(summary())
 function summary() {
   const details = all({
     price: total(),
@@ -167,7 +158,6 @@ For a dynamic collection, use `Effect.forEach(values, (value) => work(value), { 
 ## Avoid discarded programs
 
 ```vibe
-// run: saveNotice()
 function saveNotice() {
   const notice = () => Console.log("saved")
   notice()

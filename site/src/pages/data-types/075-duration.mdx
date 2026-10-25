@@ -10,7 +10,6 @@ description: "Duration works in VibeLang exactly as in Effect. Use it for elapse
 ## Constructing finite and infinite durations
 
 ```vibe
-// run: Console.log(JSON.stringify([String(Duration.toNanosUnsafe(small)), String(Duration.toNanosUnsafe(micro)), polling.toMillis(), budget.toSeconds(), session.toMinutes(), shift.toHours(), retention.toDays(), fortnight.toWeeks(), String(unbounded), negative.toSeconds()]))
 const small = Duration.nanos(750n)
 const micro = Duration.micros(20n)
 const polling = Duration.millis(250)
@@ -30,7 +29,6 @@ const negative = Duration.seconds(-2)
 Constructors name the unit at the call site. `infinity` is an unbounded positive span and `negativeInfinity` its negative counterpart. A day is a fixed 24 hours, not a calendar day across daylight saving changes.
 
 ```vibe
-// run: Console.log(milliseconds.toMillis(), String(Duration.toNanosUnsafe(nanoseconds)), text.toSeconds(), checked.isSome(), Duration.fromInput("invalid" as Duration.Input).isNone())
 const milliseconds = Duration.fromInputUnsafe(240)
 const nanoseconds = Duration.fromInputUnsafe(240n)
 const text = Duration.fromInputUnsafe("3 seconds")
@@ -46,7 +44,6 @@ const checked = Duration.fromInput("3 seconds")
 ## Extracting values in chosen units
 
 ```vibe
-// run: Console.log(JSON.stringify([delay.toMillis(), delay.toSeconds(), delay.toMinutes(), delay.toHours(), Duration.weeks(1).toDays(), Duration.days(14).toWeeks(), String(Duration.millis(3).toNanos().getOrThrow()), Duration.infinity.toNanos().isNone()]))
 const delay = Duration.minutes(2)
 delay.toMillis() // 120000
 delay.toSeconds() // 120
@@ -67,7 +64,6 @@ Numeric conversions return a number in the requested unit. `toNanos` returns an 
 ## Comparing durations
 
 ```vibe
-// run: Console.log(elapsed.isLessThan(budget), elapsed.isLessThanOrEqualTo(elapsed), budget.isGreaterThan(elapsed), budget.isGreaterThanOrEqualTo(budget), Duration.seconds(1).equals(Duration.millis(1000)))
 const elapsed = Duration.seconds(9)
 const budget = Duration.seconds(12)
 elapsed.isLessThan(budget) // true
@@ -86,7 +82,6 @@ Comparison uses the elapsed span, whatever the constructor. Compare durations di
 ## Adding and scaling durations
 
 ```vibe
-// run: provide TestClock.layer() { TestClock.setTime(0); const waiting = fork(() => waitBeforeRetry()); TestClock.adjust("9 seconds"); join waiting; Console.log(doubled.toMillis(), Clock.currentTimeMillis()) }
 import { TestClock } from "effect/testing"
 
 const attempt = Duration.seconds(4)
@@ -109,7 +104,6 @@ function waitBeforeRetry() {
 ## Converting and formatting
 
 ```vibe
-// run: Console.log(Duration.millis(6250).format(), String(Duration.infinity), String(Duration.toNanosUnsafe(Duration.millis(2))))
 Duration.millis(6250).format() // "6s 250ms"
 String(Duration.infinity) // "Infinity"
 Duration.toNanosUnsafe(Duration.millis(2)) // 2000000n

@@ -10,7 +10,6 @@ VibeLang is a language for writing [Effect](https://effect.website) programs wit
 :::code-group
 
 ```vibe [VibeLang]
-// run: Console.log(Effect.provide(greet("ada"), Layer.succeed(Users, { find: (id) => ({ id, name: "Ada" }) })))
 interface User { id: string; name: string }
 
 error UserNotFound { id: string }

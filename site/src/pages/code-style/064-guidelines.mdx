@@ -10,7 +10,6 @@ Run a VibeLang application through its platform runtime, keep its lifetime in `m
 ## Running application entry points
 
 ```vibe
-// run: provide TestClock.layer() { const worker = fork(() => main()); TestClock.adjust("2 seconds"); worker.interrupt() }
 // main.vibe
 import { TestClock } from "effect/testing"
 
@@ -68,7 +67,6 @@ Choose the runtime that matches the host and install its platform package. The a
 ## Making argument forwarding explicit
 
 ```vibe
-// run: Console.log(JSON.stringify(parseDecimalTokens(["10", "10", "10"]))); printValues([10, 20])
 function parseDecimalTokens(tokens: ReadonlyArray<string>) {
   return tokens.map((text) => Number.parseInt(text, 10))
 }

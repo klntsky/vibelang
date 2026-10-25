@@ -10,7 +10,6 @@ description: "HashSet and MutableHashSet work in VibeLang exactly as in Effect. 
 ## Choosing immutable or mutable sets
 
 ```vibe
-// run: Console.log(snapshot.has("red"), revised.has("red")); Console.log(JSON.stringify(Array.from(buildLocal()).sort()))
 const snapshot = HashSet.make("green", "blue")
 const revised = snapshot.add("red")
 snapshot.has("red") // false
@@ -34,7 +33,6 @@ Immutable updates keep earlier versions, so snapshots suit sharing between fiber
 ## Equality and uniqueness
 
 ```vibe
-// run: Console.log(Equal.equals(a, b), HashSet.make(a, b).size(), new Set([a, b]).size)
 const a = { region: "west", active: true }
 const b = { region: "west", active: true }
 Equal.equals(a, b) // true
@@ -51,7 +49,6 @@ Plain objects compare structurally in Effect 4.0.5, so separately allocated reco
 ## Constructing and changing immutable sets
 
 ```vibe
-// run: Console.log(JSON.stringify([Array.from(initial).sort(Order.Number), Array.from(changed).sort(Order.Number), Array.from(together).sort(Order.Number), Array.from(common).sort(Order.Number), Array.from(exclusive).sort(Order.Number), Array.from(large).sort(Order.Number), Array.from(labels).sort(), sum, empty.size()]))
 const empty = HashSet.empty<number>()
 const initial = HashSet.fromIterable([2, 4, 4, 6])
 const changed = initial.add(8).remove(2)
@@ -73,7 +70,6 @@ const sum = initial.reduce(0, (total, n) => total + n)
 ## Querying membership and size
 
 ```vibe
-// run: Console.log(allowed.has("write"), allowed.size(), allowed.some((name) => name.startsWith("a")), allowed.every((name) => name.length > 0), HashSet.make("read").isSubset(allowed))
 const allowed = HashSet.make("read", "write", "audit")
 allowed.has("write") // true
 allowed.size() // 3
@@ -91,7 +87,6 @@ true 3 true true true
 ## Updating mutable sets
 
 ```vibe
-// run: const result = uniqueRegions(["west", "west", ""]); Console.log(result.count, result.containsUnknown, JSON.stringify(result.values.sort()))
 function uniqueRegions(regions: ReadonlyArray<string>) {
   const seen = MutableHashSet.fromIterable(regions)
   MutableHashSet.add(seen, "unknown")
@@ -113,7 +108,6 @@ function uniqueRegions(regions: ReadonlyArray<string>) {
 ## Balancing performance and persistence
 
 ```vibe
-// run: Console.log(JSON.stringify(snapshots([2, 2, 4]).map((set) => set.size())))
 function snapshots(values: ReadonlyArray<number>) {
   let current = HashSet.empty<number>()
   const history = [current]
@@ -134,7 +128,6 @@ Persistent sets share storage between versions; mutable sets skip that allocatio
 ## Converting to JavaScript collections
 
 ```vibe
-// run: Console.log(JSON.stringify([array.sort(), copy.sort(), Array.from(native).sort()])); report()
 const regions = HashSet.make("west", "east")
 const array = Array.from(regions)
 const copy = [...regions]

@@ -11,7 +11,6 @@ Retry transient domain failures when a new attempt has a useful chance of succee
 ## Retrying failed computations
 
 ```vibe
-// run: Console.log(loadWithRetries())
 error Busy { attempt: number }
 
 function loadWithRetries() {
@@ -39,7 +38,6 @@ A failure ends the current attempt before the retry begins. Defects and interrup
 ## Selecting retryable domain errors
 
 ```vibe
-// run: Console.log(Effect.flip(() => sendTransient()).transient)
 error RequestRejected {
   transient: boolean
 }
@@ -65,7 +63,6 @@ false
 ## Controlling timing and limits
 
 ```vibe
-// run: Console.log(Effect.flip(() => sendWithBackoff())._tag); Console.log(Effect.flip(() => sendThreeMoreTimes())._tag)
 function sendWithBackoff() {
   return retry(sendRequest(), {
     times: 4,
@@ -89,7 +86,6 @@ A schedule controls delay and can add its own stopping condition; with `times`, 
 ## Recovering after retries end
 
 ```vibe
-// run: Console.log(sendOrQueue())
 function sendOrQueue() {
   return Effect.retryOrElse(
     () => sendRequest(),

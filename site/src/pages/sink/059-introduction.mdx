@@ -10,7 +10,6 @@ A Sink describes how to consume a Stream into one result. Use one to make a cons
 ## Consumers and result types
 
 ```vibe
-// run: Console.log(JSON.stringify(Stream.make("one", "two", "three").run(header)))
 const header: Sink.Sink<Array<string>, string, string, never, never> = Sink.take<string>(2)
 // Output: ["one","two"]
 ```
@@ -22,7 +21,6 @@ Sink constructors and operators that return Sinks are trusted library calls: cal
 ## Running a consumer against a source
 
 ```vibe
-// run: Console.log(JSON.stringify(parseHeader()))
 function parseHeader() {
   const source = Stream.make("format-v2", "length-64", "payload")
   const header = Sink.take<string>(2)
@@ -38,7 +36,6 @@ function parseHeader() {
 ## Unconsumed elements
 
 ```vibe
-// run: Console.log(JSON.stringify(headerWithLeftovers()))
 function headerWithLeftovers() {
   const sink = (Sink.take<string>(1)).mapEnd(([header, rest]) => [
     { header, rest: rest ?? [] }

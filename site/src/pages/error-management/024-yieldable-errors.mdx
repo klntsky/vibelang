@@ -11,7 +11,6 @@ Effect's custom error values can be yielded inside TypeScript generators. VibeLa
 ## Defining an error without a tag
 
 ```vibe
-// run: Console.log(requireText("doc-1", "Hello")); Console.log(Effect.flip(() => requireText("doc-1", " ")).documentId)
 class EmptyDocument extends Data.Error<{
   readonly documentId: string
 }> {}
@@ -31,7 +30,6 @@ doc-1
 `Data.Error` creates an error class with typed fields and Effect's yieldable behavior. VibeLang needs no yield: an explicit throw puts `EmptyDocument` in `E`. Creating or returning an error object alone doesn't fail the computation.
 
 ```vibe
-// run: Console.log(emptyDocumentError("doc-1").documentId); Console.log(Effect.flip(() => rejectDocument("doc-1")).documentId)
 function emptyDocumentError(documentId: string) {
   return new EmptyDocument({ documentId })
 }
@@ -53,7 +51,6 @@ doc-1
 ## Creating tagged error classes
 
 ```vibe
-// run: Console.log(title("Draft")); Console.log(Effect.flip(() => title(""))._tag); const error = Effect.flip(() => title("x".repeat(81))); Console.log(error is TitleTooLong ? error.length : 0)
 error EmptyTitle
 error TitleTooLong {
   length: number
@@ -80,7 +77,6 @@ Give distinct error cases distinct tags. Tag-based matching compares strings, so
 ## Recovering failures by tag
 
 ```vibe
-// run: Console.log(displayTitle("")); Console.log(editableTitle("")); Console.log(displayTitle("Draft")); Console.log(editableTitle("Draft")); Console.log(Effect.flip(() => displayTitle("x".repeat(81)))._tag); Console.log(Effect.flip(() => editableTitle("x".repeat(81)))._tag)
 function displayTitle(text: string) {
   return Effect.catchTag(title(text), "EmptyTitle", () => "Untitled")
 }

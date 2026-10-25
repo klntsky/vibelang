@@ -10,7 +10,6 @@ Canonical codec derivation works as in Effect: it preserves a schema's decoded t
 ## Deriving JSON, string-tree, and isomorphism codecs
 
 ```vibe
-// run: Console.log(JSON.stringify(encodeAudit({ created: new Date("2026-01-02T00:00:00Z"), sequence: 12n, labels: ["fragile"] })))
 import { Console } from "effect"
 const AuditRecord = Schema.Struct({
   created: Schema.Date,
@@ -33,7 +32,6 @@ function encodeAudit(input: unknown) {
 `toCodecJson` recursively chooses JSON-compatible encodings for domain values, nested declarations with built-in representations included. It keeps explicit encodings: a date explicitly encoded as epoch milliseconds stays numeric. Its output is a JSON value, not serialized JSON text; for text, use `fromJsonString`.
 
 ```vibe
-// run: Console.log(JSON.stringify(encodeSearch()))
 const Search = Schema.Struct({
   offset: Schema.Int,
   archived: Schema.Boolean,
@@ -54,7 +52,6 @@ function encodeSearch() {
 `toCodecStringTree` preserves object and array structure and converts leaves to strings. A string tree can also contain `undefined`, so it is not limited to JSON values. It suits configuration, forms, and query parameters.
 
 ```vibe
-// run: const slot = slotRepresentation({ row: 2, column: 3 }); Console.log(slot instanceof Slot, slot.row, slot.column)
 class Slot extends Schema.Class<Slot>("Slot")({
   row: Schema.Int,
   column: Schema.Int
@@ -77,7 +74,6 @@ true 2 3
 ## Supplying canonical conversions for custom declarations
 
 ```vibe
-// run: Console.log(JSON.stringify(encodeDepot()))
 class DepotRef {
   constructor(readonly region: string, readonly number: number) {}
 }
@@ -110,7 +106,6 @@ Without a hook, JSON uses an unconstrained JSON fallback and parsing can still f
 ## Relating canonical representations to JSON Schema output
 
 ```vibe
-// run: Console.log(JSON.stringify(describeDepotJson()))
 function describeDepotJson() {
   return Schema.toJsonSchemaDocument(DepotRefSchema)
 }

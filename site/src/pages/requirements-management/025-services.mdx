@@ -11,7 +11,6 @@ A service is a named capability a program uses without passing an implementation
 ## Declaring typed service keys
 
 ```vibe
-// run: provide Sequence = { next: () => 17 }, Reporter = { write: (message) => Console.log(message) } { Reporter.write(`ticket-${Sequence.next()}`) }
 service Sequence {
   next(): number!!
 }
@@ -29,7 +28,6 @@ Services are nominal: the compiler derives the key from package, module path, an
 ## Declaring a service of any shape
 
 ```vibe
-// run: provide Prefix = "> ", Search = { find: (query) => `hit:${query}` } { Console.log(lookup("vibe")) }
 interface SearchApi {
   find(query: string): string!!
 }
@@ -48,7 +46,6 @@ function lookup(query: string) {
 ## Requesting and supplying implementations
 
 ```vibe
-// run: Console.log(fixedLabel()); provide Sequence = { next: () => 23 } { Console.log(nextLabel(), readImplementation()) }
 function nextLabel() {
   return `ticket-${Sequence.next()}`
 }
@@ -73,7 +70,6 @@ function readImplementation() {
 `Sequence.next()` looks up the service and runs the method; `Sequence()` returns the implementation, to capture it or read value members. Supply every requirement before running the program. A missing provide at an entry `main` produces warning EK3205 by default; the starter will set EK3205 to `"error"` to stop the build.
 
 ```vibe
-// run: provide Settings = { baseUrl: "https://example.test" } { Console.log(endpoint("tickets")) }
 service Settings {
   baseUrl: string
 }
@@ -104,7 +100,6 @@ Providers infer and check the implementation from the key argument, so most laye
 ## Combining multiple dependencies
 
 ```vibe
-// run: Console.log(JSON.stringify(testAnnouncement()))
 function announceTicket() {
   const label = nextLabel()
   Reporter.write(`Created ${label}`)
@@ -128,7 +123,6 @@ function testAnnouncement() {
 A union in `R` needs both capabilities. Layers supply the group together; `wire` composes their graph, rejecting duplicate providers and cycles. Inputs no argument provides stay requirements of the resulting layer, reported as missing where a runner or contract needs them satisfied. For a small local override, nest direct service provision.
 
 ```vibe
-// run: Console.log(testWithContext())
 const testContext = Context.add(
   Context.make(Sequence, { next: () => 17 }),
   Reporter,
@@ -146,7 +140,6 @@ A `Context` holds existing implementations; a `Layer` describes how to build the
 ## Requesting optional services
 
 ```vibe
-// run: Console.log(optionalAnnouncement("hello")); provide Reporter = { write: (message) => Console.log(message) } { Console.log(optionalAnnouncement("hello")) }
 function optionalAnnouncement(message: string) {
   const reporter = Effect.serviceOption(Reporter)
   if (reporter.isNone()) return false
@@ -164,7 +157,6 @@ function optionalAnnouncement(message: string) {
 ## Handling dependencies between services
 
 ```vibe
-// run: provide ReportSettings = { prefix: "audit" } { provide ReporterLive { Reporter.write("ready") } }
 service ReportSettings {
   prefix: string
 }

@@ -10,7 +10,6 @@ VibeLang uses Effect to make a program's expected failures and dependencies visi
 ## Describe work before running it
 
 ```vibe
-// run: Console.log(quote())
 error InvalidQuantity {
   quantity: number
 }
@@ -30,7 +29,6 @@ const quote = () => unitPrice(72, 6)
 ## Share an application foundation
 
 ```vibe
-// run: Console.log(preview())
 service Prices {
   total(sku: string): number!InvalidQuantity
 }
@@ -56,7 +54,6 @@ Services carry dependencies in the same contract as errors and successes. Layers
 ## Apply composable production tools
 
 ```vibe
-// run: Console.log(Effect.provide(resilientReceipt("pencil-box"), PricesTest))
 function resilientReceipt(sku: string) {
   return receipt(sku)
     |> retry(%, { times: 2 })

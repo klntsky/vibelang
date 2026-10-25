@@ -10,7 +10,6 @@ A fiber is a running computation with a result and a lifetime. Effect's lightwei
 ## Forking and awaiting
 
 ```vibe
-// run: Console.log(buildDashboard())
 function buildDashboard() {
   const chart = fork {
     sleep("30 millis")
@@ -31,7 +30,6 @@ function buildDashboard() {
 ## Awaiting completion as data
 
 ```vibe
-// run: Console.log(inspectChild().isFailure())
 function inspectChild() {
   const child = fork { throw "render failed" }
   const exit = Fiber.await(child)
@@ -49,7 +47,6 @@ function inspectChild() {
 ## Handling asynchronous interruption
 
 ```vibe
-// run: stopWorker()
 function stopWorker() {
   const worker = fork {
     try {
@@ -73,7 +70,6 @@ To continue during cleanup, fork the interruption (`fork worker.interrupt()`) an
 ## Protecting work from interruption
 
 ```vibe
-// run: saveReport(); pollStatus(false); const stopped = Effect.exit(() => pollStatus(true)); Console.log(stopped.isFailure() && Cause.hasInterrupts(stopped.cause))
 function saveReport() {
   uninterruptible {
     Console.log("saving; an interruption waits until the block ends")
@@ -105,7 +101,6 @@ Statements in these blocks stay code of the enclosing function, so `return` retu
 ## Combining results
 
 ```vibe
-// run: Console.log(combine())
 function title() {
   return "Inventory"
 }
@@ -132,7 +127,6 @@ For fibers you already hold, use `join`: `const [name, count] = join [titleFiber
 ## Racing events
 
 ```vibe
-// run: provide TestClock.layer() { const jobs = Queue.unbounded<string>(); const shutdown = Deferred.make<void>(); jobs.offer("build"); Console.log(nextEvent(jobs, shutdown)); shutdown.succeed(undefined); Console.log(nextEvent(jobs, shutdown)); const idle = fork nextEvent(jobs, Deferred.make<void>()); TestClock.adjust("30 seconds"); Console.log(join idle) }
 import { TestClock } from "effect/testing"
 
 function nextEvent(jobs: Queue.Queue<string>, shutdown: Deferred.Deferred<void>) {
@@ -159,7 +153,6 @@ function nextEvent(jobs: Queue.Queue<string>, shutdown: Deferred.Deferred<void>)
 ## Running a loop body concurrently
 
 ```vibe
-// run: printAll(["a", "", "b"])
 function fetchPage(id: string) {
   sleep("5 millis")
   return `page ${id}`
@@ -180,7 +173,6 @@ function printAll(ids: ReadonlyArray<string>) {
 ## Supervising child lifetimes
 
 ```vibe
-// run: request()
 function request() {
   {
     const progress = fork {
@@ -206,7 +198,6 @@ Forked fibers inherit the current services and tracing context. Control-operatio
 ## Selecting scoped or detached lifetimes
 
 ```vibe
-// run: const scope = Scope.make(); const background = inCallerScope(scope); Scope.close(scope, Exit.succeed(undefined)); const stopped = Fiber.await(background); Console.log(stopped.isFailure() && Cause.hasInterrupts(stopped.cause)); detachedExample(); Console.log("detached finished")
 function inCallerScope(scope: Scope) {
   const background = forkIn(scope, sleep("1 minute"))
   sleep("20 millis")
@@ -227,7 +218,6 @@ function detachedExample() {
 ## Understanding execution scheduling
 
 ```vibe
-// run: waitForReady()
 function waitForReady() {
   const ready = Deferred.make<void>()
   const worker = fork {

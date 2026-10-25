@@ -53,7 +53,6 @@ Create `src/users.vibe`. It declares a `Users` service and its layer; `greet` re
 
 ```vibe
 // src/users.vibe
-// run: provide UsersLive { Console.log(greet("42")); Console.log(greet("404")); try { Users.find("404") } catch (error) { Console.log(error._tag, error.id) } }
 export schema User { id: string; name: string }
 
 export error UserNotFound { id: string }
@@ -98,7 +97,6 @@ Create `src/runtime.ts`. One `ManagedRuntime` builds `UsersLive` once and runs e
 ```ts
 // TypeScript (.ts)
 // src/runtime.ts
-// run: return import("./users.vibe").then(({ greet }) => runtime.runPromise(greet("42"))).then(console.log).finally(() => runtime.dispose())
 import { ManagedRuntime } from "effect"
 import { UsersLive } from "./users.vibe"
 

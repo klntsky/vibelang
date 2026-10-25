@@ -10,7 +10,6 @@ description: "FileSystem exposes Effect's portable file operations. Request the 
 ## Requesting the file-system service
 
 ```vibe
-// run: provide FileSystem.layerNoop({ readFileString: () => '{"theme":"dark"}' }) { Console.log(readSettings()) }
 function readSettings() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./settings.json")
@@ -24,7 +23,6 @@ function readSettings() {
 ## Performing file operations
 
 ```vibe
-// run: provide NodeFileSystem.layer { Console.log(JSON.stringify(saveSummary("ready"))) }
 import { NodeFileSystem } from "@effect/platform-node"
 function saveSummary(text: string) {
   const fs = Effect.service(FileSystem.FileSystem)
@@ -55,7 +53,6 @@ Calls run in order: the write completes before the read starts. Expected I/O fai
 | `stream`, `sink`, `watch` | Stream bytes, write through a sink, or observe changes |
 
 ```vibe
-// run: provide NodeFileSystem.layer { const fs = Effect.service(FileSystem.FileSystem); using path = fs.makeTempFileScoped(); fs.writeFileString(path, "hello"); Console.log(String(fileSize(path))) }
 function fileSize(path: string) {
   const fs = Effect.service(FileSystem.FileSystem)
   using file = fs.open(path)
@@ -87,7 +84,6 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeFileSystem.layer))
 ## Replacing behavior in tests
 
 ```vibe
-// run: provide FilesTest { Console.log(readFixture()) }
 function readFixture() {
   const fs = Effect.service(FileSystem.FileSystem)
   if (!fs.exists("/fixtures/title.txt")) return "Untitled"

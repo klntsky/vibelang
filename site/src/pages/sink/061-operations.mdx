@@ -10,7 +10,6 @@ Transform a Sink when its consumption rule fits but its input or result type doe
 ## Adapting consumer input
 
 ```vibe
-// run: Console.log(countItems())
 const quantities = Sink.sum.mapInput((entry: { quantity: number }) => entry.quantity)
 
 function countItems() {
@@ -23,7 +22,6 @@ function countItems() {
 `mapInput` converts each incoming value before the original sink sees it. Its callback is synchronous and cannot do Effect work; use `mapInputEffect` for validation, service calls, or other work with failures and requirements.
 
 ```vibe
-// run: (() => { Console.log(Stream.make("7", "11").run(parsedTotal)); try { Stream.make("bad").run(parsedTotal) } catch (error) { Console.log(error._tag, error.raw) } })()
 error InvalidQuantity {
   raw: string
 }
@@ -42,7 +40,6 @@ The new sink accepts strings and can fail with `InvalidQuantity`. A failed input
 ## Mapping consumer output
 
 ```vibe
-// run: Console.log(JSON.stringify(totalReport()))
 const report = Sink.sum.map((total) => ({ total, unit: "items" }))
 
 function totalReport() {
@@ -57,7 +54,6 @@ function totalReport() {
 ## Composing input and output transformations
 
 ```vibe
-// run: Console.log(byteReport())
 const report = Sink.sum
   .mapInput((entry: { bytes: number }) => entry.bytes)
   .map((bytes) => `${bytes} bytes`)
@@ -74,7 +70,6 @@ The input stage adapts each element, the original sink accumulates, and the outp
 ## Filtering before consumption
 
 ```vibe
-// run: Console.log(JSON.stringify(positiveBatches()))
 function positiveBatches() {
   const positive = Stream.make(-3, 4, 0, 8, -1, 12, 16).filter((n) => n > 0)
   const batches = positive.transduce(Sink.take<number>(3))

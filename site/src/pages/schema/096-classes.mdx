@@ -10,7 +10,6 @@ Schema classes work as in Effect. A class validates its fields, acts as a codec,
 ## Declaring validated classes
 
 ```vibe
-// run: const value = readPackage({ reference: "pkg-94", pieces: "2" }); Console.log(value instanceof Package, value.pieces)
 import { Console } from "effect"
 class Package extends Schema.Class<Package>("Package")({
   reference: Schema.NonEmptyString,
@@ -32,7 +31,6 @@ Pass the class itself as the `Self` type, a stable identifier, and its fields. T
 ## Constructing and checking instances
 
 ```vibe
-// run: Console.log(constructPackage("pkg-94", 2).pieces, constructWithNew("pkg-94").pieces); try { constructPackage("", 2) } catch (issue) { Console.log(issue._tag) }
 function constructPackage(reference: string, pieces: number) {
   return Package.makeEffect({ reference, pieces })
 }
@@ -54,7 +52,6 @@ For a cross-field invariant, pass a checked `Schema.Struct` instead of a fields 
 ## Bypassing checks deliberately
 
 ```vibe
-// run: Console.log(fromVerifiedFields("", 2).reference === "")
 function fromVerifiedFields(reference: string, pieces: number) {
   return new Package({ reference, pieces }, { disableChecks: true })
 }
@@ -69,7 +66,6 @@ true
 ## Defining structural equality
 
 ```vibe
-// run: Console.log(sameContainer())
 class Container extends Schema.Class<Container>("Container")({
   labels: Schema.Array(Schema.String)
 }) {}
@@ -90,7 +86,6 @@ Instances support Effect's structural equality, nested arrays and objects includ
 ## Adding getters and methods
 
 ```vibe
-// run: Console.log(announcePackage())
 class LabeledPackage extends Schema.Class<LabeledPackage>("LabeledPackage")({
   reference: Schema.NonEmptyString
 }) {
@@ -124,7 +119,6 @@ Getters derive synchronous values from fields; keep them pure so formatting, che
 ## Using classes as codecs
 
 ```vibe
-// run: Console.log(JSON.stringify(packageWireRoundTrip([{ reference: "pkg-94", pieces: "2" }])))
 const Packages = Schema.Array(Package)
 
 function packageWireRoundTrip(input: unknown) {
@@ -142,7 +136,6 @@ A class schema is a transformation: decoding a plain object creates an instance,
 ## Annotating classes
 
 ```vibe
-// run: Console.log(Dock.identifier); Console.log(Schema.resolveAnnotations(Dock)?.title); Console.log(Dock.makeEffect({ number: 2 }).number)
 class Dock extends Schema.Class<Dock>("Dock")(
   { number: Schema.Int },
   { title: "Loading dock", description: "A numbered dispatch location" }
@@ -160,7 +153,6 @@ Pass annotations after the fields or struct. The class identifier is also its de
 ## Modeling recursive classes
 
 ```vibe
-// run: const value = readCrate({ count: "2", children: [{ count: "1", children: [] }] }); Console.log(value instanceof Crate, value.children[0] instanceof Crate); Console.log(JSON.stringify(Schema.encodeEffect(Crate)(value)))
 interface CrateWire {
   count: string
   children: ReadonlyArray<CrateWire>
@@ -188,7 +180,6 @@ Suspend the recursive edge and annotate the callback's return type to break the 
 ## Creating tagged variants and extending classes
 
 ```vibe
-// run: Console.log(Packed.makeEffect({ reference: "pkg-94" })._tag); Console.log(InsuredPackage.makeEffect({ reference: "pkg-94", pieces: 2, insuredValue: 100 }).summary()); try { reportMissing("pkg-94") } catch (error) { Console.log(error._tag) }
 class Packed extends Schema.TaggedClass<Packed>()("Packed", {
   reference: Schema.String
 }) {}

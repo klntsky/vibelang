@@ -10,7 +10,6 @@ A producer yields values one at a time and can run Effects between yields. Use `
 ## Yield values on demand
 
 ```vibe
-// run: Console.log(firstAlert())
 function* readings() {
   try {
     for (const celsius of [18, 21, 25, 19, 28, 30]) {
@@ -41,7 +40,6 @@ In `.vibe`, `function*` declares a producer; don't use it for `Effect.gen` or ot
 ## Call services between yields
 
 ```vibe
-// run: provide NodeServices.layer { const fs = Effect.service(FileSystem); using dir = fs.makeTempDirectoryScoped(); fs.writeFileString(`${dir}/a.txt`, "short"); fs.writeFileString(`${dir}/b.txt`, "x".repeat(1001)); Console.log(firstLargeFile(dir) === `${dir}/b.txt`) }
 import { FileSystem } from "effect/FileSystem"
 import { Path } from "effect/Path"
 import { NodeServices } from "@effect/platform-node"
@@ -73,7 +71,6 @@ Resources a producer acquires with `using` stay open between yields and close wh
 ## Use a producer as a Stream
 
 ```vibe
-// run: Console.log(JSON.stringify(alerts()))
 function alerts() {
   const selected = readings().filter((value) => value >= 25).map((value) => `${value} C`).take(2)
   const result: string[] = []
@@ -92,7 +89,6 @@ When Stream operators consume a producer, the runtime starts it on its own fiber
 ## Iterate any Stream
 
 ```vibe
-// run: Console.log(sumStream())
 function sumStream() {
   let total = 0
   for (const value of Stream.fromIterable([1, 2, 3])) {
@@ -110,7 +106,6 @@ Use `for (const value of source)` for producers. This preview doesn't support `f
 ## JavaScript generators
 
 ```vibe
-// run: Console.log([...countdown(3)].join(","))
 function* countdown(from: number): Generator<number> {
   for (let n = from; n > 0; n--) yield n
 }

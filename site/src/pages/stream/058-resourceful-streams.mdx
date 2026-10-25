@@ -10,7 +10,6 @@ A stream can hold a connection, file, or subscription open while its elements ar
 ## Acquiring for the stream lifetime
 
 ```vibe
-// run: Console.log(JSON.stringify(readLines()))
 function openReader() {
   Console.log("reader opened")
   return { lines: ["header", "entry-a", "entry-b"] }
@@ -34,7 +33,6 @@ function readLines() {
 ## Release after stopping or interruption
 
 ```vibe
-// run: Console.log(JSON.stringify(readHeader())); try { readWithDeadline() } catch (error) { Console.log(error._tag) }
 function readHeader() {
   return lines.take(1).runCollect()
 }
@@ -61,7 +59,6 @@ The timeout interrupts consumption and waits for release before reporting failur
 ## Registering finalizers
 
 ```vibe
-// run: Console.log(JSON.stringify(readAudited()))
 const audited = lines.ensuring {
   Console.log("reader resources released")
   Console.log("consumption finished")

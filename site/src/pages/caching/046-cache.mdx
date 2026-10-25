@@ -10,7 +10,6 @@ A `Cache` stores lookup outcomes by key and shares in-progress lookups across ca
 ## Building a lookup cache
 
 ```vibe
-// run: const prices = Effect.provide(() => makePrices(), Layer.succeed(Products, { price: (sku) => 42 })); Console.log(Cache.get(prices, "ink"))
 error MissingProduct {
   sku: string
 }
@@ -35,7 +34,6 @@ The default cache captures lookup services when created. `Cache.get(cache, sku)`
 ## Sharing concurrent requests
 
 ```vibe
-// run: Console.log(JSON.stringify(concurrentLookup()))
 function concurrentLookup() {
   let calls = 0
   const cache = Cache.make({
@@ -62,7 +60,6 @@ Requests for the same missing key wait on one computation without blocking the J
 ## Setting capacity and expiration
 
 ```vibe
-// run: const names = makePermanentNames(); Console.log(Cache.get(names, "ink")); Console.log(Cache.get(names, "blue"))
 function makePermanentNames() {
   return Cache.make({
     capacity: 50,
@@ -79,7 +76,6 @@ Capacity bounds entries, not bytes; eviction keeps recently used entries over ol
 ## Inspecting cache state
 
 ```vibe
-// run: Console.log(JSON.stringify(inspect()))
 function inspect() {
   const cache = Cache.make({ capacity: 5, lookup: (key: string) => key.length })
   Cache.get(cache, "paper")
@@ -98,7 +94,6 @@ function inspect() {
 ## Invalidating and refreshing entries
 
 ```vibe
-// run: Console.log(JSON.stringify(refreshExample()))
 function refreshExample() {
   let version = 0
   const cache = Cache.make({

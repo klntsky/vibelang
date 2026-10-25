@@ -10,7 +10,6 @@ description: "Config loads typed settings with Effect's validation and error typ
 ## Declare typed configuration
 
 ```vibe
-// run: provide ConfigProvider.layer(ConfigProvider.fromUnknown({ HOST: "localhost", PORT: 9091 })) { Console.log(JSON.stringify(serverSettings())) }
 const Host = Config.NonEmptyString("HOST")
 const Port = Config.Port("PORT")
 
@@ -42,7 +41,6 @@ Prefer `Finite` to `Number` for ordinary numeric settings: `Number` also accepts
 ## Parse with schemas
 
 ```vibe
-// run: provide ConfigProvider.layer(ConfigProvider.fromUnknown({ TEAM_NAME: "search" })) { Console.log(teamName()) }; provide ConfigProvider.layer(ConfigProvider.fromUnknown({ TEAM_NAME: "ab" })) { try { teamName() } catch (error) { Console.log(error._tag) } }
 function teamName() {
   return Config.schema(
     Schema.String.check(Schema.isMinLength(3)),
@@ -57,7 +55,6 @@ function teamName() {
 `Config.schema` builds a descriptor that decodes the provider's representation with the schema; calling it returns the decoded value. Put constraints in the schema so invalid input reports a configuration failure. A structured schema can describe a whole object, its field paths mapping to environment keys or object properties.
 
 ```vibe
-// run: Console.log(JSON.stringify(server.parse(ConfigProvider.fromUnknown({ server: { host: "localhost", port: 9091 } }))))
 // descriptors.vibe
 export const server = Config.schema(Schema.Struct({
   host: Schema.String,
@@ -67,7 +64,6 @@ export const server = Config.schema(Schema.Struct({
 ```
 
 ```vibe
-// run: Console.log(JSON.stringify(localServer()))
 import { server } from "./descriptors.vibe"
 
 function localServer() {
@@ -83,7 +79,6 @@ Use `descriptor.parse(provider)` for an explicit source, especially in tests; it
 ## Read arrays and records
 
 ```vibe
-// run: provide ConfigProvider.layer(ConfigProvider.fromUnknown({ REGIONS: "north,south", LABELS: "team=search,tier=internal" })) { Console.log(JSON.stringify(routingSettings())) }
 function routingSettings() {
   const regions = Config.Array(Schema.String, "REGIONS")()
   const labels = Config.Record(Schema.String, Schema.String, "LABELS")()
@@ -97,7 +92,6 @@ Arrays accept structural values or a separated string such as `north,south`; rec
 ## Nest and combine configuration
 
 ```vibe
-// run: Console.log(JSON.stringify(database.parse(ConfigProvider.fromEnv({ env: { DATABASE_HOST: "db.internal", DATABASE_PORT: "5433" } }))))
 // database-config.vibe
 export const database = Config.nested(Config.all({
   host: Config.NonEmptyString("HOST"),
@@ -107,7 +101,6 @@ export const database = Config.nested(Config.all({
 ```
 
 ```vibe
-// run: Console.log(JSON.stringify(testDatabaseSettings()))
 import { database } from "./database-config.vibe"
 
 function testDatabaseSettings() {
@@ -123,7 +116,6 @@ function testDatabaseSettings() {
 ## Defaults and fallbacks
 
 ```vibe
-// run: const provider = ConfigProvider.fromUnknown({ BACKUP_HOST: "standby.internal" }); Console.log(port.parse(provider), Option.isNone(apiKey.parse(provider)), host.parse(provider)); try { port.parse(ConfigProvider.fromUnknown({ PORT: "invalid" })) } catch (error) { Console.log(error._tag) }
 // optional-config.vibe
 export const port = Config.withDefault(Config.Port("PORT"), 9091)
 export const apiKey = Config.option(Config.String("API_KEY"))
@@ -136,7 +128,6 @@ export const host = Config.orElse(
 ```
 
 ```vibe
-// run: const result = defaultsExample(); Console.log(result.port, Option.isNone(result.apiKey), result.host)
 import { port, apiKey, host } from "./optional-config.vibe"
 
 function defaultsExample() {
@@ -157,7 +148,6 @@ A default on a `Config.all` group replaces the whole group when any child is abs
 ## Transform parsed values
 
 ```vibe
-// run: Console.log(origin.parse(ConfigProvider.fromUnknown({ HOST: "example.test", PORT: 9091 })))
 // origin-config.vibe
 export const origin = Config.map(Config.all({
   host: Config.NonEmptyString("HOST"),
@@ -167,7 +157,6 @@ export const origin = Config.map(Config.all({
 ```
 
 ```vibe
-// run: provide ConfigProvider.layer(ConfigProvider.fromUnknown({ HOST: "example.test", PORT: 9091 })) { reportOrigin() }
 import { origin } from "./origin-config.vibe"
 
 function reportOrigin() {
@@ -183,7 +172,6 @@ Use `Config.map` for a transformation that can't fail, a schema for validation, 
 ## Protect secrets
 
 ```vibe
-// run: provide ConfigProvider.layer(ConfigProvider.fromUnknown({ ACCESS_TOKEN: "documentation-placeholder" })) { Console.log(String(secretSetting())) }
 function secretSetting() {
   const token = Config.Redacted("ACCESS_TOKEN")()
   Console.log(String(token))
@@ -198,7 +186,6 @@ function secretSetting() {
 ## Load providers
 
 ```vibe
-// run: Console.log(testPort(), Config.Port("PORT").parse(EnvProvider), Config.Port("PORT").parse(DotEnvProvider)); provide FileSystem.layerNoop({ readFileString: (path) => { Console.log(path); return "PORT=9095" } }) { Console.log(Config.Port("PORT").parse(fileProvider())) }
 const TestProvider = ConfigProvider.fromUnknown({ PORT: 9091 })
 const EnvProvider = ConfigProvider.fromEnv({ env: { PORT: "9092" } })
 const DotEnvProvider = ConfigProvider.fromDotEnvContents("PORT=9093")
@@ -222,7 +209,6 @@ function fileProvider() {
 ## Remap provider paths
 
 ```vibe
-// run: Console.log(deploymentPort())
 const DeploymentProvider = ConfigProvider.constantCase(
   ConfigProvider.fromEnv({ env: { SERVICE_PORT: "9094" } })
 )
@@ -238,7 +224,6 @@ function deploymentPort() {
 ## Compose and install providers
 
 ```vibe
-// run: Console.log(JSON.stringify(configuredServer()))
 const Combined = ConfigProvider.orElse(
   ConfigProvider.fromEnv({ env: { HOST: "edge.internal" } }),
   ConfigProvider.fromUnknown({ HOST: "localhost", PORT: 9091 })
