@@ -217,11 +217,41 @@ describe("vibelang-unplugin", { concurrency }, () => {
       // return nothing.
       it("bun: an entry point from Bun.build's files keeps resolving and embedding files", { skip }, async (t) => {
         const root = await fixture(t, "bun-files")
-        const result = await spawned("bun", ["--no-warnings", build, "bun", "--files"], root)
+        // Bun snapshots directories while resolving the entry and its plugins.
+        // Every disk asset must exist before that resolver starts.
+        const ready = join(root, "asset-ready.mjs")
+        await writeFile(ready, `import { readFileSync } from "node:fs"
+if (readFileSync(${JSON.stringify(join(root, "helper.bin"))}, "utf8") !== "helper") throw new Error("file asset was not prepared before Bun started")
+`)
+        const result = await spawned("bun", ["--preload", ready, "--no-warnings", build, "bun", "--files"], root)
         assert.equal(result.code, 0, `${result.stdout}\n${result.stderr}`)
         const run = await spawned("bun", ["out/virtual-main.js"], root)
         assert.equal(run.code, 0, run.stderr)
         assert.equal(run.stdout, expected)
+      })
+
+      it("bun: a failed file-asset build records the asset state before and after bundling", { skip }, async (t) => {
+        const root = await fixture(t, "bun-files-failure")
+        const asset = join(root, "helper.bin")
+        const preload = join(root, "remove-asset.mjs")
+        // Remove the asset after the harness records its inputs, at the
+        // Bun.build boundary, to distinguish a missing file from a stale cache.
+        await writeFile(preload, `import { unlinkSync } from "node:fs"
+const build = Bun.build.bind(Bun)
+Bun.build = (options) => { unlinkSync(${JSON.stringify(asset)}); return build(options) }
+`)
+        const result = await spawned("bun", ["--preload", preload, "--no-warnings", build, "bun", "--files"], root)
+        assert.equal(result.code, 1, result.stdout + result.stderr)
+        const event = JSON.parse(result.stdout.trim().split("\n").at(-1))
+        assert.equal(event.ok, false)
+        assert.ok(event.context, "failed Bun builds must retain file-asset diagnostics: " + result.stdout)
+        assert.equal(event.context.stage, "build")
+        assert.equal(event.context.asset, asset)
+        assert.equal(typeof event.context.bun, "string")
+        assert.equal(event.context.beforeBuild.asset.exists, true)
+        assert.equal(event.context.beforeBuild.asset.size, 6)
+        assert.deepEqual(event.context.afterBuild.asset, { exists: false, error: "ENOENT" })
+        assert.equal(event.context.afterBuild.directory.exists, true)
       })
     }
 

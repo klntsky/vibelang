@@ -10,7 +10,7 @@
 //
 // The plugin finds the compiler through VIBELANG_BINARY. A build without
 // --watch exits 1 when it fails.
-import { writeFileSync } from "node:fs"
+import { statSync } from "node:fs"
 import module from "node:module"
 import { join, resolve } from "node:path"
 import { createUnplugin } from "unplugin"
@@ -25,8 +25,8 @@ const vibelang = mode === "--deferred"
   ? (options) => deferred(bundler, options)
   : (await import(`vibelang-unplugin/${bundler}`)).default
 
-function report(ok, message) {
-  console.log(JSON.stringify(ok ? { ok } : { ok, message }))
+function report(ok, message, context) {
+  console.log(JSON.stringify(ok ? { ok } : { ok, message, ...(context ? { context } : {}) }))
   if (!watch) process.exitCode = ok ? 0 : 1
 }
 
@@ -105,24 +105,42 @@ if (bundler === "webpack" || bundler === "rspack") {
   if (watch) await (await esbuild.context(options)).watch()
   else await esbuild.build(options).catch(() => {})
 } else if (bundler === "bun") {
+  const assetPath = join(root, "helper.bin")
+  const snapshot = (path) => {
+    try {
+      const stat = statSync(path)
+      return { exists: true, size: stat.size, mtimeMs: stat.mtimeMs, ctimeMs: stat.ctimeMs }
+    } catch (error) {
+      return { exists: false, error: error.code }
+    }
+  }
+  let stage = "prepare", beforeBuild
+  const failureContext = () => {
+    let resolved
+    try { resolved = Bun.resolveSync(assetPath, root) } catch (error) { resolved = error.message }
+    return { stage, bun: Bun.version, root, asset: assetPath, beforeBuild, afterBuild: { asset: snapshot(assetPath), directory: snapshot(root) }, resolved }
+  }
   try {
     // --files: a virtual entry that embeds a file asset and imports the fixture, and a virtual .js entry beside it,
     // as an app that compiles to one executable embeds a helper and a worker.
     const asset = JSON.stringify(join(root, "helper.bin"))
-    if (mode === "--files") writeFileSync(join(root, "helper.bin"), "helper")
+    // fixture() copies helper.bin before launching Bun. Creating it here is
+    // too late: Bun can reuse the directory listing from module resolution.
     const files = mode === "--files"
       ? {
         "virtual-main.ts": `import asset from ${asset} with { type: "file" }\nif (typeof asset !== "string") throw new Error("no asset")\nawait import(${JSON.stringify(entry)})`,
         "virtual-worker.js": "export const worker = 1"
       }
       : undefined
+    beforeBuild = { asset: snapshot(assetPath), directory: snapshot(root) }
+    stage = "build"
     const result = await Bun.build({
       entrypoints: files ? Object.keys(files) : [entry], outdir: outDir, target: "bun", format: "esm",
       sourcemap: "external", naming: files ? "[name].js" : "main.js", plugins: [vibelang()], ...(files ? { files } : {})
     })
-    report(result.success, result.logs.map(String).join("\n"))
+    report(result.success, result.logs.map(String).join("\n"), result.success ? undefined : failureContext())
   } catch (error) {
-    report(false, [error.message, ...(error.errors || []).map(String)].join("\n"))
+    report(false, [error.message, ...(error.errors || []).map(String)].join("\n"), failureContext())
   }
 } else if (bundler === "vite") {
   const { build } = await import("vite")
