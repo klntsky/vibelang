@@ -86,6 +86,8 @@ In a return annotation on a function with a body, `infer` followed by any name i
 
 Write all three slots. `Effect<number>` here reports EK2003: "Did you mean never or inferred?" It suggests `number!!`, to check for no failures or requirements, or removing the annotation to infer them. A plain return annotation such as `: number` is EK2003 on a function whose body runs an Effect or throws past its own `catch`; a function that compiles to plain JavaScript keeps it.
 
+A function that compiles to plain JavaScript also recurses as JavaScript does. `function sumTo(n: number): number!! { return n === 0 ? 0 : n + sumTo(n - 1) }` calls itself directly, so a deep enough recursion overflows the stack, after roughly 10,000 calls on Node depending on the platform, and fails with a `RangeError` defect. A function whose body runs an Effect recurses through Effect's runtime instead, which keeps the JavaScript stack flat: the same function with a `sleep("0 millis")` in its body runs 200,000 calls deep.
+
 This applies only to return annotations of `.vibe` functions with bodies. In parameter types, aliases, abstract members, and `.ts` files, `Effect<number>` keeps TypeScript's defaults, `Effect<number, never, never>`, and channel inference is unsupported. A callback parameter without an Effect contract, such as `(n: number) => string`, still accepts any contract.
 
 ## Description and execution

@@ -53,7 +53,7 @@ function randomBytes(size: number) {
 // Output: 16
 ```
 
-Platform work needs a boundary hatch. `try((size) => crypto.getRandomValues(new Uint8Array(size)), size)` turns an exception into the expected failure `UnknownError`, and a function in second place, as above, gives the failure a domain name.
+Platform work needs a boundary hatch. `try((size) => crypto.getRandomValues(new Uint8Array(size)), size)` turns an exception into the expected failure `Cause.UnknownError`, and a function in second place, as above, gives the failure a domain name.
 
 The hatch's first argument is plain TypeScript, evaluated when the Effect runs: calls in it are not Effects, and platform APIs are allowed. It is self-contained: it may use its own parameters and locals, globals, imports, and the file's error declarations, but no other binding of the `.vibe` file, such as the parameter `size`. Pass such a value as an input, an argument after the function and the error mapper; it fills the function's first parameter. EK4405 reports a binding read from outside; its quick fix passes the binding as an input.
 
@@ -93,7 +93,7 @@ function digest(text: string) {
 // Output: 32
 ```
 
-`try` with a function that returns a promise, `async` or not, waits for it and maps a rejection into `E`; without a second argument the failure is `UnknownError`. The function receives an `AbortSignal` in the parameter after its inputs, when it declares one that takes it. Pass it to an API that supports cancellation; otherwise interruption stops the wait but not necessarily the foreign operation.
+`try` with a function that returns a promise, `async` or not, waits for it and maps a rejection into `E`; without a second argument the failure is `Cause.UnknownError`. The function receives an `AbortSignal` in the parameter after its inputs, when it declares one that takes it. Pass it to an API that supports cancellation; otherwise interruption stops the wait but not necessarily the foreign operation.
 
 `sync` with such a function treats rejection as a defect; it belongs in an adapter whose success-only promise contract is deliberate. `async` appears only inside a hatch: a VibeLang function waits by calling, `join` waits for a fiber, and `await` appears only in the await operations. For HTTP, use Effect's HTTP modules, not a wrapped browser `fetch` call.
 
