@@ -341,12 +341,15 @@ func (tx *lowering) dispatch(completion *ast.Node, j jump) *ast.Node {
 	}
 	var then *ast.Node
 	switch {
-	case !tx.frame.lands(j):
+	case !tx.frame.lands(j) && tx.frame.region != nil:
 		tx.frame.region.add(j)
 		then = f.NewReturnStatement(completion)
 	case j.kind == ast.KindReturnStatement:
 		then = f.NewReturnStatement(member("value"))
 	default:
+		// A break or continue that lands here, or that has no target in the
+		// function at all, an error the checker reported (TS1105, TS1107,
+		// TS1116), which is emitted as written, as visitJump does.
 		var label *ast.Node
 		if j.label != "" {
 			label = f.NewIdentifier(j.label)

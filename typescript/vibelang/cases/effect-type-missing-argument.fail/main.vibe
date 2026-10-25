@@ -1,0 +1,21 @@
+// expect: TS1110 TS1109 TS1109
+// An expression or type the parser left out is a syntax error, and the file
+// still checks. The quick fixes that rewrite Effect's TypeScript forms read
+// their operands' text: EK4833's for Effect.Effect<A, E, R>, EK4832's for a
+// Schema.Struct constant and EK4835's for Effect.catchTag. They read a missing
+// operand's text past its end and crashed; now EK4833 offers no rewrite for a
+// missing type argument and a missing operand's text is empty.
+import { Effect, Schema } from "effect"
+
+error Plain { code: number }
+
+export function count(n: number): Effect.Effect<number, , never> {
+  return n
+}
+
+export const Shape = Schema.Struct({ id: Schema.String, note: })
+
+export function recover(fail: boolean) {
+  return (() => { if (fail) throw new Plain({ code: 1 }); return "ok" })
+    |> Effect.catchTag(%, "Plain", (caught) => )
+}

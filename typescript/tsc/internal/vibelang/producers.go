@@ -329,12 +329,16 @@ func (tx *lowering) visitStreamLoop(node *ast.Node) *ast.Node {
 	if parent := node.Parent; parent != nil && parent.Kind == ast.KindLabeledStatement {
 		label = parent.AsLabeledStatement().Label.Text()
 	}
+	initializer := loop.Initializer
+	if ast.IsVariableDeclarationList(initializer) && len(initializer.AsVariableDeclarationList().Declarations.Nodes) == 0 {
+		// for (const of s): a syntax error the parser reported, emitted as written.
+		return tx.Visitor().VisitEachChild(node)
+	}
 	iterable := tx.Visitor().VisitNode(loop.Expression)
 
 	r := &region{}
 	var binding *ast.Node  // the declaration the closure takes the element as
 	var prologue *ast.Node // the assignment of the element to an existing target
-	initializer := loop.Initializer
 	if ast.IsVariableDeclarationList(initializer) && initializer.Flags&ast.NodeFlagsBlockScoped != 0 {
 		binding = initializer.AsVariableDeclarationList().Declarations.Nodes[0]
 	} else {

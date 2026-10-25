@@ -409,7 +409,7 @@ func shortText(text, otherwise string) string {
 
 // expressionText returns node's source text without leading trivia.
 func expressionText(file *ast.SourceFile, node *ast.Node) string {
-	return file.Text()[nodeStart(file, node):node.End()]
+	return nodeText(file, node) // "" for a node the parser left out, which a file with syntax errors has
 }
 
 // effectMember returns the module and the name of the effect export that

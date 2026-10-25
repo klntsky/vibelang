@@ -249,6 +249,9 @@ func (tx *lowering) visitFork(node *ast.Node) *ast.Node {
 func (tx *lowering) visitUsingForOf(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	loop := node.AsForInOrOfStatement()
+	if len(loop.Initializer.AsVariableDeclarationList().Declarations.Nodes) == 0 {
+		return tx.Visitor().VisitEachChild(node) // for (using of s): a syntax error the parser reported
+	}
 	declaration := loop.Initializer.AsVariableDeclarationList().Declarations.Nodes[0]
 	expression := tx.Visitor().VisitNode(loop.Expression)
 	value := f.NewUniqueName("value")

@@ -83,6 +83,9 @@ func effectTypeRewrite(c *checker.Checker, file *ast.SourceFile, reference *ast.
 		return nil // EK2003 asks whether the missing channels are never or inferred
 	}
 	for i, argument := range arguments {
+		if ast.NodeIsMissing(argument) {
+			return nil // a type argument left out, as in Effect.Effect<A, , R>: a syntax error the parser reported
+		}
 		if ast.IsInferTypeNode(argument) && !(bodyReturn && i == 2) {
 			return nil
 		}

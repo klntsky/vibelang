@@ -846,6 +846,9 @@ typescript/vibelang/cases/effect-subtype-success-data/main.vibe:33:24 lambda pla
 typescript/vibelang/cases/effect-subtype-success-data/main.vibe:35:25 lambda program table
 typescript/vibelang/cases/effect-subtype-success-data/main.vibe:35:73 lambda program table
 typescript/vibelang/cases/effect-subtype-success-data/main.vibe:39:38 lambda effectFn annotation
+typescript/vibelang/cases/effect-type-missing-argument.fail/main.vibe:19:11 lambda choice fallback
+typescript/vibelang/cases/effect-type-missing-argument.fail/main.vibe:20:24 byname program table
+typescript/vibelang/cases/effect-type-missing-argument.fail/main.vibe:20:36 lambda effectFn table
 typescript/vibelang/cases/effect-value-as-data-spellings/main.vibe:6:42 lambda plain table
 typescript/vibelang/cases/effect-value-as-data-spellings/main.vibe:7:51 lambda effectFn table
 typescript/vibelang/cases/effect-value-as-data-spellings/main.vibe:9:31 lambda effectFn table
@@ -1228,6 +1231,8 @@ typescript/vibelang/cases/held-pipe-initializer/main.vibe:21:94 lambda plain tab
 typescript/vibelang/cases/held-pipe-initializer/main.vibe:23:26 lambda plain table
 typescript/vibelang/cases/held-pipe-initializer/main.vibe:29:27 lambda plain table
 typescript/vibelang/cases/held-pipe-initializer/main.vibe:7:14 lambda effectFn annotation
+typescript/vibelang/cases/jump-without-target-region.fail/main.vibe:16:37 lambda program table
+typescript/vibelang/cases/jump-without-target-region.fail/main.vibe:16:46 lambda effectFn table
 typescript/vibelang/cases/keyword-operand-comments/main.vibe:123:16 lambda dual fallback
 typescript/vibelang/cases/keyword-operand-comments/main.vibe:141:29 lambda dual fallback
 typescript/vibelang/cases/keyword-operand-comments/main.vibe:14:17 lambda effectFn annotation

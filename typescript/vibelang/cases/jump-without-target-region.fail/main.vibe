@@ -1,0 +1,48 @@
+// expect: TS1107 TS1107 TS1107 TS1107
+// A break or continue with no target is a grammar error, and the file still
+// emits, since noEmitOnError is off. Inside a region (a using block, a try
+// statement), lowering returns the jump's completion record to the
+// function's own body, which has no target to dispatch it to either: it
+// emits the jump as written instead of crashing.
+error Missing { key: string }
+
+function find(key: string): number!Missing {
+  if (key === "") throw new Missing({ key })
+  return key.length
+}
+
+export function owned() {
+  {
+    using r = Effect.acquireRelease(() => 1, () => {})
+    break
+  }
+}
+
+export function caught(keys: ReadonlyArray<string>) {
+  const kept: number[] = []
+  try {
+    kept.push(find(keys[0]))
+  } catch (_) {
+    continue
+  }
+  return kept
+}
+
+export function labeled() {
+  try {
+    find("a")
+    break outer
+  } finally {
+    Console.log("done")
+  }
+}
+
+export function looped() {
+  for (const key of ["a", ""]) {
+    try {
+      find(key)
+    } catch (_) {
+      continue missing
+    }
+  }
+}
