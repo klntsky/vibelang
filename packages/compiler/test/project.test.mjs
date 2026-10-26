@@ -1,4 +1,5 @@
 import { strict as assert } from "node:assert"
+import { spawnSync } from "node:child_process"
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
@@ -424,3 +425,41 @@ process.exit(result.status ?? 1)
   assert.equal(compiles().length, 2, trace.join("\n"))
   assert.ok(trace.some((line) => line.includes("changed during compile 0")), trace.join("\n"))
 })
+
+// Run from another cwd so relative paths exercise the public entry point,
+// including installed-package discovery, without changing the test runner's cwd.
+for (const project of ["tsconfig.json", "packages/app/tsconfig.json"]) {
+  for (const configured of [false, true]) {
+    test(`projectImports resolves ${project} from cwd with ${configured ? "an explicit" : "the installed"} compiler`, (t) => {
+      const cwd = fixture(t)
+      const root = dirname(join(cwd, project))
+      mkdirSync(root, { recursive: true })
+      writeFileSync(join(cwd, project), "{}")
+      const pkg = join(cwd, "node_modules/vibelang")
+      mkdirSync(join(pkg, "bin"), { recursive: true })
+      writeFileSync(join(pkg, "package.json"), '{"name":"vibelang","type":"module"}')
+      const compiler = join(pkg, "bin/vibelang")
+      writeFileSync(compiler, `#!/usr/bin/env node
+import { readFileSync } from "node:fs"
+const args = process.argv.slice(2)
+readFileSync(args[args.indexOf("--project") + 1], "utf8")
+console.log("src/main.vibe")
+console.log('node_modules/dep/index.d.ts')
+console.log(${JSON.stringify("   Imported via \"dep\" from file 'src/main.vibe'")})
+`)
+      const options = { project, ...(configured ? { compiler } : {}) }
+      const env = { ...process.env }
+      delete env.VIBELANG_BINARY
+      const run = spawnSync(process.execPath, ["--input-type=module", "-e", `
+import { projectImports } from ${JSON.stringify(new URL("../project.mjs", import.meta.url).href)}
+console.log(JSON.stringify(projectImports(${JSON.stringify(options)})))
+`], { cwd, env, encoding: "utf8" })
+      assert.equal(run.status, 0, run.stdout + run.stderr)
+      assert.deepEqual(JSON.parse(run.stdout), {
+        files: [join(root, "src/main.vibe"), join(root, "node_modules/dep/index.d.ts")],
+        imports: [{ importer: join(root, "src/main.vibe"), specifier: "dep", file: join(root, "node_modules/dep/index.d.ts") }],
+        errors: []
+      })
+    })
+  }
+}

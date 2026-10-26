@@ -139,7 +139,10 @@ export function parseExplainFiles(output, root) {
  * specifiers itself. It returns { files, imports, errors }; errors holds the
  * diagnostics that stopped the compiler from reading the project.
  */
-export function projectImports({ project, root = dirname(project), compiler = findCompiler(root) }) {
+export function projectImports({ project, root, compiler }) {
+  project = resolve(project)
+  root = resolve(root ?? dirname(project))
+  compiler ??= findCompiler(root)
   const [file, argv] = command(compiler, ["--project", project, "--pretty", "false", "--explainFiles", "--listFilesOnly"])
   const run = spawnSync(file, argv, { cwd: root, encoding: "utf8", maxBuffer: 1 << 30 })
   if (run.error) throw new Error(`vibelang: ${run.error.message}\nCompiler: ${compiler}`)
