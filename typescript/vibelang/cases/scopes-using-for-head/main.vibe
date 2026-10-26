@@ -1,0 +1,106 @@
+// for (using x = value; test; step): JavaScript takes the head values once
+// and disposes them when the loop exits, so the loop runs in a Scope region
+// and releases them, in reverse order, on every exit: the end of the loop, a
+// jump out of it, a failure, a defect, or an interruption (D95). An Effect
+// acquisition in the head gets that region's Scope, as in a block.
+error Bad {}
+
+function disposable(events: string[], name: string) {
+  return { [Symbol.dispose](): void { events.push(`dispose ${name}`) } }
+}
+
+function completes() {
+  const events: string[] = []
+  for (using a = disposable(events, "a"), b = disposable(events, "b"); events.length < 2; events.push("step")) {
+    events.push("body")
+    sleep("1 millis")
+  }
+  events.push("after")
+  return events
+}
+
+function fails() {
+  const events: string[] = []
+  const outcome = exit(() => {
+    for (using h = disposable(events, "h"); events.length < 5;) {
+      events.push("body")
+      sleep("1 millis")
+      throw new Bad()
+    }
+  })
+  return [Exit.isFailure(outcome), events]
+}
+
+function dies() {
+  const events: string[] = []
+  const outcome = exit(() => {
+    for (using h = disposable(events, "h"); events.length < 5;) {
+      events.push("body")
+      sleep("1 millis")
+      Effect.die("boom")
+    }
+  })
+  return [Exit.isFailure(outcome), events]
+}
+
+function interrupted() {
+  const events: string[] = []
+  const started = Deferred.make<void>()
+  function child() {
+    for (using h = disposable(events, "h"); ;) {
+      events.push("body")
+      Deferred.succeed(started, undefined)
+      sleep("10 seconds")
+    }
+  }
+  const fiber = Effect.forkChild(child())
+  Deferred.await(started)
+  Fiber.interrupt(fiber)
+  return events
+}
+
+// A labeled jump leaves the inner loop, whose value is disposed, and keeps
+// the outer loop, whose head does not run again.
+function jumps(limit: number) {
+  const events: string[] = []
+  function run() {
+    outer: for (using a = disposable(events, "a"); ;) {
+      for (using b = disposable(events, "b"); ;) {
+        events.push("inner")
+        sleep("1 millis")
+        if (events.length > limit) return "returned"
+        if (events.length > 3) break outer
+        continue outer
+      }
+    }
+    return "broke"
+  }
+  const result = run()
+  return [result, events]
+}
+
+function acquires(fail: boolean) {
+  const events: string[] = []
+  const outcome = exit(() => {
+    for (using conn = Effect.acquireRelease(() => { events.push("acquire"); return "c" }, () => { events.push("release") }); events.length < 3;) {
+      events.push(`use ${conn}`)
+      sleep("1 millis")
+      if (fail) throw new Bad()
+    }
+  })
+  return [Exit.isFailure(outcome), events]
+}
+
+// expect-result: {"completes":["body","step","dispose b","dispose a","after"],"fails":[true,["body","dispose h"]],"dies":[true,["body","dispose h"]],"interrupted":["body","dispose h"],"breaks":["broke",["inner","dispose b","inner","dispose b","inner","dispose b","dispose a"]],"returns":["returned",["inner","dispose b","inner","dispose b","inner","dispose b","dispose a"]],"acquires":[false,["acquire","use c","use c","release"]],"acquireFails":[true,["acquire","use c","release"]]}
+export function main() {
+  return {
+    completes: completes(),
+    fails: fails(),
+    dies: dies(),
+    interrupted: interrupted(),
+    breaks: jumps(10),
+    returns: jumps(4),
+    acquires: acquires(false),
+    acquireFails: acquires(true),
+  }
+}

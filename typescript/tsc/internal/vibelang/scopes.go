@@ -37,18 +37,49 @@ import (
 // using adds no masking of its own: an acquisition is masked or interruptible
 // as its Effect.acquireRelease says (D25). for (using x of values) takes each
 // value with using in a Scope region around that iteration's body, so the
-// value is released when the iteration ends, by any path.
+// value is released when the iteration ends, by any path. for (using x =
+// value; test; step) takes its values once, as JavaScript does, in a Scope
+// region around the whole loop, so they are released when the loop exits.
 
 func init() {
 	checker.RegisterUsingInitializerHook(usingInitializer)
 }
 
 // isBlockUsing reports whether node is a using statement directly in a
-// block, the form a Scope region lowers. A using in a for head, or in a case
-// clause, which TypeScript rejects, stays as TypeScript emits it.
+// block, the form a Scope region lowers. A using in a for head belongs to
+// its loop (isUsingFor, isUsingForOf); one in a case clause, which
+// TypeScript rejects, stays as TypeScript emits it.
 func isBlockUsing(node *ast.Node) bool {
 	return node.Kind == ast.KindVariableStatement && isUsingList(node.AsVariableStatement().DeclarationList) &&
 		node.Parent != nil && node.Parent.Kind == ast.KindBlock
+}
+
+// isUsingFor reports whether node is `for (using x = value; test; step)
+// body`, a C-style loop whose head declares using.
+func isUsingFor(node *ast.Node) bool {
+	if node.Kind != ast.KindForStatement {
+		return false
+	}
+	initializer := node.AsForStatement().Initializer
+	return initializer != nil && initializer.Kind == ast.KindVariableDeclarationList && isUsingList(initializer)
+}
+
+// labeledLoop returns the statement under node's labels: node itself when it
+// is not a labeled statement.
+func labeledLoop(node *ast.Node) *ast.Node {
+	for node.Kind == ast.KindLabeledStatement {
+		node = node.AsLabeledStatement().Statement
+	}
+	return node
+}
+
+// outermostLabel returns the outermost labeled statement whose statement,
+// under its labels, is node, or node when no label names it.
+func outermostLabel(node *ast.Node) *ast.Node {
+	for node.Parent != nil && node.Parent.Kind == ast.KindLabeledStatement {
+		node = node.Parent
+	}
+	return node
 }
 
 // isUsingForOf reports whether node is `for (using x of values) body`, whose
@@ -75,7 +106,7 @@ func ownerBlock(node *ast.Node) *ast.Node {
 
 // usingDeclarationOf returns the declaration whose initializer is node,
 // skipping parentheses, when that declaration belongs to a using statement
-// directly in a block; otherwise nil.
+// directly in a block or to the head of a C-style for loop; otherwise nil.
 func usingDeclarationOf(node *ast.Node) *ast.Node {
 	parent := node.Parent
 	for parent != nil && parent.Kind == ast.KindParenthesizedExpression {
@@ -84,14 +115,14 @@ func usingDeclarationOf(node *ast.Node) *ast.Node {
 	if parent == nil || parent.Kind != ast.KindVariableDeclaration || parent.Initializer() != node {
 		return nil
 	}
-	if list := parent.Parent; list != nil && list.Parent != nil && isBlockUsing(list.Parent) {
+	if list := parent.Parent; list != nil && list.Parent != nil && (isBlockUsing(list.Parent) || isUsingFor(list.Parent)) {
 		return parent
 	}
 	return nil
 }
 
 // isAcquisition reports whether call is an acquisition: the initializer of a
-// using declaration in a block, and a call that runs an Effect. Its Effect
+// using declaration in a block or a for head, and a call that runs an Effect. Its Effect
 // runs with the block's Scope, so Scope leaves its R.
 func (a *analyzer) isAcquisition(call *ast.Node) bool {
 	return usingDeclarationOf(call) != nil && a.runs(call)

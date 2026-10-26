@@ -9,7 +9,7 @@ type scopePlan struct {
 	scopeBlocks map[*ast.Node]bool      // blocks that are Scope regions
 	usings      map[*ast.Node]bool      // using statements in those blocks
 	forks       map[*ast.Node]*ast.Node // fork calls, mapped to the block whose region owns the fiber
-	usingLoops  map[*ast.Node]bool      // for (using x of values) statements
+	usingLoops  map[*ast.Node]bool      // for (using x of values) statements, and for (using x = v; ...) statements under their labels
 }
 
 func newScopePlan() scopePlan {
@@ -29,6 +29,8 @@ func (p *scopePlan) planScopes(a *analyzer, fn *ast.Node) {
 			p.usings[node] = true
 		case isUsingForOf(node):
 			p.usingLoops[node] = true
+		case isUsingFor(node):
+			p.usingLoops[outermostLabel(node)] = true
 		case node.Kind == ast.KindCallExpression:
 			if owner := a.forkOwner(node); owner != nil {
 				p.scopeBlocks[owner] = true
@@ -44,7 +46,7 @@ func (p *scopePlan) planScopes(a *analyzer, fn *ast.Node) {
 
 // scoped reports whether the lowering of node belongs to a Scope region: node
 // is a Scope region's block, a using statement in one, a fork it owns, or a
-// for...of loop that takes its values with using.
+// loop that takes its values with using.
 func (p *scopePlan) scoped(node *ast.Node) bool {
 	return p.scopeBlocks[node] || p.usings[node] || p.forks[node] != nil || p.usingLoops[node]
 }
@@ -58,6 +60,8 @@ func (tx *lowering) visitScoped(node *ast.Node) *ast.Node {
 		return tx.visitUsing(node)
 	case ast.KindForOfStatement:
 		return tx.visitUsingForOf(node)
+	case ast.KindForStatement, ast.KindLabeledStatement:
+		return tx.visitUsingFor(node)
 	default:
 		return tx.visitFork(node)
 	}
@@ -281,4 +285,70 @@ func (tx *lowering) visitUsingForOf(node *ast.Node) *ast.Node {
 		f.NewVariableDeclaration(value, nil /*exclamationToken*/, nil /*typeNode*/, nil /*initializer*/),
 	}), ast.NodeFlagsConst)
 	return f.UpdateForInOrOfStatement(loop, nil /*awaitModifier*/, initializer, expression, f.NewBlock(f.NewNodeList(dispatched), true /*multiLine*/))
+}
+
+// visitUsingFor lowers `for (using x = value; test; step) body` in an Effect
+// function, with the labels in front of it. JavaScript evaluates the head's
+// using declarations once and disposes their values when the loop exits, so
+// the loop runs in a Scope region that takes the values with using first:
+//
+//	outer: for (using conn = Pool.acquire(); conn.open; ) { if (done(conn)) return conn.id; poll(conn) }
+//
+// becomes
+//
+//	{
+//	  const completion = yield* runtime.$region(Effect.fnUntraced(function* f$using(scope) {
+//	    const conn = yield* runtime.$using(scope, (yield* Pool).acquire());
+//	    outer: for (; conn.open;) {
+//	      if (yield* done(conn)) return { kind: "return", value: conn.id };
+//	      yield* poll(conn);
+//	    }
+//	    return runtime.$normal;
+//	  }));
+//	  if (completion.kind === "return") return completion.value;
+//	}
+//
+// The region closes on every exit: the loop's end, a jump out of it, a
+// failure, a defect, or an interruption.
+func (tx *lowering) visitUsingFor(node *ast.Node) *ast.Node {
+	f := tx.Factory()
+	loop := labeledLoop(node)
+	statement := loop.AsForStatement()
+	scope := tx.scopeName(loop)
+
+	r := &region{}
+	saved := tx.frame
+	tx.frame = &frame{name: saved.name, region: r, handleClause: saved.handleClause}
+	var declarations []*ast.Node
+	for _, declaration := range statement.Initializer.AsVariableDeclarationList().Declarations.Nodes {
+		value := f.NewYieldExpression(f.NewToken(ast.KindAsteriskToken), tx.runtimeCall("$using", scope, tx.acquisition(declaration.Initializer())))
+		declarations = append(declarations, f.NewVariableDeclaration(tx.Visitor().VisitNode(declaration.Name()), nil /*exclamationToken*/, nil /*typeNode*/, value))
+	}
+	using := f.NewVariableStatement(nil /*modifiers*/, f.NewVariableDeclarationList(f.NewNodeList(declarations), ast.NodeFlagsConst))
+	tx.EmitContext().SetOriginal(using, statement.Initializer)
+	using.Loc = statement.Initializer.Loc
+
+	// The loop and its labels are jump targets inside the region's closure,
+	// as visitJumpTarget makes them for any other loop.
+	var labels []*ast.Node
+	for n := node; n.Kind == ast.KindLabeledStatement; n = n.AsLabeledStatement().Statement {
+		labels = append(labels, n)
+		tx.frame.targets = append(tx.frame.targets, target{label: n.AsLabeledStatement().Label.Text(), loop: true})
+	}
+	tx.frame.targets = append(tx.frame.targets, target{loop: true})
+	condition := tx.Visitor().VisitNode(statement.Condition)
+	incrementor := tx.Visitor().VisitNode(statement.Incrementor)
+	body := tx.Visitor().VisitEmbeddedStatement(statement.Statement)
+	lowered := f.UpdateForStatement(statement, nil /*initializer*/, condition, incrementor, body)
+	for i := len(labels) - 1; i >= 0; i-- {
+		labeled := labels[i].AsLabeledStatement()
+		lowered = f.UpdateLabeledStatement(labeled, labeled.Label, lowered)
+	}
+	tx.frame = saved
+
+	run := tx.scopeRegion(r, scope, node, []*ast.Node{using, lowered})
+	result := f.NewBlock(f.NewNodeList(statementsOf(tx.runRegion(node, run, r))), true /*multiLine*/)
+	tx.EmitContext().SetOriginal(result, node)
+	result.Loc = node.Loc
+	return result
 }

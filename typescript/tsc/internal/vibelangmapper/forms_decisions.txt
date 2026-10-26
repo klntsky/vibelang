@@ -1942,6 +1942,13 @@ typescript/vibelang/cases/scopes-using-async-dispose/main.vibe:23:12 lambda plai
 typescript/vibelang/cases/scopes-using-async-dispose/main.vibe:29:15 lambda plain table
 typescript/vibelang/cases/scopes-using-async-dispose/main.vibe:34:5 lambda program table
 typescript/vibelang/cases/scopes-using-async-dispose/main.vibe:35:5 lambda effectFn table
+typescript/vibelang/cases/scopes-using-for-head/main.vibe:24:24 lambda program table
+typescript/vibelang/cases/scopes-using-for-head/main.vibe:36:24 lambda program table
+typescript/vibelang/cases/scopes-using-for-head/main.vibe:56:34 byname program table
+typescript/vibelang/cases/scopes-using-for-head/main.vibe:84:24 lambda program table
+typescript/vibelang/cases/scopes-using-for-head/main.vibe:85:45 lambda program table
+typescript/vibelang/cases/scopes-using-for-head/main.vibe:85:91 lambda effectFn table
+typescript/vibelang/cases/scopes-using-for-head/main.vibe:9:12 lambda plain annotation
 typescript/vibelang/cases/scopes-using-pending-interrupt/main.vibe:12:45 lambda program table
 typescript/vibelang/cases/scopes-using-pending-interrupt/main.vibe:16:16 lambda plain annotation
 typescript/vibelang/cases/scopes-using-pending-interrupt/main.vibe:20:34 byname program table
