@@ -255,6 +255,28 @@ function discard(program: Effect.Effect<number>) {
 | Other | Renaming a tagged class renames its tag | Not needed: an `error` declaration's tag is its name, so a rename renames both | `error NotFound { }` renamed to `Missing` |
 | Other | Go to definition for `RpcClient` | Not adopted yet: the language server has no definition hook | None |
 
+## Debug stack traces
+
+Build with `"sourceMap": true` in `compilerOptions`, then run `node --enable-source-maps dist/main.js`. Source maps translate JavaScript locations to `.vibe` locations. They do not record the logical caller chain.
+
+Function tracing defaults to `"none"`. A defect can therefore show only one frame, even with source maps enabled. Set `"vibelang": { "tracing": "exported" }` at the top level of `tsconfig.json` to add spans for exported functions, or use `"all"` to include local functions. Rebuild after changing it. Add `withSpan("checkout") { ... }` around work that needs a meaningful operation name. More spans add runtime work.
+
+The default Node runner can exit with only `Error: message`. For a debugging run, call your application's exported `main` from a TypeScript entry and print the rejected error's stack:
+
+```ts
+// debug.ts
+// fragment
+import { Effect } from "effect"
+import { main } from "./main.vibe"
+
+Effect.runPromise(main()).catch((error: unknown) => {
+  console.error(error instanceof Error ? error.stack : error)
+  throw error
+})
+```
+
+Include `debug.ts` in the project, compile it with `vibelang`, then run `node --enable-source-maps dist/debug.js`. Importing `main.vibe` does not start its default runner. This entry prints the underlying JavaScript stack and rethrows to preserve the failure exit status. Tracing and named spans add logical Effect call context.
+
 ## Lint and build integration
 
 Type-check with `vibelang --noEmit`. The compiler owns type and language diagnostics in the terminal, editor, and Vite overlay. The local `vibelang-vite` package supports Vite 7 and 8 and Vitest 5. It runs one whole-project compiler subprocess on the first request and after edits, serves JavaScript and source maps, and invalidates loaded `.vibe` modules and their importers; it does not use `vibelang --api`.

@@ -118,6 +118,16 @@ Add scripts to `package.json`, which must have `"type": "module"`:
 }
 ```
 
+`node --enable-source-maps` maps JavaScript locations back to `.vibe` lines. It does not add the logical caller chain. Function tracing defaults to `"none"`, so a defect can show only one frame. To add function spans, set this top-level option in `tsconfig.json` and rebuild:
+
+```json
+{
+  "vibelang": { "tracing": "exported" }
+}
+```
+
+`"exported"` traces exported functions; `"all"` traces local functions too. For a sparse failure message or a missing caller stack, follow [Debug stack traces](012-devtools.md#debug-stack-traces).
+
 Keep source tests out of the build output. Add `tsconfig.test.json` so Vitest also checks and compiles those files:
 
 ```json

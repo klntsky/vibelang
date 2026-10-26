@@ -75,3 +75,16 @@ test("6: the shipped agent contract is self-contained and names current forms an
   assert.ok(routes.includes("vibelang-features/111-control-operations-and-handlers"))
   assert.ok(routes.includes("vibelang-features/112-producers"))
 })
+
+test("7: Effect users can find tracing limits, a debugging recipe and measured costs", () => {
+  for (const path of ["docs/user/src/getting-started/004-installation.md", "docs/user/src/getting-started/012-devtools.md", "docs/user/src/vibelang-features/114-vibelang-for-effect-users.md"]) {
+    const text = read(path)
+    for (const term of ["--enable-source-maps", '"exported"', '"all"', "stack", "span"]) assert.ok(text.includes(term), path + ": " + term)
+    assert.match(text, /default.*none|none.*default/s)
+  }
+  const tools = read("docs/user/src/getting-started/012-devtools.md")
+  assert.match(tools, /Effect\.runPromise\(main\(\)\)/)
+  assert.match(tools, /error\.stack/)
+  const effects = read("docs/user/src/vibelang-features/114-vibelang-for-effect-users.md")
+  for (const term of ["single-machine", "2.9", "Effect.fn", "catch 0", "Effect.orElseSucceed", "200,000", "1,000,000", "Clock.currentTimeMillis"]) assert.ok(effects.includes(term), term)
+})

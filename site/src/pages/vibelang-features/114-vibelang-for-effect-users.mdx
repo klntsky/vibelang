@@ -190,6 +190,26 @@ function reportTime() {
 
 Inside an Effect function, a plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a `.vibe` value, such as `text`, only as an input: an argument after the function, bound to its first parameter. To trust workspace or other TypeScript packages, set `"vibelang": { "trustedPackages": ["@acme/*"] }` at the top level of `tsconfig.json`. Exceptions from a matching package's synchronous plain calls are defects, its Effects run, and EK4401 does not fire. `trusted(impl, [Errors])` declares a function's expected failures. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
 
+## Trace and debug calls
+
+Run emitted JavaScript with `node --enable-source-maps dist/main.js` and enable `"sourceMap": true` in `compilerOptions`. Source maps preserve `.vibe` locations. Function tracing defaults to `"none"`, so defects can show only one stack frame. Set `"vibelang": { "tracing": "exported" }` at the top level of `tsconfig.json` and rebuild to trace exported functions. Use `"all"` to trace local functions too.
+
+Use `withSpan("checkout") { ... }` for a named operation, as you would use `Effect.withSpan` in TypeScript. Function spans supply the logical caller context that source maps alone cannot add, and add runtime work. If the default Node runner prints only an error message, use the [TypeScript debugging entry](/getting-started/012-devtools#debug-stack-traces) to print the rejected error's `stack`.
+
+## Runtime cost
+
+These are single-machine observations from the 0.0.9 alpha review on Linux x64, Node 26 and Effect 4.0.5. They are not a performance guarantee. The benchmark timed sequential loops with `Clock.currentTimeMillis`, with 200,000 calls for the success-only comparison and 1,000,000 for recovery and plain functions. The step increments a number and fails every 250,000th value; recovery resets it to zero. The success-only loop ends before that failure.
+
+| Loop | Observed time |
+| --- | ---: |
+| 200,000 Effect-contracted VibeLang calls without `catch` | 550 to 610 ms, about 2.9 µs per call |
+| 200,000 `Effect.fn` generator calls | 860 to 1,200 ms |
+| 1,000,000 `step(n) catch 0` expressions | 3.0 to 3.8 s |
+| 1,000,000 `Effect.succeed`/`Effect.fail` steps with `Effect.orElseSucceed` | About 0.33 s |
+| 1,000,000 plain-function calls | About 3 ms |
+
+Effect-contracted calls were in the same order of cost as `Effect.fn` generators. The `catch` loop cost more than the hand-written `Effect.orElseSucceed` loop. A function that compiles to plain JavaScript adds no Effect wrapper. Measure your own workload, including tracing, before choosing a boundary for a hot loop.
+
 ## Catch expected failures only
 
 ```vibe
