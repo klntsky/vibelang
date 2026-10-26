@@ -161,10 +161,7 @@ Only `using` acquisitions belong to the lexical block. An acquisition without `u
 
 `Scope` is in the prelude, as the module and as the type alias for `Scope.Scope`, so these contracts need no import. `using` adds no masking policy: `acquireRelease` masks acquisition by default, and its third argument `{ interruptible: true }` lets cancellation reach an acquisition that waits on the outside world. An adapter that receives a resource after cancellation must release it; the spec's resource adapter detects that race with the runtime's TypeScript `suspend` helper.
 
-A JavaScript Disposable acquired while interruption is pending has a known
-[acquisition window](030-scope.md#known-limitation-pending-interruption-and-javascript-disposables).
-Use `Effect.acquireRelease` with its default protected acquisition and an explicit
-release callback for this case.
+A JavaScript Disposable has a [pending-interruption acquisition window](030-scope.md#known-limitation-pending-interruption-and-javascript-disposables); acquire a plain `{ value: disposable }` holder with protected `Effect.acquireRelease` and dispose `holder.value` in its release callback.
 
 ## Coming from Effect
 

@@ -275,7 +275,11 @@ These entries record the build lanes' defaults. Lane U recorded F7's D97-D99 fro
 
 Amended 2026-10-23 (release review, must-fix 3): an acquisition's value with `Symbol.asyncDispose` and no `Symbol.dispose` gets an awaited `[Symbol.asyncDispose]()` at block exit when the acquisition registered no release of its own in the block's Scope; before, nothing released it. A resource that releases itself keeps only its own release, so an asynchronous release, such as a stream's, never runs twice.
 
+Clarified 2026-10-26 (0.0.9 review B2): the protected Disposable pattern acquires a plain `{ value: disposable }` holder with `Effect.acquireRelease` and disposes `holder.value` in release. Bind the holder with `using`: it has no disposal method, so this closes exactly once on success, failure, defect, and pending interruption (`scopes-using-holder`). Binding the Disposable itself and disposing it in release still closes it twice under D94; the synchronous/asynchronous asymmetry is unchanged and needs an owner decision.
+
 **D95. For-using bodies own a region per iteration** (default, lane F6). In an Effect function, `for (using x of values)` makes each iteration's body a Scope region; the value is taken first, and `using` or `fork` inside the body join that region. Resources and children must end with the iteration that owns them.
+
+Amended 2026-10-26 (0.0.9 review B1): a C-style `for (using x = value; test; step)` acquires its head once in a Scope region around the whole loop, preserving its labels. That region releases on normal completion, typed failure, defect, interruption, and jumps out of the loop, in reverse declaration order. A `for (using x of source)` over an iterator, producer, or Stream releases the iteration's value before closing its source on an early exit; the source closes on failure and interruption too. Cases: `scopes-using-for-head`, `scopes-using-for-of-iterator`, `scopes-using-loop-exits`, and `scopes-using-for-of-labels`.
 
 **D96. Expression-bodied forks retain Scope** (default, lane F6). A `fork` belongs to the innermost block around it; an arrow function with an expression body has no block, so `() => fork(p)` is `Effect.forkScoped` and keeps `Scope` in R. **controversial**: it differs from `() => { return fork(p) }`; alternatives are treating expression bodies as blocks or reporting a returned block-owned fiber.
 

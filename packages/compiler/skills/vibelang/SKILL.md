@@ -39,7 +39,7 @@ A `.vibe` file is TypeScript in which every function is an Effect. Read and writ
 | `Effect.catch(p, f)`, `Effect.orElseSucceed(p, () => v)` | `p catch (e) => f(e)`, `p catch v` (D236) |
 | `Effect.catchCause`, `Effect.failCause(c)` | `match (exit(p)) { when Exit.Success(let v): v; when Exit.Failure(let cause): ...; }` (D217), `throw cause` (D177) |
 | `Effect.ensuring`, `Effect.onExit` | `try { } finally { }`, `try { } finally (exit) { }` (D178) |
-| `Effect.scoped` + `acquireRelease` | `using r = Effect.acquireRelease(() => open(), (r) => close(r))`, released at block exit |
+| `Effect.scoped` + `acquireRelease` | `using r = Effect.acquireRelease(() => open(), (r) => close(r))`, released at block exit; [pending-interruption limitation and safe Disposable holder](https://vibelang.sh/resource-management/030-scope#known-limitation-pending-interruption-and-javascript-disposables) |
 | `Effect.fn("name")(function* ...)` | `function f() { return withSpan("name") { ... } }` |
 | `Effect.withSpan(p, "n")`, `it.effect("n", () => ...)` | block params: `withSpan("n") { ... }`, `it.effect("n") { ... }` (D188) |
 | `p.pipe(Effect.retry(s), Effect.timeout(t))` | `p \|> retry(%, s) \|> timeout(%, t)` (D154) |
@@ -92,7 +92,7 @@ A `.vibe` file is TypeScript in which every function is an Effect. Read and writ
 - Services: `service` declarations; `Layer.effect(S) { }`; `provide` once around `main`: `requirements-management/025-services`, `027-layers`.
 - Retries and timeouts: bare `retry` and `timeout` or a pipe; per-attempt timeout inside the retry: `error-management/018-retrying`, `019-timing-out`.
 - Concurrency: the `await` operations, `fork`/`join`, `for concurrent`: `concurrency/007-basic-concurrency`, `047-fibers`.
-- Resources: `using` in the block that owns them: `resource-management/029-introduction`.
+- Resources: `using` in the block that owns them: `resource-management/029-introduction`. For a Disposable with an explicit release, acquire `{ value: disposable }` and release `holder.value`; binding the Disposable itself also calls `Symbol.dispose` (D94).
 - Data: `schema` declarations; `Schema.Struct` for checks, transformations and exact optional keys: `schema/087-basic-usage`. A tagged union is a `data` declaration, matched by variant: `data-types/073-data`.
 - Matching: `vibelang-features/116-match-and-is`. Handlers: `111-control-operations-and-handlers`. Producers: `112-producers`.
 - TypeScript at the edges: hatches, trust, factories (D269): `vibelang-features/114-vibelang-for-effect-users`.

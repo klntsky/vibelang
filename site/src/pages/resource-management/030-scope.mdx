@@ -98,40 +98,86 @@ acquisition-to-registration window, not an interruption during the resource's
 later use. `using` itself does not mask acquisition.
 
 Wrap acquisition and cleanup together with `Effect.acquireRelease`, keeping its
-default protected acquisition. Use `using h = Effect.acquireRelease(...)` to
-give it a lexical lifetime, or let the caller supply its scope. Release is then
-registered inside the protection before pending interruption is delivered.
-For a JavaScript Disposable, call its disposal method from the release callback.
+default protected acquisition. For a JavaScript Disposable, acquire a plain
+holder, `{ value: disposable }`, and dispose `holder.value` in the release
+callback. Bind the holder with `using` and use `holder.value` in the body.
+The holder has no disposal method, so only the registered release closes the
+resource. Release is registered before pending interruption is delivered.
 
-This example requests interruption while acquisition is waiting and still
-disposes the handle:
+Returning the Disposable itself from `acquireRelease` and also disposing it in
+the release callback closes it twice on normal exit: `using` adds its own
+`Symbol.dispose` call. The holder avoids this under the current runtime
+rules, including for a resource whose second close throws.
+
+This example checks success, typed failure, defect, and interruption requested
+while acquisition is waiting. Each path closes the handle exactly once:
 
 ```vibe
-function safePendingAcquisition() {
+module files {
+  export function open(events: string[]) {
+    let closed = false
+    events.push("open")
+    return {
+      [Symbol.dispose](): void {
+        if (closed) throw new Error("closed twice")
+        closed = true
+        events.push("closed")
+      }
+    }
+  }
+}
+import { open } from files
+
+error Bad {}
+
+function acquire(events: string[]) {
+  return Effect.acquireRelease(
+    () => ({ value: sync((log: string[]) => open(log), events) }),
+    (holder) => sync((h) => h.value[Symbol.dispose](), holder)
+  )
+}
+
+function describe(outcome: Exit.Exit<void, Bad>) {
+  if (Exit.isSuccess(outcome)) return "success"
+  if (Exit.hasDies(outcome)) return "defect"
+  if (Exit.hasFails(outcome)) return "failure"
+  return Exit.hasInterrupts(outcome) ? "interrupted" : "other"
+}
+
+function run(ending: string) {
+  const events: string[] = []
+  const outcome = exit(() => {
+    using file = acquire(events)
+    events.push("body")
+    if (ending === "fail") throw new Bad()
+    if (ending === "die") Effect.die("boom")
+  })
+  return [describe(outcome), events]
+}
+
+function pending() {
   const events: string[] = []
   const entered = Deferred.make<void>()
   const gate = Deferred.make<void>()
-
   function work() {
-    using h = Effect.acquireRelease(
+    using file = Effect.acquireRelease(
       () => {
         Deferred.succeed(entered, undefined)
         Deferred.await(gate)
-        events.push("acquired")
-        return { [Symbol.dispose](): void { events.push("disposed") } }
+        return { value: sync((log: string[]) => open(log), events) }
       },
-      (handle) => handle[Symbol.dispose]()
+      (holder) => sync((h) => h.value[Symbol.dispose](), holder)
     )
+    events.push("never runs")
   }
-
   const child = Effect.forkChild(work())
   Deferred.await(entered)
   child.interruptUnsafe(98765)
   Deferred.succeed(gate, undefined)
-  Fiber.await(child)
-  return events
+  const outcome = Fiber.await(child)
+  return [describe(outcome), events]
 }
-// Output: ["acquired","disposed"]
+// Output: {"succeeds":["success",["open","body","closed"]],"fails":["failure",["open","body","closed"]],"dies":["defect",["open","body","closed"]],"pending":["interrupted",["open","closed"]]}
 ```
 
 ## Arranging nested resource lifetimes

@@ -1962,6 +1962,16 @@ typescript/vibelang/cases/scopes-using-for-of-labels/main.vibe:4:12 lambda plain
 typescript/vibelang/cases/scopes-using-for-of-labels/main.vibe:69:112 lambda program table
 typescript/vibelang/cases/scopes-using-for-of-labels/main.vibe:95:38 lambda plain table
 typescript/vibelang/cases/scopes-using-for-of-labels/main.vibe:97:45 lambda plain table
+typescript/vibelang/cases/scopes-using-holder/main.vibe:27:26 lambda plain table
+typescript/vibelang/cases/scopes-using-holder/main.vibe:27:5 lambda program table
+typescript/vibelang/cases/scopes-using-holder/main.vibe:28:22 lambda plain table
+typescript/vibelang/cases/scopes-using-holder/main.vibe:28:5 lambda effectFn table
+typescript/vibelang/cases/scopes-using-holder/main.vibe:41:24 lambda program table
+typescript/vibelang/cases/scopes-using-holder/main.vibe:56:7 lambda program table
+typescript/vibelang/cases/scopes-using-holder/main.vibe:59:30 lambda plain table
+typescript/vibelang/cases/scopes-using-holder/main.vibe:61:24 lambda plain table
+typescript/vibelang/cases/scopes-using-holder/main.vibe:61:7 lambda effectFn table
+typescript/vibelang/cases/scopes-using-holder/main.vibe:65:34 byname program table
 typescript/vibelang/cases/scopes-using-loop-exits/main.vibe:106:24 byname program table
 typescript/vibelang/cases/scopes-using-loop-exits/main.vibe:120:34 byname program table
 typescript/vibelang/cases/scopes-using-loop-exits/main.vibe:129:112 lambda program table

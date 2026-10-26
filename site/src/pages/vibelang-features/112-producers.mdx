@@ -101,7 +101,7 @@ function sumStream() {
 
 `for...of` pulls an Effect Stream and closes it when the loop exits, including on `break`. Arrays, maps, sets, and strings iterate as in JavaScript. As in JavaScript, a loop that exits early calls its iterator's `return()`, also when the body fails or the fiber is interrupted.
 
-Use `for (const value of source)` for producers. This preview doesn't support `for (using value of source)` over a producer, and `Array.from(source)` is not a Stream consumer; `Stream.runCollect(source)` collects all the elements into an array.
+Use `for (const value of source)` for producers, or `for (using value of source)` when each element needs disposal at the end of its iteration. On early exit the element is disposed before the producer closes. `Array.from(source)` is not a Stream consumer; `Stream.runCollect(source)` collects all the elements into an array.
 
 ## JavaScript generators
 

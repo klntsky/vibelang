@@ -1,0 +1,76 @@
+// The pattern for a JavaScript Disposable that must not leak when an
+// interruption is pending: acquire a plain holder with Effect.acquireRelease
+// and dispose holder.value in the release. The holder has no
+// [Symbol.dispose]() of its own, so using adds no second release (D94), and
+// the release is registered inside the protected acquisition (D25). The
+// Disposable throws when it is closed twice, so each run shows exactly one
+// close: on success, typed failure, defect, and pending interruption.
+module files {
+  export function open(events: string[]) {
+    let closed = false
+    events.push("open")
+    return {
+      [Symbol.dispose](): void {
+        if (closed) throw new Error("closed twice")
+        closed = true
+        events.push("closed")
+      }
+    }
+  }
+}
+import { open } from files
+
+error Bad {}
+
+function acquire(events: string[]) {
+  return Effect.acquireRelease(
+    () => ({ value: sync((log: string[]) => open(log), events) }),
+    (holder) => sync((h) => h.value[Symbol.dispose](), holder)
+  )
+}
+
+function describe(outcome: Exit.Exit<void, Bad>) {
+  if (Exit.isSuccess(outcome)) return "success"
+  if (Exit.hasDies(outcome)) return "defect"
+  if (Exit.hasFails(outcome)) return "failure"
+  return Exit.hasInterrupts(outcome) ? "interrupted" : "other"
+}
+
+function run(ending: string) {
+  const events: string[] = []
+  const outcome = exit(() => {
+    using file = acquire(events)
+    events.push("body")
+    if (ending === "fail") throw new Bad()
+    if (ending === "die") Effect.die("boom")
+  })
+  return [describe(outcome), events]
+}
+
+function pending() {
+  const events: string[] = []
+  const entered = Deferred.make<void>()
+  const gate = Deferred.make<void>()
+  function work() {
+    using file = Effect.acquireRelease(
+      () => {
+        Deferred.succeed(entered, undefined)
+        Deferred.await(gate)
+        return { value: sync((log: string[]) => open(log), events) }
+      },
+      (holder) => sync((h) => h.value[Symbol.dispose](), holder)
+    )
+    events.push("never runs")
+  }
+  const child = Effect.forkChild(work())
+  Deferred.await(entered)
+  child.interruptUnsafe(98765)
+  Deferred.succeed(gate, undefined)
+  const outcome = Fiber.await(child)
+  return [describe(outcome), events]
+}
+
+// expect-result: {"succeeds":["success",["open","body","closed"]],"fails":["failure",["open","body","closed"]],"dies":["defect",["open","body","closed"]],"pending":["interrupted",["open","closed"]]}
+export function main() {
+  return { succeeds: run("succeed"), fails: run("fail"), dies: run("die"), pending: pending() }
+}
