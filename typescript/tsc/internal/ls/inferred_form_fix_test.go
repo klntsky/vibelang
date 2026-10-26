@@ -103,7 +103,7 @@ func inferredActions(t *testing.T, files map[string]string) ([]*lsproto.CodeActi
 type inferredEmit struct{ JS, DTS string }
 
 // normalizeEffectHelper ignores only the local generated Effect namespace
-// binding, which a newly written bang contract can reserve in the parser.
+// binding, which a newly written contract can change.
 func normalizeEffectHelper(js string) string {
 	re := regexp.MustCompile(`import \* as (\w+) from "effect/Effect";`)
 	match := re.FindStringSubmatchIndex(js)
@@ -122,7 +122,7 @@ func TestInferredFormFix(t *testing.T) {
 		name, source string
 		choices      int
 	}{
-		{"named method contract", `export class C { f(): ReadonlyArray<string>!! { return ["x"] } }`, 0},
+		{"named method contract", `export class C { f(): Effect<ReadonlyArray<string>> { return ["x"] } }`, 0},
 		{"program argument", `import { takesProgram } from "./host"; export function run() { return takesProgram(() => { return work(1) }) }`, 1},
 		{"program block", `import { takesProgram } from "./host"; export function run() { return takesProgram { return work(1) } }`, 1},
 		{"cross-file Effect callback", `import { takesFn } from "./host"; export function run() { return takesFn((x: number) => { const n=work(x); return n }) }`, 1},
@@ -131,7 +131,7 @@ func TestInferredFormFix(t *testing.T) {
 		{"symlinked property", `export const obj = { f: (x: number) => { work(x); return x } }`, 1},
 		{"exported arrow", `export const fn = (x: number) => { const y=work(x); return y }`, 1},
 		{"block", `declare const host: any; host { work(1); return 1 }`, 1},
-		{"failure and requirement", `interface Bad { bad: true }; interface Env { env: true }; declare function fail(): number!Bad!Env; export const obj = { f: () => { const x = fail(); return x } }`, 1},
+		{"failure and requirement", `interface Bad { bad: true }; interface Env { env: true }; declare function fail(): Effect<number, Bad, Env>; export const obj = { f: () => { const x = fail(); return x } }`, 1},
 		{"object method", `export const obj = { f(x: number) { work(x); return x } }`, 1},
 		{"function expression", `declare const host: any; host(function(x: number) { work(x); return x })`, 1},
 		{"property", `export const obj = { f: (x: number) => { work(x); return x } }`, 1},
@@ -148,7 +148,7 @@ func TestInferredFormFix(t *testing.T) {
 				"/Users/x/src/host.ts":                                    `import type { Effect } from "effect/Effect"; export declare const host: any; export declare function work(x: number): Effect<number,never,never>; export declare function get(x: number): Effect<number,never,never>; export declare function takesProgram(p: Effect<number,never,never>): Effect<number,never,never>; export declare function takesFn(f:(x:number)=>Effect<number,never,never>): Effect<number,never,never>`,
 				"/Users/x/src/main.vibe":                                  `import { work } from "./host"; ` + test.source,
 				"/Users/x/src/node_modules/vibelang-runtime/package.json": `{"name":"vibelang-runtime","types":"index.d.ts"}`,
-				"/Users/x/src/node_modules/vibelang-runtime/index.d.ts":   `export * as Effect from "effect/Effect"; import type { Effect } from "effect/Effect"; export declare function $awaitAll<A,E,R>(xs: readonly Effect<A,E,R>[]): Effect<A[],E,R>; export declare function sync<A>(f:()=>A, mapper?: (error: unknown)=>unknown): A`,
+				"/Users/x/src/node_modules/vibelang-runtime/index.d.ts":   `export { Effect } from "effect"; import type * as EffectModule from "effect/Effect"; export type Effect<A, E = never, R = never> = EffectModule.Effect<A, E, R>; export declare function $awaitAll<A,E,R>(xs: readonly Effect<A,E,R>[]): Effect<A[],E,R>; export declare function sync<A>(f:()=>A, mapper?: (error: unknown)=>unknown): A`,
 				"/Users/x/src/node_modules/effect/package.json":           `{"name":"effect","types":"index.d.ts"}`,
 				"/Users/x/src/node_modules/effect/index.d.ts":             `export * as Effect from "./Effect"`,
 				"/Users/x/src/node_modules/effect/Effect.d.ts":            `export interface Effect<A,E=never,R=never> { readonly "~effect/Effect": { readonly _A: (_:never)=>A; readonly _E: (_:never)=>E; readonly _R: (_:never)=>R } }`,
@@ -211,7 +211,7 @@ func TestInferredFormFix(t *testing.T) {
 				applyTrustedAction(t, files, actions[0])
 			}
 			fixed := files["/Users/x/src/main.vibe"]
-			if test.name == "failure and requirement" && !strings.Contains(fixed, ": number!Bad!Env") {
+			if test.name == "failure and requirement" && !strings.Contains(fixed, ": Effect<number, Bad, Env>") {
 				t.Fatalf("lost inferred channels: %s", fixed)
 			}
 			if n := count(fixed); n != 0 {
@@ -224,7 +224,7 @@ func TestInferredFormFix(t *testing.T) {
 			if normalizeEffectHelper(before.JS) != normalizeEffectHelper(after.JS) {
 				t.Fatalf("JavaScript changed: before %s after %s", before.JS, after.JS)
 			}
-			// A written bang contract may import the prelude Effect namespace
+			// A written contract may import the prelude's Effect type
 			// (chapter 27; TestDeclarationImportsRecycledAnnotation), whereas
 			// an inferred contract uses an inline effect/Effect import. Compare
 			// their public types below, rather than their import spellings.

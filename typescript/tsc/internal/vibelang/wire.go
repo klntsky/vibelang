@@ -449,7 +449,7 @@ func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type,
 			m = anyMain
 		}
 		d := report(c, program, m, scanner.GetTextOfNode(program))
-		note(d, "TypeScript gives a program type any where it cannot type it, as after an error in its declaration: fix that error, or write the program's type, A!E!R.")
+		note(d, "TypeScript gives a program type any where it cannot type it, as after an error in its declaration: fix that error, or write the program's type, Effect<A, E, R>.")
 		if site != runnerEntry {
 			coverArgument(c, program)
 		}

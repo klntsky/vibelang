@@ -3,10 +3,10 @@ class Gone extends TaggedError("Gone")<{
 }> {
 }
 abstract class Users {
-    abstract find(id: string): Effect.Effect<string, Gone, never>;
+    abstract find(id: string): Effect<string, Gone>;
 }
 abstract class Ask extends Control {
-    abstract answer(): Effect.Effect<boolean, never, never>;
+    abstract answer(): Effect<boolean>;
 }
 interface Ticket extends Schema.Schema.Type<typeof Ticket> {
 }

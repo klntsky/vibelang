@@ -17,20 +17,20 @@ func TestPlainContractFailureFix(t *testing.T) {
 		{
 			"arrow",
 			"error Invalid { value: string }\nexport const validate = (value: string): string => {\n  if (value === \"\") throw new Invalid({ value })\n  return value\n}",
-			"Write string!Invalid!",
-			"error Invalid { value: string }\nexport const validate = (value: string): string!Invalid! => {\n  if (value === \"\") throw new Invalid({ value })\n  return value\n}",
+			"Write Effect<string, Invalid>",
+			"error Invalid { value: string }\nexport const validate = (value: string): Effect<string, Invalid> => {\n  if (value === \"\") throw new Invalid({ value })\n  return value\n}",
 		},
 		{
 			"match arm",
 			"error Invalid { value: string }\nexport function pick(tag: string): number {\n  return match (tag) {\n    when \"a\": 1;\n    default: throw new Invalid({ value: tag });\n  }\n}",
-			"Write number!Invalid!",
-			"error Invalid { value: string }\nexport function pick(tag: string): number!Invalid! {\n  return match (tag) {\n    when \"a\": 1;\n    default: throw new Invalid({ value: tag });\n  }\n}",
+			"Write Effect<number, Invalid>",
+			"error Invalid { value: string }\nexport function pick(tag: string): Effect<number, Invalid> {\n  return match (tag) {\n    when \"a\": 1;\n    default: throw new Invalid({ value: tag });\n  }\n}",
 		},
 		{
 			"two failures",
 			"error Invalid { value: string }\nerror Missing\nexport function check(value: string | undefined): string {\n  if (value === undefined) throw new Missing()\n  if (value === \"\") throw new Invalid({ value })\n  return value\n}",
-			"Write string!Invalid | Missing!",
-			"error Invalid { value: string }\nerror Missing\nexport function check(value: string | undefined): string!Invalid | Missing! {\n  if (value === undefined) throw new Missing()\n  if (value === \"\") throw new Invalid({ value })\n  return value\n}",
+			"Write Effect<string, Invalid | Missing>",
+			"error Invalid { value: string }\nerror Missing\nexport function check(value: string | undefined): Effect<string, Invalid | Missing> {\n  if (value === undefined) throw new Missing()\n  if (value === \"\") throw new Invalid({ value })\n  return value\n}",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

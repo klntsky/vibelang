@@ -9,7 +9,7 @@ import (
 )
 
 // Checks of service and control classes (design D1, D2): a member without a
-// full contract (EK2101), a key that two services share (EK3001), and a
+// body whose return type is not an Effect type (EK2101), a key that two services share (EK3001), and a
 // service used as a base class (EK3002, EK3003, EK3004), declared generic
 // (EK3005), or with a static member that shadows a service member (EK3006).
 
@@ -144,30 +144,25 @@ func checkServiceDeclaration(c *checker.Checker, class *ast.Node) {
 			}
 			continue
 		}
-		if ast.IsMethodDeclaration(member) && serviceShape(class) == nil && !isFullContract(c, member.Type()) && !isUnresolved(c, member.Type()) {
+		if ast.IsMethodDeclaration(member) && serviceShape(class) == nil && !isEffectContract(c, member.Type()) && !isUnresolved(c, member.Type()) {
 			at := member.Type()
 			if at == nil {
 				at = memberName
 				cover(c, memberName) // TS7010: an implicit any return type
 			}
 			d := report(c, at, EK2101, name+"."+memberName.Text())
-			note(d, "Write {0}; use {1} if it cannot fail and needs nothing.", bangText(writtenSuccess(member.Type()), "Errors", "Dependencies"), bangText(writtenSuccess(member.Type()), "never", "never"))
+			name := effectTypeName(c, member)
+			note(d, "Write {0}; use {1} if it cannot fail and needs nothing.", namedEffectText(name, writtenSuccess(member.Type()), "Errors", "Dependencies"), namedEffectText(name, writtenSuccess(member.Type())))
 		}
 	}
 }
 
-// isFullContract reports whether typeNode, a return type annotation, states
-// a full contract: an Effect whose three channels are written out. A
-// reference written Effect<A> or Effect<A, E> leaves channels to the
-// interface's defaults, so it is not one; an alias of a full Effect is.
-func isFullContract(c *checker.Checker, typeNode *ast.Node) bool {
-	if typeNode == nil || !isEffectType(c, c.GetTypeFromTypeNode(typeNode)) {
-		return false
-	}
-	if ast.IsTypeReferenceNode(typeNode) && isEffectName(typeNode.AsTypeReferenceNode().TypeName) {
-		return len(typeNode.TypeArguments()) == 3
-	}
-	return true
+// isEffectContract reports whether typeNode, a return type annotation,
+// states a contract: an Effect type, written Effect<A, E, R> or as an alias
+// of one. A type argument left out means what it means in TypeScript, so
+// Effect<A> is a contract that cannot fail and needs nothing (D308).
+func isEffectContract(c *checker.Checker, typeNode *ast.Node) bool {
+	return typeNode != nil && isEffectType(c, c.GetTypeFromTypeNode(typeNode))
 }
 
 // isUnresolved reports whether typeNode names a type the checker could not
@@ -177,9 +172,8 @@ func isUnresolved(c *checker.Checker, typeNode *ast.Node) bool {
 }
 
 // writtenSuccess returns the text of the success type that typeNode, a
-// return type annotation that is not a full contract, states: the first type
-// argument of a partial Effect<A>, the annotation itself otherwise, or A when
-// there is none.
+// return type annotation that is not a contract, states: the annotation
+// itself, or A when there is none.
 func writtenSuccess(typeNode *ast.Node) string {
 	switch {
 	case typeNode == nil:

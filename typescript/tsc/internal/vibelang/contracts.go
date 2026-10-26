@@ -1,8 +1,6 @@
 package vibelang
 
 import (
-	"strings"
-
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
@@ -21,8 +19,9 @@ import (
 //
 // A channel written `infer Name` comes from the body (D57). The signature's
 // return type holds what was inferred, so callers and declaration files see
-// the full contract. A return annotation that leaves a channel out, such as
-// Effect<User>, is EK2003. A non-Effect annotation makes a plain function,
+// the full contract. A type argument left out means what it means in
+// TypeScript: Effect<User> checks E and R as never (D308). A non-Effect
+// annotation makes a plain function,
 // which never fails and needs nothing (D67, D282): a failure that can escape
 // it, or an Effect it runs, is EK2003 (plain_failures.go).
 
@@ -216,8 +215,8 @@ func (a *analyzer) calleeContract(callee *ast.Node, call *ast.Node, sig *checker
 }
 
 // checkContracts reports, for each function in file that the lowering can
-// turn into an Effect: EK2003 for a return annotation that is not a contract
-// or leaves a channel out, EK2001 for an expected failure that escapes the
+// turn into an Effect: EK2003 for a plain return annotation on a body that
+// runs Effects or can fail, EK2001 for an expected failure that escapes the
 // contract's E, and EK2002 for a requirement that escapes its R.
 func checkContracts(c *checker.Checker, file *ast.SourceFile) {
 	a := analyzerFor(c)
@@ -246,22 +245,10 @@ func (a *analyzer) checkContract(file *ast.SourceFile, fn *ast.Node) {
 		// what the function returns. A method that implements a plain-function
 		// member, such as Equal.symbol, is checked against that member (D55).
 		if fn.Kind != ast.KindMethodDeclaration && !a.canBePlain(fn) {
-			d := report(c, annotation, EK2003.With("{0} is a plain return annotation, but {1} runs Effects, so it returns an Effect."), written, functionDisplayName(fn))
-			note(d, "Write {0} to check that it cannot fail and needs nothing, or {1} to name its errors and infer its dependencies.", bangText(written, "never", "never"), bangText(written, "Errors"))
+			d := report(c, annotation, EK2003, written, functionDisplayName(fn))
+			name := effectTypeName(c, annotation)
+			note(d, "Write {0} to check that it cannot fail and needs nothing, or {1} to name its errors and infer its dependencies.", namedEffectText(name, written), namedEffectText(name, written, "Errors", "infer R"))
 			note(d, "Or remove the annotation to infer the whole contract.")
-		}
-		return
-	case k.reference != nil && len(k.channels) < 3:
-		if len(k.channels) == 0 {
-			return // TypeScript reports the missing type arguments
-		}
-		channels := channelTexts(k)
-		d := report(c, annotation, EK2003, written)
-		note(d, "Write {0} to check the missing channels as never.", bangText(channels...))
-		if len(channels) == 2 {
-			note(d, "Or write {0} to infer the dependencies from the body.", strings.TrimSuffix(bangText(channels...), "!"))
-		} else {
-			note(d, "Or remove the annotation to infer them from the body.")
 		}
 		return
 	}
@@ -281,14 +268,14 @@ func (a *analyzer) checkContract(file *ast.SourceFile, fn *ast.Node) {
 			if parameter := a.uncontractedCallbackOf(fn, escape.t); parameter != nil {
 				note(d, "{0} has no contract, so a call to it can fail with any {1} (D12, D68). If it cannot fail, write its contract: {2}", declarationName(parameter), c.TypeToString(escape.t), callbackContractText(file, parameter))
 			}
-			note(d, "Catch it inside {0}, or change the contract to {1}.", name, contractText(c, contractType, channelE, escape.t))
+			note(d, "Catch it inside {0}, or change the contract to {1}.", name, contractText(c, effectTypeName(c, annotation), contractType, channelE, escape.t))
 		}
 	}
 	if !k.inferred(channelR) {
 		declared := channelType(c, contractType, "_R")
 		for _, escape := range escapes(c, info.requirements, info.requirementSources, declared) {
 			d := report(c, escape.source, EK2002, name, c.TypeToString(escape.t), c.TypeToString(declared))
-			note(d, "Provide {0} inside {1}, or add it: {2}.", c.TypeToString(escape.t), name, contractText(c, contractType, channelR, escape.t))
+			note(d, "Provide {0} inside {1}, or add it: {2}.", c.TypeToString(escape.t), name, contractText(c, effectTypeName(c, annotation), contractType, channelR, escape.t))
 		}
 	}
 }
@@ -349,24 +336,16 @@ func channelAssignableTo(c *checker.Checker, source, target *checker.Type, visit
 }
 
 // contractText writes contract, an Effect<A, E, R>, with extra joined to the
-// given channel, for a fix that widens the contract. It writes the ! form.
-func contractText(c *checker.Checker, contract *checker.Type, channel int, extra *checker.Type) string {
+// given channel, for a fix that widens the contract, in the short form under
+// name (effectTypeName).
+func contractText(c *checker.Checker, name string, contract *checker.Type, channel int, extra *checker.Type) string {
 	channels := []*checker.Type{successType(c, contract), channelType(c, contract, "_E"), channelType(c, contract, "_R")}
 	channels[channel] = c.GetUnionType([]*checker.Type{channels[channel], extra})
 	texts := make([]string, len(channels))
 	for i, t := range channels {
 		texts[i] = c.TypeToString(t)
 	}
-	return bangText(texts...)
-}
-
-// channelTexts returns the source text of each channel k writes.
-func channelTexts(k *contract) []string {
-	texts := make([]string, len(k.channels))
-	for i, channel := range k.channels {
-		texts[i] = scanner.GetTextOfNode(channel)
-	}
-	return texts
+	return namedEffectText(name, texts...)
 }
 
 // functionDisplayName names fn in a diagnostic: its name, the name of the

@@ -208,7 +208,7 @@ func (a *analyzer) factoryProgram(expr *ast.Node, success *checker.Type) bool {
 		if symbol := a.checker.GetSymbolAtLocation(expr); symbol != nil {
 			// A class named inside its own extends expression, as in
 			// Schema.Class<Crate>("Crate")({ children: Schema.suspend(
-			// (): Schema.Codec<Crate, W>!! => Crate) }), has no static type
+			// (): Effect<Schema.Codec<Crate, W>> => Crate) }), has no static type
 			// until that base resolves. Reading it here reports TS2506, so
 			// keep D67's success-return convention, as for the const below.
 			if decl := symbol.ValueDeclaration(); decl != nil && ast.IsClassLike(decl) {

@@ -209,10 +209,13 @@ func (p *Parser) vibelangReadonly(modifiers *ast.ModifierList, anchor core.TextR
 	return p.newModifierList(modifiers.Loc, append([]*ast.Node{readonly}, modifiers.Nodes...))
 }
 
-// Effect types.
+// Retired Effect types.
 //
-// In a .vibe file a type followed by ! is an Effect type written
-// Result!Error!Dependencies:
+// A .vibe file writes an Effect type as TypeScript does, Effect<A, E, R>
+// (D308). D127's ! form, Result!Error!Dependencies, is retired, but the
+// parser still reads a type followed by ! as the Effect type it stood for, so
+// a file that has one still checks; the checker reports each one as EK1014,
+// whose quick fix writes the Effect type (vibelang/retired_effect_types.go):
 //
 //	User!NotFound!Db   Effect.Effect<User, NotFound, Db>
 //	User!NotFound!     Effect.Effect<User, NotFound, never>
@@ -228,9 +231,9 @@ func (p *Parser) vibelangReadonly(modifiers *ast.ModifierList, anchor core.TextR
 // object type in a slot in parentheses. A slot's type starts on the line of
 // its !, so a member that ends in `void!!` does not take the next member.
 //
-// The reference is Effect.Effect, which names Effect's type whether Effect is
-// the prelude's or imported from "effect", so a declaration file reads
-// Effect.Effect<A, E, R>.
+// The reference is Effect.Effect, with a name the parser synthesizes, which
+// names Effect's type whether Effect is the prelude's or imported from
+// "effect"; the synthesized name is how the checker finds the form.
 
 // parseVibeLangEffectType parses the slots that follow result when the current
 // token is the ! that makes result an Effect type. Otherwise it returns result.
@@ -322,20 +325,20 @@ func (p *Parser) vibelangInferOmitted(returnType *ast.TypeNode) {
 
 // parseServiceDeclaration parses
 //
-//	service Users { find(id: string): User!NotFound; region: string }
-//	control Approval { approve(request: string): boolean!! }
+//	service Users { find(id: string): Effect<User, NotFound>; region: string }
+//	control Approval { approve(request: string): Effect<boolean> }
 //
 // as the abstract classes they abbreviate, with members that have no bodies
 // (D128, D223). The older spelling with class, service class Users { ... },
 // parses the same way; the checker warns about it (EK2120):
 //
-//	abstract class Users { abstract find(id: string): User!NotFound; abstract readonly region: string }
-//	abstract class Approval extends Control { abstract approve(request: string): boolean!! }
+//	abstract class Users { abstract find(id: string): Effect<User, NotFound>; abstract readonly region: string }
+//	abstract class Approval extends Control { abstract approve(request: string): Effect<boolean> }
 //
 // A member without a body or initializer that is not static becomes abstract,
 // and a value member also readonly. Static members, such as a layer, and
-// members with bodies stay as written. A member's contract is written in the
-// ! form; without a ! a return type is not an Effect (EK2101).
+// members with bodies stay as written. A member's contract is an Effect
+// type; a return type that is not one is EK2101.
 func (p *Parser) parseServiceDeclaration(pos int, jsdoc jsdocScannerInfo, modifiers *ast.ModifierList, control bool) *ast.Node {
 	word := p.scanner.TokenRange()
 	p.nextToken() // service or control

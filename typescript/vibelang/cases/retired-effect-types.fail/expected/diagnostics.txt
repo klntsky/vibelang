@@ -1,0 +1,15 @@
+main.vibe(11,21): error EK1014
+main.vibe(12,12): error EK1014
+main.vibe(25,28): error EK1014
+main.vibe(29,37): error EK1014
+main.vibe(34,32): error EK1014
+main.vibe(38,21): error EK1014
+main.vibe(42,30): error EK1014
+main.vibe(46,28): error EK1014
+main.vibe(48,31): error EK1014
+main.vibe(49,15): error EK1014
+main.vibe(50,15): error EK1014
+main.vibe(50,16): error EK1014
+main.vibe(52,44): error EK1014
+main.vibe(56,34): error EK1014
+main.vibe(62,35): error EK1014

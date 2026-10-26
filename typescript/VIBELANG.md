@@ -82,7 +82,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `vibelang-services-default` | `static readonly default` makes a service a `Context.Reference` that never joins R; `static make` and `static readonly layer` stay on the class |
 | `vibelang-control` | `extends Control` declares a control operation; `Approval.approve(…)` joins R until the runtime's `handle` answers it |
 | `vibelang-service-misuse.fail` | EK3002-EK3006: a service that is extended, constructed, tested with `instanceof`, declared generic, or given a static member with a service member's name |
-| `vibelang-service-contract.fail` | EK2101: a service method with a bare return type, a partial `Effect<A>`, or no annotation; a value member takes any type |
+| `vibelang-service-contract.fail` | EK2101: a service method with a bare return type or no annotation; `Effect<A>` is a contract; a value member takes any type |
 | `vibelang-service-keys-shared.fail` | EK3001: two services in one module share a key |
 | `vibelang-layer-programs` | A `Layer.effect` program whose object has untyped methods still infers `Layer<Users, never, Database>` |
 | `vibelang-wire` | `wire` takes its arguments in any order and emits them consumers first, so one `Database` serves `Users` and `Orders` |
@@ -102,7 +102,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `failures-causes` | `catch` skips a defect, a mixed cause, and an interruption (D13); `finally` runs on each, and a failing `finally` keeps both failures (D15) |
 | `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` still sees expected failures only, and a TypeError passes through it (D54, D282) |
 | `ek2004-dead-catch.fail` | A catch whose `try` block has E = `never` is EK2004, in an Effect function and in a plain one (defects pass through), which `compilerOptions.vibelang` makes an error here; a live `catch` is not reported (D282) |
-| `plain-contract-validate`, `plain-contract-render`, `plain-contract-callback` | Smithers A-1, B-4, E-1 under D282: A-1's throwing validator is an Effect function, `string!Empty!`; B-4 keeps JavaScript's throw inside `sync` under `string!!`; E-1's plain callback calls keep their exceptions and declaration types |
+| `plain-contract-validate`, `plain-contract-render`, `plain-contract-callback` | Smithers A-1, B-4, E-1 under D282: A-1's throwing validator is an Effect function, `Effect<string, Empty>`; B-4 keeps JavaScript's throw inside `sync` under `Effect<string>`; E-1's plain callback calls keep their exceptions and declaration types |
 | `conditional-record`, `conditional-record-environment`, `conditional-record-inexact.fail` | Smithers E-15: paired TypeScript/VibeLang conditional records compile and stay plain under `exactOptionalPropertyTypes`; without it, both report TS2322 on the inferred optional `undefined` properties |
 | `plain-contract-exceptions` | A plain function throws only what its catch handles, which receives typed failures with their types, `JSON.parse`'s and a trusted call's included; exceptions from TypeScript it calls propagate unchanged and become defects in an Effect caller; a method or function that can throw takes an Effect contract (D282) |
 | `plain-contract-effect.fail` | Running an Effect under a plain contract remains EK2003 |
@@ -113,13 +113,14 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `ek2004-defect` | An Effect try with E = `never` warns that defects pass through and still propagates a defect (D260) |
 | `noemit-on-error` | Warning-only projects emit under `noEmitOnError`; errors and mixed warning/error projects do not, in both project and build mode (six checks) |
 | `contracts` | Written contracts: returns checked against A, a contract wider than the body, a contract on a body that runs nothing, `infer` in each channel (D57), and the `.d.ts` with the inferred channels filled in |
-| `contract-wider-callers` | A caller sees a contract wider than a body that runs nothing: callers of `Effect<number, Gone, Needed>` and `number!Gone!Needed` take `Gone` and `Needed`, and `number!!` keeps the plain path (Chapter 15) |
+| `contract-wider-callers` | A caller sees a contract wider than a body that runs nothing: callers of `Effect<number, Gone, Needed>` take `Gone` and `Needed`, and `Effect<number>` keeps the plain path (Chapter 15) |
 | `contract-wider-callers.fail` | Calling such a function under a narrower contract is EK2002 for its requirement and EK2001 for its failure |
 | `contracts-success.fail` | A returned value that A does not accept is TypeScript's TS2322 |
 | `ek2001-escaping-failure.fail` | A failure from a call and one from a `throw` escape their contracts; a `catch` keeps a third function within its contract |
 | `ek2002-escaping-requirement.fail` | A service the body needs escapes the contract's R |
 | `ek2003-bare-return.fail` | A plain return annotation is EK2003 on a function that runs an Effect; plain calls keep the plain contract |
-| `ek2003-missing-channels.fail` | `Effect<string>` and `Effect<string, UserNotFound>` leave channels out |
+| `effect-type-defaults`, `effect-type-defaults.fail` | A type argument left out of a contract is `never`, as in TypeScript (D308): `Effect<A>` and `Effect<A, E>` check the channels they leave out, `infer` still infers one, and a service's members write `Effect<…>`; a body that needs more is EK2001 or EK2002, and a bare member type EK2101 |
+| `retired-effect-types.fail`, `retired-effect-types-fixed` | D308: every retired `!` form is EK1014; the twin is what `vibelang --fix` writes, which compiles and runs |
 | `recursion` | `isOdd` and `isEven` call each other under written contracts, a caller outside reads them, and a self-recursive `totalSize` writes its contract too |
 | `recursive-contract-lambdas` | Smithers D-5, A-7, and S11-1, which crashed the checker: lambdas with Effect contracts that call themselves through a raced map of branch programs, a `catch` handler with a by-name caller, a call before the first Effect operation, a local lambda inside a program, a lambda used as a value, a `throw` after the recursive call, and a block-param body are Effect functions; a pure recursive lambda with a contract is one too, and one with a plain annotation stays plain |
 | `schema-statics-annotation` | Smithers C-5: a constructor lambda whose return annotation names the variable its enclosing call initializes compiles as in TypeScript, without TS7022, TS2577, or TS2456; with an Effect contract it is an Effect function |
@@ -370,8 +371,8 @@ A declaration form starts with a word that an identifier follows on the same lin
 | Form | Expands to | Decision |
 | --- | --- | --- |
 | `error NotFound { id: string }` | `class NotFound extends TaggedError("NotFound")<{ readonly id: string }> {}` | D126 |
-| `User!NotFound!Db`, `User!!`, `User!NotFound` | `Effect.Effect<User, NotFound, Db>`; an empty slot is `never`; left-out dependencies are `infer R` on a function with a body (`parseReturnType`), else `never` | D127 |
-| `service Users { find(id: string): User!NotFound }`, `control Approval { ... }` | `abstract class Users { abstract find(...) }`, with `extends Control` for `control`; bodiless instance members become abstract, value members also readonly (`vibelangAbstractMembers`, cleared inside nested classes); an implemented member is EK2103. The older spelling with `class` (`service class Users`) parses the same way and draws the warning EK2120, whose quick fix removes `class` (`declaration_forms.go`) | D128, D223 |
+| `User!NotFound!Db`, `User!!`, `User!NotFound`, retired | `Effect.Effect<User, NotFound, Db>`; an empty slot is `never`; left-out dependencies are `infer R` on a function with a body (`parseReturnType`), else `never`. Each is EK1014, whose quick fix writes the `Effect<…>` type (`retired_effect_types.go`) | D127, D308 |
+| `service Users { find(id: string): Effect<User, NotFound> }`, `control Approval { ... }` | `abstract class Users { abstract find(...) }`, with `extends Control` for `control`; bodiless instance members become abstract, value members also readonly (`vibelangAbstractMembers`, cleared inside nested classes); an implemented member is EK2103. The older spelling with `class` (`service class Users`) parses the same way and draws the warning EK2120, whose quick fix removes `class` (`declaration_forms.go`) | D128, D223 |
 | `layer UsersLive: Users { setup; find(id) { ... }; readonly region = "eu" }`, the old spelling of `Layer.effect(Users) { setup; return { ... } }` (D221) | `const UsersLive = Layer.effect(Users, () => { setup; return { find(id) { ... }, region: "eu" } })`, or `Layer.succeed` without setup; setup after a member is EK2104 (`layers_check.go`). It draws the warning EK2121, whose quick fix rewrites the declaration into the call from its source text (`layerDeclarationText` in `declaration_forms.go`). The current form needs nothing from the parser beyond block params (D188) | D129, D221 |
 | `provide AppLive { ... }` | A `Block` flagged `NodeFlagsVibeLang` whose first statement holds the layer; the analyzer (`provideFlow`) and the lowering (`visitProvideBlock`, a region under `Effect.provide`) recognize it (`provide.go`). The old spelling `with AppLive { ... }` parses the same way and draws the warning EK1009, whose quick fix writes `provide`. Providers separated by commas become an array of layers, and `Key = value` becomes `$provideService(Key, "Key", value)` from `vibelang-runtime` (`vibelangProviders` in the parser); `providerChannelsOf` reads the array element by element | D130, D172-D175 |
 | `catch (e: NotFound) { A } catch (e) { B }` (retired: warning EK2112; `catch (cause: Cause)` draws EK2113; `retiredcatch.go` finds the chain and its quick fix writes `match (e) { when NotFound: …; default: throw e; }`, an `if (e is …)` chain, or `match (exit(…))`; D216, D217) | One `catch ($caught)` whose block is `if ($isFailure<NotFound>($caught)) { const e = $caught; A } else { const e = $caught; B }`, ending in `throw $caught` without an untyped clause; the lowering adds the tags (`catches.go`) | D131 |
@@ -382,7 +383,7 @@ A declaration form starts with a word that an identifier follows on the same lin
 
 An entry module, one that exports a parameterless `function main`, gets `runtime.$entry(import.meta.main, import.meta.url, main, () => NodeRuntime.runMain(main()))` at the end of its JavaScript, with `runtime.$runMain(main())` in the arrow when `@effect/platform-node` does not resolve from it, and `void 0` for both `import.meta` arguments in a file emitted as CommonJS; `$entry` decides whether the host started the module, in a bundle too (`packages/runtime/src/main.ts`); `implicitRuntimeImport` adds the package as an implicit import so the plan can tell (`entry.go`, D135). A module that calls a runner at its top level gets none.
 
-In `.vibe` files, `parsePostfixTypeOrHigher` leaves `!` to `parseType`, which reads the slots of an Effect type; JSDoc's postfix non-null `T!` does not parse there. Hovers rewrite Effect types into the `!` form through `ls.RegisterQuickInfoTextHook` (`vibelang/bang.go`), and contract messages write them the same way.
+In `.vibe` files, `parsePostfixTypeOrHigher` leaves `!` to `parseType`, which reads the slots of the retired `!` form of an Effect type, so EK1014 can report it and its quick fix rewrite it (`vibelang/retired_effect_types.go`); JSDoc's postfix non-null `T!` does not parse there. Hovers write Effect types in TypeScript's short form, `Effect<string>` for `Effect.Effect<string, never, never>`, through `ls.RegisterQuickInfoTextHook` (`vibelang/effect_text.go`), and contract messages write them the same way.
 
 The VS Code grammar adds these forms in `editors/vscode/scripts/vibelang-grammar.mjs`, which `derive-grammar.mjs` applies whenever it rederives the grammar from TypeScript's. `site/vibe.tmLanguage.json` is a copy of it.
 
@@ -663,9 +664,10 @@ The checks so far:
 | EK1005 | The callee of a runner in code a fiber runs | `runners.go` |
 | EK1012 | A call that runs and never succeeds where a variable, a field, an element or an assignment stores it (D147); a warning, adjustable | `neverstored.go` |
 | EK1013 | The comma after a field of an `error`, `schema error`, `service`, or `control` body, which the parser reads as an empty class member flagged `NodeFlagsVibeLang` instead of reporting TypeScript's TS1442; with a quick fix that writes `;`. A `data` declaration's variants and fields end with their separator, so the check reads a comma there (`data.go`) | `fieldcommas.go`, `data.go` |
+| EK1014 | The retired `!` form of an Effect type, `A!E!R`, which the parser still reads as `Effect.Effect<A, E, R>`; with a quick fix that writes the `Effect<…>` type it stood for, which `vibelang --fix` applies (D308) | `retired_effect_types.go` |
 | EK2001 | The call or `throw` that adds an expected failure the function's contract does not allow | `contracts.go` |
 | EK2002 | The call that adds a requirement the function's contract does not allow | `contracts.go` |
-| EK2003 | A return annotation that leaves a contract channel out, a plain return annotation on a function whose body runs an Effect, or one on a function whose throw can escape, with a quick fix that writes `A!E!` (D282); a JavaScript iterator annotation on a generator whose throw can escape (D296) | `contracts.go`, `plain_failures.go`, `plain_generators.go` |
+| EK2003 | A plain return annotation on a function whose body runs an Effect, or one on a function whose throw can escape, with a quick fix that writes `Effect<A, E>` (D282); a JavaScript iterator annotation on a generator whose throw can escape (D296) | `contracts.go`, `plain_failures.go`, `plain_generators.go` |
 | EK2004 | The `catch` keyword, when the `try` block has E = `never`, in an Effect function or a plain one; defects pass through (D260, D282); covers TypeScript's errors about the `never` caught value | `failures.go` |
 | EK2005 | The program passed to `resumeWith` when it needs a service or fails with an error the operation does not declare (D17); covers TypeScript's TS2345 there | `handlers.go` |
 | EK2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript would discard the failure in flight | `regions.go` |
@@ -777,7 +779,7 @@ A method's expectation is read once, from the contextual type the checker has wh
 
 | Code | Reported at | What it reports |
 | --- | --- | --- |
-| EK2101 | The return type of a service or control method, or its name | A method without a full contract: the annotation must be an `Effect` with all three channels written, such as `Effect<number, never, never>`, or an alias of one. `Effect<A>` leaves channels to defaults, so it is not one. An annotation TypeScript cannot resolve is left to TypeScript's error |
+| EK2101 | The return type of a service or control method, or its name | A method whose return type is not an Effect type, such as `number`, or that has none. `Effect<A>` and `Effect<A, E>` are contracts whose missing channels are `never` (D308), and an alias of an Effect type is one too. An annotation TypeScript cannot resolve is left to TypeScript's error |
 | EK3001 | The class name | Two service or control classes anywhere in the program share a key; a note names the other |
 | EK3002 | The `extends` expression | A class extends a service; covers TypeScript's errors about the inherited abstract members |
 | EK3003 | The `new` expression | `new Users()`; covers TS2511 |
@@ -878,7 +880,7 @@ The return type annotation of a `.vibe` function with a body is the function's c
 | A requirement must be in R | EK2002 at the call that needs it |
 | A channel written `infer Name` comes from the body (D57) | The annotated return type hook completes the signature's return type: A as TypeScript infers a return type (`GetReturnTypeFromBody`), E and R from `effectOf`. The infer type hook keeps `checkInferType` from reporting TS1338 and the unused name; the binder already declares such a name in no scope |
 | The declaration file carries the full contract | An annotation with an `infer` channel is not copied: the declaration type annotation hook makes the emitter serialize the signature's return type. A full contract is copied, and the prelude's declaration-file imports make its `Effect` portable |
-| A contract that leaves a channel out is EK2003 | `Effect<User>` and `Effect<User, UserNotFound>`, with both fixes: the missing channels as `never`, or as `infer` |
+| A type argument left out is `never`, as in TypeScript (D308) | `Effect<User>` and `Effect<User, UserNotFound>` check the channels they leave out as `never`; only `infer` infers a channel |
 | A plain return annotation keeps its type on a function that compiles to plain JavaScript (D67) | On a function whose body runs an Effect, or throws past its own `catch` (D282, on a method too), it is EK2003. A method without an annotation that implements a plain-function member is checked against that member (D55): one that can fail is EK4301 |
 | A caller sees the contract, not the body | `addCall` reads a callee's E and R from its contract when the contract infers neither; a callee whose contract infers a channel is read through its body, which never asks for a return type that a call cycle may be computing |
 
@@ -887,9 +889,6 @@ main.vibe(14,20): error EK2001: UserNotFound can escape greeting, but its contra
   Catch it inside greeting, or change the contract to Effect<string, UserNotFound, never>.
 main.vibe(15,3): error EK2002: welcome needs Mailer, but its contract says R = Users.
   Provide Mailer inside welcome, or add it: Effect<string, MailError, Mailer | Users>.
-main.vibe(6,35): error EK2003: Effect<string> leaves contract channels unspecified. Did you mean never or inferred?
-  Write Effect<string, never, never> to check the missing channels as never.
-  Or write Effect<string, infer E, infer R> to infer them from the body.
 ```
 
 ### Recursion (D52)

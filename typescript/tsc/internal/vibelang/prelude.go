@@ -172,7 +172,7 @@ func mayUsePrelude(file *ast.SourceFile) (prelude bool, root bool) {
 // maySplitPlainFunction reports whether file declares a function that may
 // compile to plain JavaScript with an Effect form (isSplittable): a named
 // function declaration with a body and no return type annotation that is
-// neither async nor a generator. A function annotated with A!E!R names
+// neither async nor a generator. A function annotated with Effect<A, E, R> names
 // effect's Effect, so mayUsePrelude already loads effect for it, and one
 // annotated with a plain type keeps that type.
 func maySplitPlainFunction(file *ast.SourceFile) bool {

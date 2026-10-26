@@ -366,7 +366,7 @@ func (a *analyzer) typeInForm(fn *ast.Node, t *checker.Type, f form) *checker.Ty
 		if sigs := a.checker.GetSignaturesOfType(t, checker.SignatureKindCall); len(sigs) == 1 {
 			declared := a.declaredProgramReturn(fn)
 			// A declared program type that names the candidate's type
-			// parameters, as R2 does in (a: A) => void!!R2, is what inference
+			// parameters, as R2 does in (a: A) => Effect<void, never, R2>, is what inference
 			// reads from fn's type. A factory whose returns TypeScript already
 			// types as an Effect, as () => Effect.void, keeps that type, or R2
 			// would be inferred as itself.

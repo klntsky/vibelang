@@ -21,7 +21,7 @@ import (
 //	EK4830  class X extends Data.TaggedError("X")<{ … }> {}   error X { … }
 //	EK4831  class X extends Context.Service<X, { … }>()("k")  service X { … }
 //	EK4832  const X = Schema.Struct({ … })                    schema X { … }
-//	EK4833  Effect.Effect<A, E, R>                            A!E!R
+//	EK4833  Effect.Effect<A, E, R>                            Effect<A, E, R>
 //	EK4834  Effect.succeed(x), Effect.fail(e) where they run  x, throw e
 //	EK4835  Effect.catchTag, catchTags, catch                 x catch (e) => match (e) { … }
 //	EK4836  Effect.withSpan, provide, provideService          withSpan("n") { … }, provide L { … }
@@ -41,7 +41,7 @@ var (
 	EK4831 = message(4831, warningCategory, "{0} extends Context.Service; in VibeLang a service is a service declaration: service {0} { … }.")
 	// EK4832 (D286): a constant that holds a Schema.Struct. {0} is the constant.
 	EK4832 = message(4832, warningCategory, "{0} holds a Schema.Struct; a schema declaration writes the struct and its type at once: schema {0} { … }.")
-	// EK4833 (D287): an Effect type written with its type arguments. {0} is the type, {1} the ! form.
+	// EK4833 (D287, D308): an Effect type written through the Effect module. {0} is the type, {1} the prelude's spelling.
 	EK4833 = message(4833, warningCategory, "{0} is TypeScript's spelling of an Effect type; write {1}.")
 	// EK4834 (D288): Effect.succeed or Effect.fail where the call runs. {0} is the call, {1} the direct form.
 	EK4834 = message(4834, warningCategory, "{0} runs here, so it is its value: write {1}.")
@@ -105,8 +105,8 @@ var tsFormRules = map[int32]*tsFormRule{}
 // tsFormFixCodes are the codes whose quick fixes vibelang --fix applies
 // (D291): the rules above, whose fixes keep the program's meaning, and the
 // retired spellings whose fixes write the current ones (D172, D219, D221,
-// D223).
-var tsFormFixCodes = []int32{4830, 4831, 4832, 4833, 4834, 4835, 4836, 1009, 2112, 2113, 2120, 2121}
+// D223, D308).
+var tsFormFixCodes = []int32{4830, 4831, 4832, 4833, 4834, 4835, 4836, 1009, 1014, 2112, 2113, 2120, 2121}
 
 // checkTypeScriptForms reports the rules' warnings in file.
 func checkTypeScriptForms(c *checker.Checker, file *ast.SourceFile) {

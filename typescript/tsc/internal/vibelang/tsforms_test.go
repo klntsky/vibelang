@@ -36,35 +36,36 @@ func TestTypeScriptFormQuickFixes(t *testing.T) {
 		{"prelude TaggedError", 4830, `export class Gone extends TaggedError("Gone")<{ id: string }> {}`, `export error Gone { id: string }`},
 		{"last use of the import", 4830, "import * as Data from \"effect/Data\"\n/** Gone. */\nexport class Gone extends Data.TaggedError(\"Gone\")<{ id: string }> {}", "/** Gone. */\nexport error Gone { id: string }"},
 		// EK4831 (D285)
-		{"service", 4831, "export class Users extends Context.Service<Users, {\n  find(id: string): Effect.Effect<string>\n  readonly region: string,\n  size: (name: string) => number!!\n}>()(\"app/Users\") {}", "export service Users {\n  find(id: string): string!!\n  region: string\n  size: (name: string) => number!!\n}"},
-		{"one-line service", 4831, `export class Clock2 extends Context.Service<Clock2, { now(): Effect.Effect<number, never, never>, zone: string }>()("app/Clock2") {}`, `export service Clock2 { now(): number!!; zone: string }`},
+		{"service", 4831, "export class Users extends Context.Service<Users, {\n  find(id: string): Effect.Effect<string>\n  readonly region: string,\n  size: (name: string) => Effect<number>\n}>()(\"app/Users\") {}", "export service Users {\n  find(id: string): Effect<string>\n  region: string\n  size: (name: string) => Effect<number>\n}"},
+		{"one-line service", 4831, `export class Clock2 extends Context.Service<Clock2, { now(): Effect.Effect<number, never, never>, zone: string }>()("app/Clock2") {}`, `export service Clock2 { now(): Effect<number, never, never>; zone: string }`},
 		// EK4832 (D286)
 		{"struct and its type", 4832, "export const User = Schema.Struct({ id: Schema.String, nickname: Schema.optional(Schema.String), role: Schema.Literals([\"admin\", \"member\"]) })\nexport type User = typeof User.Type\nexport const u: User = { id: \"1\", role: \"admin\" }", "export schema User { id: string; nickname?: string; role: \"admin\" | \"member\" }\nexport const u: User = { id: \"1\", role: \"admin\" }"},
 		{"every field form", 4832, "export const Order = Schema.Struct({\n  items: Schema.Array(Schema.Union([Schema.String, Schema.Number])),\n  pair: Schema.Tuple([Schema.String, Schema.Boolean]),\n  tags: Schema.Record(Schema.String, Schema.Number),\n  status: Schema.mutableKey(Schema.Literal(\"open\")),\n  note: Schema.optional(Schema.Union([Schema.String, Schema.Null])),\n  meta: Schema.Struct({ ok: Schema.Boolean }),\n  count: Schema.Finite\n})", "export schema Order {\n  items: (string | number)[]\n  pair: [string, boolean]\n  tags: Record<string, number>\n  mutable status: \"open\"\n  note?: string | null\n  meta: { ok: boolean }\n  count: Schema.Finite\n}"},
 		{"local struct", 4832, "export function decode(value: unknown) {\n  const Local = Schema.Struct({ value: Schema.String })\n  return Schema.decodeUnknownEffect(Local)(value)\n}", "export function decode(value: unknown) {\n  schema Local { value: string }\n  return Schema.decodeUnknownEffect(Local)(value)\n}"},
-		// EK4833 (D287)
-		{"full contract", 4833, `export function load(): Effect.Effect<number, never, never> { return 1 }`, `export function load(): number!! { return 1 }`},
-		{"never dependencies in a body's return", 4833, "error Gone\nexport function load(): Effect.Effect<number, Gone, never> { return 1 }", "error Gone\nexport function load(): number!Gone! { return 1 }"},
-		{"inferred dependencies", 4833, "error Gone\nexport function load(): Effect.Effect<number, Gone, infer R> { return 1 }", "error Gone\nexport function load(): number!Gone { return 1 }"},
-		{"parameter", 4833, `export function run(program: Effect.Effect<number>): number!! { return program() }`, `export function run(program: number!!): number!! { return program() }`},
-		{"union member", 4833, `export type Maybe = Effect.Effect<number> | undefined`, `export type Maybe = (number!!) | undefined`},
-		{"function slot", 4833, `export type Make = Effect.Effect<() => number>`, `export type Make = (() => number)!!`},
-		{"prelude spelling", 4833, `export type Load = (id: string) => Effect<string, never, never>`, `export type Load = (id: string) => string!!`},
+		// EK4833 (D287, D308): the module goes, the arguments stay as written.
+		{"full contract", 4833, `export function load(): Effect.Effect<number, never, never> { return 1 }`, `export function load(): Effect<number, never, never> { return 1 }`},
+		{"never dependencies in a body's return", 4833, "error Gone\nexport function load(): Effect.Effect<number, Gone, never> { return 1 }", "error Gone\nexport function load(): Effect<number, Gone, never> { return 1 }"},
+		{"inferred dependencies", 4833, "error Gone\nexport function load(): Effect.Effect<number, Gone, infer R> { return 1 }", "error Gone\nexport function load(): Effect<number, Gone, infer R> { return 1 }"},
+		{"inferred errors", 4833, `export function load(): Effect.Effect<number, infer E, never> { return 1 }`, `export function load(): Effect<number, infer E, never> { return 1 }`},
+		{"defaults on a body", 4833, `export function load(): Effect.Effect<number> { return 1 }`, `export function load(): Effect<number> { return 1 }`},
+		{"parameter", 4833, `export function run(program: Effect.Effect<number>): Effect<number> { return program() }`, `export function run(program: Effect<number>): Effect<number> { return program() }`},
+		{"union member", 4833, `export type Maybe = Effect.Effect<number> | undefined`, `export type Maybe = Effect<number> | undefined`},
+		{"function slot", 4833, `export type Make = Effect.Effect<() => number>`, `export type Make = Effect<() => number>`},
 		// EK4834 (D288)
 		{"succeed in a return", 4834, "export function find(id: number) {\n  if (id === 0) throw new Error(\"no\")\n  return Effect.succeed(\"Ada\")\n}", "export function find(id: number) {\n  if (id === 0) throw new Error(\"no\")\n  return \"Ada\"\n}"},
 		{"fail in a return", 4834, "error Gone\nexport function find(id: number) {\n  if (id === 0) return Effect.fail(new Gone())\n  return 1\n}", "error Gone\nexport function find(id: number) {\n  if (id === 0) throw new Gone()\n  return 1\n}"},
 		{"succeed in an Effect-typed arrow", 4834, "export const read: () => Effect.Effect<{ ok: boolean }> = () => Effect.succeed({ ok: true })", "export const read: () => Effect.Effect<{ ok: boolean }> = () => ({ ok: true })"},
 		{"fail in an Effect-typed arrow", 4834, "error Gone\nexport const gone: () => Effect.Effect<never, Gone> = () => Effect.fail(new Gone())", "error Gone\nexport const gone: () => Effect.Effect<never, Gone> = () => throw new Gone()"},
 		// EK4835 (D289)
-		{"catchTag of a declared error", 4835, "error Gone { id: number }\nfunction find(id: number): string!Gone { throw new Gone({ id }) }\nexport function describe(id: number) { return Effect.catchTag(find(id), \"Gone\", (e) => `gone ${e.id}`) }", "error Gone { id: number }\nfunction find(id: number): string!Gone { throw new Gone({ id }) }\nexport function describe(id: number) { return find(id) catch (e) => match (e) { when Gone: `gone ${e.id}`; default: throw e; } }"},
-		{"catchTags", 4835, "error Gone\nerror Slow\nfunction find(id: number): string!Gone | Slow { if (id < 0) throw new Slow(); throw new Gone() }\nexport function both(id: number) { return Effect.catchTags(find(id), { Gone: () => \"gone\", Slow: () => \"slow\" }) }", "error Gone\nerror Slow\nfunction find(id: number): string!Gone | Slow { if (id < 0) throw new Slow(); throw new Gone() }\nexport function both(id: number) { return find(id) catch (e) => match (e) { when Gone: \"gone\"; when Slow: \"slow\"; default: throw e; } }"},
-		{"catchTag of a structural tag", 4835, "class Tagged { readonly _tag = \"Tagged\" as const }\nfunction fail(): string!Tagged { throw new Tagged() }\nexport function recover() { return Effect.catchTag(fail(), \"Tagged\", () => \"ok\") }", "class Tagged { readonly _tag = \"Tagged\" as const }\nfunction fail(): string!Tagged { throw new Tagged() }\nexport function recover() { return fail() catch (e) => match (e) { when { _tag: \"Tagged\" }: \"ok\"; default: throw e; } }"},
-		{"catch with a handler", 4835, "error Gone\nfunction find(): string!Gone { throw new Gone() }\nexport function any() { return Effect.catch(find(), (e) => e._tag) }", "error Gone\nfunction find(): string!Gone { throw new Gone() }\nexport function any() { return find() catch (e) => e._tag }"},
-		{"catch with a fallback", 4835, "error Gone\nfunction find(): string!Gone { throw new Gone() }\nexport function any() { return Effect.catch(find(), () => \"none\") }", "error Gone\nfunction find(): string!Gone { throw new Gone() }\nexport function any() { return find() catch \"none\" }"},
+		{"catchTag of a declared error", 4835, "error Gone { id: number }\nfunction find(id: number): Effect<string, Gone> { throw new Gone({ id }) }\nexport function describe(id: number) { return Effect.catchTag(find(id), \"Gone\", (e) => `gone ${e.id}`) }", "error Gone { id: number }\nfunction find(id: number): Effect<string, Gone> { throw new Gone({ id }) }\nexport function describe(id: number) { return find(id) catch (e) => match (e) { when Gone: `gone ${e.id}`; default: throw e; } }"},
+		{"catchTags", 4835, "error Gone\nerror Slow\nfunction find(id: number): Effect<string, Gone | Slow> { if (id < 0) throw new Slow(); throw new Gone() }\nexport function both(id: number) { return Effect.catchTags(find(id), { Gone: () => \"gone\", Slow: () => \"slow\" }) }", "error Gone\nerror Slow\nfunction find(id: number): Effect<string, Gone | Slow> { if (id < 0) throw new Slow(); throw new Gone() }\nexport function both(id: number) { return find(id) catch (e) => match (e) { when Gone: \"gone\"; when Slow: \"slow\"; default: throw e; } }"},
+		{"catchTag of a structural tag", 4835, "class Tagged { readonly _tag = \"Tagged\" as const }\nfunction fail(): Effect<string, Tagged> { throw new Tagged() }\nexport function recover() { return Effect.catchTag(fail(), \"Tagged\", () => \"ok\") }", "class Tagged { readonly _tag = \"Tagged\" as const }\nfunction fail(): Effect<string, Tagged> { throw new Tagged() }\nexport function recover() { return fail() catch (e) => match (e) { when { _tag: \"Tagged\" }: \"ok\"; default: throw e; } }"},
+		{"catch with a handler", 4835, "error Gone\nfunction find(): Effect<string, Gone> { throw new Gone() }\nexport function any() { return Effect.catch(find(), (e) => e._tag) }", "error Gone\nfunction find(): Effect<string, Gone> { throw new Gone() }\nexport function any() { return find() catch (e) => e._tag }"},
+		{"catch with a fallback", 4835, "error Gone\nfunction find(): Effect<string, Gone> { throw new Gone() }\nexport function any() { return Effect.catch(find(), () => \"none\") }", "error Gone\nfunction find(): Effect<string, Gone> { throw new Gone() }\nexport function any() { return find() catch \"none\" }"},
 		// EK4836 (D290)
 		{"withSpan", 4836, "function find() { return Effect.succeed(1) }\nexport function traced() { return Effect.withSpan(find(), \"find\") }", "function find() { return Effect.succeed(1) }\nexport function traced() { return withSpan(\"find\") { return find() } }"},
-		{"provide", 4836, "service Region { name(): string!! }\nconst RegionLive = Layer.succeed(Region, { name() { return \"eu\" } })\nexport function region() {\n  return Effect.provide(Region.name(), RegionLive)\n}", "service Region { name(): string!! }\nconst RegionLive = Layer.succeed(Region, { name() { return \"eu\" } })\nexport function region() {\n  provide RegionLive { return Region.name() }\n}"},
-		{"provideService", 4836, "service Region { name(): string!! }\nexport function region() {\n  return Effect.provideService(Region.name(), Region, { name() { return \"eu\" } })\n}", "service Region { name(): string!! }\nexport function region() {\n  provide Region = { name() { return \"eu\" } } { return Region.name() }\n}"},
+		{"provide", 4836, "service Region { name(): Effect<string> }\nconst RegionLive = Layer.succeed(Region, { name() { return \"eu\" } })\nexport function region() {\n  return Effect.provide(Region.name(), RegionLive)\n}", "service Region { name(): Effect<string> }\nconst RegionLive = Layer.succeed(Region, { name() { return \"eu\" } })\nexport function region() {\n  provide RegionLive { return Region.name() }\n}"},
+		{"provideService", 4836, "service Region { name(): Effect<string> }\nexport function region() {\n  return Effect.provideService(Region.name(), Region, { name() { return \"eu\" } })\n}", "service Region { name(): Effect<string> }\nexport function region() {\n  provide Region = { name() { return \"eu\" } } { return Region.name() }\n}"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			got := applyQuickFix(t, test.source, test.code)
@@ -141,20 +142,21 @@ func TestTypeScriptFormRefusals(t *testing.T) {
 		{"Schema error", `export class Failed extends Schema.TaggedError<Failed>()("Failed", { id: Schema.String }) {}`, 4837, "is not a Schema"},
 		{"fields from a named type", "interface Fields { id: string }\nexport class Named extends Data.TaggedError(\"Named\")<Fields> {}", 4830, "the fields come from Fields"},
 		{"error class with members", `export class Custom extends Data.TaggedError("Custom")<{ id: string }> { get message() { return this.id } }`, 4830, ""},
-		{"service with a named shape", "interface Shape { read(): string!! }\nexport class Named extends Context.Service<Named, Shape>()(\"app/Named\") {}", 4831, "its members come from Shape"},
+		{"service with a named shape", "interface Shape { read(): Effect<string> }\nexport class Named extends Context.Service<Named, Shape>()(\"app/Named\") {}", 4831, "its members come from Shape"},
 		{"service with a plain method", `export class Plain extends Context.Service<Plain, { read(): string }>()("app/Plain") {}`, 4831, "an operation of a service returns an Effect type"},
 		{"service of a number", `export class Port extends Context.Service<Port, number>()("app/Port") {}`, 4831, ""},
 		{"struct with optionalKey", `export const Exact = Schema.Struct({ id: Schema.optionalKey(Schema.String) })`, 4832, ""},
 		{"struct with an annotation", `export const Named = Schema.Struct({ id: Schema.String }).annotate({ identifier: "Named" })`, 4832, ""},
 		{"struct whose name is another type", "type Point = { x: number }\nexport const Point = Schema.Struct({ x: Schema.Number })", 4832, ""},
-		{"partial contract on a body", `export function load(): Effect.Effect<number> { return 1 }`, 4833, ""},
-		{"inferred errors", `export function load(): Effect.Effect<number, infer E, never> { return 1 }`, 4833, ""},
+		{"prelude spelling", `export type Load = (id: string) => Effect<string, never, never>`, 4833, ""},
+		{"a type named Effect", "type Effect<A> = { value: A }\nexport type Load = Effect.Effect<string>", 4833, ""},
+		{"an imported Effect namespace", "import { Effect } from \"effect\"\nexport type Load = (id: string) => Effect.Effect<string>", 4833, ""},
 		{"succeed passed by name", `export function patient() { return retry(Effect.succeed(1), Schedule.recurs(1)) }`, 4834, ""},
 		{"succeed of an Effect", "const inner: Effect.Effect<number> = Effect.sync(() => 1)\nexport function outer() { return Effect.succeed(inner) }", 4834, ""},
-		{"succeed in a lambda whose form follows its body", `export const free = { run: () => Effect.succeed(1) } as unknown as { run: () => number!! }`, 4834, ""},
+		{"succeed in a lambda whose form follows its body", `export const free = { run: () => Effect.succeed(1) } as unknown as { run: () => Effect<number> }`, 4834, ""},
 		{"fail of a Cause", `export function rethrow(cause: Cause.Cause<string>) { return Effect.fail(cause) }`, 4834, ""},
-		{"catchTag with a block handler", "error Gone\nfunction find(): string!Gone { throw new Gone() }\nexport function f() { return Effect.catchTag(find(), \"Gone\", () => { const x = 1; return x }) }", 4835, ""},
-		{"provide as a value", "service Region { name(): string!! }\nconst RegionLive = Layer.succeed(Region, { name() { return \"eu\" } })\nexport function region() {\n  const name = Effect.provide(Region.name(), RegionLive)\n  return name\n}", 4836, ""},
+		{"catchTag with a block handler", "error Gone\nfunction find(): Effect<string, Gone> { throw new Gone() }\nexport function f() { return Effect.catchTag(find(), \"Gone\", () => { const x = 1; return x }) }", 4835, ""},
+		{"provide as a value", "service Region { name(): Effect<string> }\nconst RegionLive = Layer.succeed(Region, { name() { return \"eu\" } })\nexport function region() {\n  const name = Effect.provide(Region.name(), RegionLive)\n  return name\n}", 4836, ""},
 		{"withSpan shadowed", "function withSpan(name: string) { return name }\nexport function f() { return Effect.withSpan(Effect.succeed(1), \"x\") }", 4836, ""},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -287,7 +289,7 @@ func TestFixProjectRefusesNewErrors(t *testing.T) {
 		t.Fatalf("refused %+v, want EK4834 on line 2 with TS2345", result.Refused)
 	}
 	fixed := result.Files[file.FileName()]
-	if fixed == nil || fixed.Counts[4833] != 1 || !strings.Contains(fixed.Text, "export type B = number!!") || !strings.Contains(fixed.Text, "Effect.succeed(\"fast\")") {
+	if fixed == nil || fixed.Counts[4833] != 1 || !strings.Contains(fixed.Text, "export type B = Effect<number>") || !strings.Contains(fixed.Text, "Effect.succeed(\"fast\")") {
 		t.Fatalf("fixed %+v, want only the EK4833 fix", fixed)
 	}
 	var report strings.Builder

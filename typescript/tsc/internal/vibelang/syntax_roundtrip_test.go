@@ -17,10 +17,16 @@ import (
 // These cases pin syntax from D154, D176-D196, D223, D225 and D229-D232.
 var syntaxRoundTripCases = []struct{ name, source string }{
 	{"declarations", `error Gone { readonly id: string }
-service Users { find(id: string): string!Gone }
-control Ask { answer(): boolean!! }
+service Users { find(id: string): Effect<string, Gone> }
+control Ask { answer(): Effect<boolean> }
 schema Ticket { id: string; count: number }`},
-	{"contracts", `function read(id: string): string!Gone!Users { return Users.find(id) }
+	{"contracts", `function read(id: string): Effect<string, Gone, Users> { return Users.find(id) }
+function partial(id: string): Effect<string, infer E, infer R> { return Users.find(id) }
+type Program = Effect<number>
+type Errors = Effect<string, Gone>
+type Requirements = Effect<boolean, never, Users>`},
+	// D308: the retired ! form still parses, so EK1014 can report and rewrite it.
+	{"retired-contracts", `function read(id: string): string!Gone!Users { return Users.find(id) }
 type Program = number!!
 type Errors = string!Gone
 type Requirements = boolean!!Users`},

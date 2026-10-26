@@ -1,0 +1,81 @@
+// expect: EK1014
+// D308: the ! form of an Effect type is retired, and each one is EK1014.
+// retired-effect-types.fail writes every form; retired-effect-types-fixed is
+// what vibelang --fix writes for it, which compiles and runs. A ! form
+// without dependencies infers them on a function with a body, so the fix
+// writes infer R there and nothing elsewhere.
+error NotFound { id: string }
+error Timeout
+
+service Users {
+  find(id: string): string!NotFound
+  count(): number!!
+}
+
+const UsersLive = Layer.succeed(Users, {
+  find(id: string) {
+    if (id !== "42") throw new NotFound({ id })
+    return "Ada"
+  },
+  count() {
+    return 2
+  }
+})
+
+function full(id: string): string!NotFound!Users {
+  return Users.find(id)
+}
+
+function noDependencies(n: number): number!Timeout! {
+  if (n < 0) throw new Timeout()
+  return n
+}
+
+function inferred(id: string): string!NotFound {
+  return Users.find(id)
+}
+
+function neither(): number!! {
+  return 3
+}
+
+function onlyDependencies(): number!!Users {
+  return Users.count()
+}
+
+const arrow = (n: number): number!Timeout => noDependencies(n) + 1
+
+type Finder = (id: string) => string!NotFound
+type Maybe = (number!!) | undefined
+type Nested = (number!!)!NotFound!
+
+function find(finder: Finder, id: string): string!! {
+  return finder(id) catch "none"
+}
+
+function either(program: Maybe): number!! {
+  return program === undefined ? 0 : program()
+}
+
+const five: Effect<number> = Effect.sync(() => 5)
+
+function unwrap(program: Nested): number!NotFound! {
+  const inner = program()
+  return inner()
+}
+
+export function main() {
+  provide UsersLive {
+    return {
+      full: full("42"),
+      noDependencies: noDependencies(1),
+      inferred: inferred("42"),
+      neither: neither(),
+      onlyDependencies: onlyDependencies(),
+      arrow: arrow(1),
+      find: find((id) => { if (id === "7") throw new NotFound({ id }); return id }, "7"),
+      either: either(Effect.succeed(4)),
+      unwrap: unwrap(Effect.succeed(five))
+    }
+  }
+}

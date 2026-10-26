@@ -45,5 +45,5 @@ func checkAnyCallResult(c *checker.Checker, fn *ast.Node, value *ast.Node) {
 	for ast.IsParenthesizedExpression(named) || ast.IsAsExpression(named) || ast.IsTypeAssertion(named) || ast.IsSatisfiesExpression(named) {
 		named = named.Expression() // (loader as any)() names loader
 	}
-	note(d, "Give {0} a type: a function type that returns A!E!R runs the program the call returns, and one that returns a value type keeps the value.", messageText(named, "the callee"))
+	note(d, "Give {0} a type: a function type that returns Effect<A, E, R> runs the program the call returns, and one that returns a value type keeps the value.", messageText(named, "the callee"))
 }

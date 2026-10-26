@@ -93,16 +93,16 @@ var (
 	EK2001 = message(2001, errorCategory, "{0} can escape {1}, but {2}.")
 	// EK2002: a requirement escapes the written contract. {0} is the function, {1} the requirement, {2} the contract's R.
 	EK2002 = message(2002, errorCategory, "{0} needs {1}, but its contract says R = {2}.")
-	// EK2003: a return annotation that is not a full Effect<A, E, R>. {0} is the annotation.
-	EK2003 = message(2003, errorCategory, "{0} leaves contract channels unspecified. Did you mean never or inferred?")
+	// EK2003: a plain return annotation on a function whose body runs an Effect (D67) or can fail (D282). {0} is the annotation, {1} the function.
+	EK2003 = message(2003, errorCategory, "{0} is a plain return annotation, but {1} runs Effects, so it returns an Effect.")
 	// EK2004: an Effect try block with E = never; defects pass through.
 	EK2004 = message(2004, warningCategory, "this try block runs Effects but has no expected errors; defects pass through this catch.")
 	// EK2005: a resumeWith program that needs a service or fails outside the operation's contract. {0} is what it needs.
 	EK2005 = message(2005, errorCategory, "resumeWith runs this code at the perform site, inside the handled program, where the clause's providers are not in scope. It needs {0}.")
 	// EK2006: a return, break, or continue that leaves a finally block. {0} is the statement's keyword.
 	EK2006 = message(2006, errorCategory, "{0} leaves a finally block, which would discard a failure in flight.")
-	// EK2101: a declaration without a body that has no full contract. {0} is the declaration.
-	EK2101 = message(2101, errorCategory, "{0} has no body to infer from, so its contract must be written in full.")
+	// EK2101: a declaration without a body whose return type is not an Effect type. {0} is the declaration.
+	EK2101 = message(2101, errorCategory, "{0} has no body to infer from, so its contract must be written as an Effect type.")
 	// EK2103: a member of a service or control declaration with a body or an initializer. {0} is the member, {1} the word.
 	EK2103 = message(2103, errorCategory, "{0} has an implementation, but a {1} declares only contracts.")
 	// EK2104: a setup statement of a layer declaration that follows one of its members.

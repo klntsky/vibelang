@@ -20,7 +20,7 @@ import (
 type VibeSyntaxKind int
 
 const (
-	// VibeSyntaxEffectType is an Effect type, A!E!R: Range.
+	// VibeSyntaxEffectType is an Effect type in the retired ! form, A!E!R (EK1014): Range.
 	VibeSyntaxEffectType VibeSyntaxKind = iota + 1
 	// VibeSyntaxMutable is mutable and the member name after it: Range runs
 	// from mutable through the name. With Index, the name is preceded by [ and

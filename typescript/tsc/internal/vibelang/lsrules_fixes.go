@@ -688,7 +688,7 @@ var inferredFormFix = &ls.CodeFixProvider{
 			if info == nil {
 				return nil, nil
 			}
-			annotation = bangTypes("Effect<" + annotation + ", " + printType(c.GetUnionType(info.errors)) + ", " + printType(c.GetUnionType(info.requirements)) + ">")
+			annotation = namedEffectTypes(effectTypeName(c, fn), "Effect<"+annotation+", "+printType(c.GetUnionType(info.errors))+", "+printType(c.GetUnionType(info.requirements))+">")
 		}
 		var changes []*lsproto.TextEdit
 		if isFormChoiceBlock(fn) {

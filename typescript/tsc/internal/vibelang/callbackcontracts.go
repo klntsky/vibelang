@@ -83,8 +83,8 @@ func (a *analyzer) uncontractedCallbackOf(fn *ast.Node, t *checker.Type) *ast.No
 }
 
 // callbackContractText writes parameter, an uncontracted callback, with the
-// contract that says it cannot fail and needs nothing: make: () => Boom!!,
-// or make?: () => Boom!! for an optional one.
+// contract that says it cannot fail and needs nothing: make: () => Effect<Boom>,
+// or make?: () => Effect<Boom> for an optional one.
 func callbackContractText(file *ast.SourceFile, parameter *ast.Node) string {
 	name := declarationName(parameter)
 	if parameter.QuestionToken() != nil {
@@ -100,7 +100,7 @@ func callbackContractText(file *ast.SourceFile, parameter *ast.Node) string {
 	if !ok {
 		return name
 	}
-	return name + ": " + prefix + bangText(returned, "never", "never")
+	return name + ": " + prefix + effectText(returned)
 }
 
 // acceptsAnyContract reports whether fn's callback parameters accept any

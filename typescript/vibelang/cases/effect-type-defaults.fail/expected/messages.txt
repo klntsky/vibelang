@@ -1,0 +1,8 @@
+main.vibe(10,12): error EK2101: Users.count has no body to infer from, so its contract must be written as an Effect type.
+Write Effect<number, Errors, Dependencies>; use Effect<number> if it cannot fail and needs nothing.
+main.vibe(14,10): error EK2001: Gone can escape find, but its contract says E = never.
+Catch it inside find, or change the contract to Effect<string, Gone>.
+main.vibe(14,10): error EK2002: find needs Users, but its contract says R = never.
+Provide Users inside find, or add it: Effect<string, never, Users>.
+main.vibe(18,10): error EK2002: lookup needs Users, but its contract says R = never.
+Provide Users inside lookup, or add it: Effect<string, Gone, Users>.

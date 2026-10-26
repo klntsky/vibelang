@@ -279,7 +279,7 @@ func (a *analyzer) checkRecursiveContract(fn *ast.Node) {
 	}
 }
 
-// wholeContract returns fn's contract with every channel written, as A!E!R:
+// wholeContract returns fn's contract with every channel written, as Effect<A, E, R>:
 // each channel as fn's contract writes it, else E and R as the cycle's
 // fixpoint found them, and A as the placeholder A.
 func (a *analyzer) wholeContract(fn *ast.Node) string {
@@ -296,7 +296,7 @@ func (a *analyzer) wholeContract(fn *ast.Node) string {
 			}
 		}
 	}
-	return bangText(channels...)
+	return namedEffectText(effectTypeName(c, fn), channels...)
 }
 
 // readsInferredContract reports whether a contract that writes fn's A and

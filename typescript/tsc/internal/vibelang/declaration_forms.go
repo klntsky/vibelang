@@ -14,8 +14,8 @@ import (
 
 // The current spelling of services, controls, and layers (D223, D221).
 //
-//	service Users { find(id: string): User!NotFound }
-//	control Approval { approve(request: string): boolean!! }
+//	service Users { find(id: string): Effect<User, NotFound> }
+//	control Approval { approve(request: string): Effect<boolean> }
 //	const UsersLive = Layer.effect(Users) { const seen = new Set<string>(); return { find(id) { ... } } }
 //
 // The older spellings still compile and draw warnings with quick fixes:

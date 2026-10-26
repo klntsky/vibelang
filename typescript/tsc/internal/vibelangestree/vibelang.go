@@ -18,8 +18,8 @@ import (
 // (packages/compiler/eslint.mjs) so rules and scope analysis still reach
 // every source node inside them:
 //
-//	A!E!R                  VibeEffectType { success, failure, requirements }
-//	A!infer E              VibeInferType { name }, outside a conditional type
+//	retired A!E!R          VibeEffectType { success, failure, requirements } (EK1014)
+//	Effect<A, infer E>     VibeInferType { name }, outside a conditional type
 //	x |> f(%)              VibePipeExpression { left, right }, TopicReference
 //	x catch (e) => y       VibeCatchExpression { expression, handler }
 //	provide L, K = v { }   VibeProvideStatement { providers, body },
@@ -214,7 +214,7 @@ func (c *converter) moduleReference(n *ast.Node) *obj {
 	return identifierShape(c.nodeAt(r, "Identifier"), name).set("value", name)
 }
 
-// effectType converts A!E!R, which the parser writes Effect.Effect<A, E, R>
+// effectType converts the retired A!E!R (EK1014), which the parser writes Effect.Effect<A, E, R>
 // with a synthesized name and synthesized never or infer R slots.
 func (c *converter) effectType(n *ast.Node) *obj {
 	reference := n.AsTypeReferenceNode()
