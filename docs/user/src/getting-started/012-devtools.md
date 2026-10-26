@@ -361,3 +361,4 @@ Library debugging concepts still apply; VibeLang's call execution, service decla
 | EK1016 | An unused, unexported `function main()` will never start. Write `export function main()`. This warning can be turned off for an intentional unused helper. |
 | EK4409 | An `any` call can return an unrun program. A local constant whose initializer is known to be effectful is diagnosed even in a contracted function that compiles to plain code; give the callee its callable type. |
 | EK4835 | The catchTag/catchTags fix omits the default arm when its handlers cover every failure in E. Partial handlers keep the rethrow. |
+| TS2304 (TestClock) | TestClock is outside the root prelude. Import it with `import { TestClock } from "effect/testing"`. |

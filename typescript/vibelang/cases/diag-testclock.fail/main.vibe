@@ -1,0 +1,4 @@
+// expect: TS2304
+export function main() { TestClock.adjust("1 second") }
+
+export function local(TestClock: { value: number }) { return TestClock.value }
