@@ -105,6 +105,30 @@ func TestStockTypeScriptPinHasOneSource(t *testing.T) {
 	}
 	scan(filepath.Join(root, ".smithers/flows/docs/project.ts"))
 	scan(filepath.Join(root, "CONTRIBUTING.md"))
+	// The user docs may name the stock TypeScript the mapper is tested
+	// with, and then name the pin.
+	if pin, err := stockTypeScriptVersion(root); err == nil {
+		named := regexp.MustCompile(`typescript@(\d+\.\d+\.\d+[0-9A-Za-z.-]*[0-9A-Za-z])`)
+		err := filepath.WalkDir(filepath.Join(root, "docs/user/src"), func(path string, entry fs.DirEntry, err error) error {
+			if err != nil || entry.IsDir() || filepath.Ext(path) != ".md" {
+				return err
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			for _, match := range named.FindAllStringSubmatch(string(data), -1) {
+				if match[1] != pin {
+					rel, _ := filepath.Rel(root, path)
+					found = append(found, rel+": "+match[0]+" is not the pin, typescript@"+pin)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	if len(found) > 0 {
 		t.Fatalf("stock TypeScript versions written outside packages/ts-mapper/package.json; read devDependencies.typescript instead:\n%s", strings.Join(found, "\n"))
 	}
