@@ -27,5 +27,9 @@ export function publicHygiene(file, text) {
   if (file === "scripts/setup.sh" && /(?:runtime|editor) lane/.test(text)) {
     problems.push("an internal setup instruction")
   }
+  if (file === "typescript/VIBELANG.md" &&
+      /A match subject is evaluated once, including a getter|No VibeLang pass is superlinear|arguments. inside a region's closure is the closure's|serverInfo. still says/.test(text)) {
+    problems.push("a stale compiler limitation or unmeasured complexity claim")
+  }
   return problems
 }

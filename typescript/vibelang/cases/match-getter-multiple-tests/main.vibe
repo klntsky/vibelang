@@ -1,0 +1,17 @@
+// expect-result: [3,1]
+// A changing getter must be read once across multiple tested arms.
+export function main() {
+  let reads = 0
+  const subject = {
+    get state(): "a" | "b" | "c" {
+      reads++
+      return reads === 1 ? "c" : "b"
+    }
+  }
+  const result = match (subject.state) {
+    when "a": 1;
+    when "b": 2;
+    when "c": 3;
+  }
+  return [result, reads]
+}

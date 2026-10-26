@@ -1,0 +1,15 @@
+// expect-result: [2,1]
+export function main() {
+  let reads = 0
+  const subject = {
+    get state(): "a" | "b" {
+      reads++
+      return reads === 1 ? "b" : "a"
+    }
+  }
+  const result = match (subject.state) {
+    when "a": 1;
+    when "b": 2;
+  }
+  return [result, reads]
+}

@@ -48,3 +48,7 @@ test("review provenance checks handle capitalization without rejecting ordinary 
 test("contributor commands use portable checkout paths and plain setup instructions", () => {
   assert.deepEqual(findings.filter(p => p.endsWith("a private checkout default") || p.endsWith("an internal setup instruction")), [])
 })
+
+test("the compiler notes describe verified behavior and measured performance", () => {
+  assert.deepEqual(findings.filter(p => p.endsWith("a stale compiler limitation or unmeasured complexity claim")), [])
+})

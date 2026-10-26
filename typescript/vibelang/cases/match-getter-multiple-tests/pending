@@ -1,0 +1,1 @@
+compiler getter subjects are evaluated again across multiple tested match arms; expect one read
