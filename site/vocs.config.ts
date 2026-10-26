@@ -63,5 +63,6 @@ export default defineConfig({
     { text: 'Guides', link: '/013-getting-started' },
     { text: 'Cheat sheet', link: '/vibelang-features/115-cheat-sheet' },
     { text: 'Specification', link: '/spec/' },
+    { text: 'GitHub', link: 'https://github.com/smithersai/vibelang', external: true },
   ],
 })

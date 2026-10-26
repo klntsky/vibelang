@@ -4,13 +4,13 @@ import { join, relative, resolve } from "node:path"
 
 export async function checkSite(root: string) {
   root = resolve(root)
-  const pages = new Map<string, { ids: Set<string>; links: string[]; images: string[]; meta: Map<string, string> }>()
+  const pages = new Map<string, { ids: Set<string>; links: string[]; images: string[]; meta: Map<string, string>; hasTopNavGitHub: boolean }>()
   function files(dir: string): string[] {
     return readdirSync(dir, { withFileTypes: true }).flatMap(e =>
       e.isDirectory() ? files(join(dir, e.name)) : e.name.endsWith(".html") ? [join(dir, e.name)] : [])
   }
   for (const file of files(root)) {
-    const page = { ids: new Set<string>(), links: [] as string[], images: [] as string[], meta: new Map<string, string>() }
+    const page = { ids: new Set<string>(), links: [] as string[], images: [] as string[], meta: new Map<string, string>(), hasTopNavGitHub: false }
     await new HTMLRewriter()
       .on("meta", { element(e) {
         const key = e.getAttribute("property") ?? e.getAttribute("name")
@@ -18,14 +18,21 @@ export async function checkSite(root: string) {
       } })
       .on("[id]", { element(e) { page.ids.add(e.getAttribute("id")!) } })
       .on("a[href]", { element(e) { page.links.push(e.getAttribute("href")!) } })
+      .on('[data-v-gutter-top] a[href="https://github.com/smithersai/vibelang"]', {
+        element() { page.hasTopNavGitHub = true },
+      })
       .on("img[src]", { element(e) { page.images.push(e.getAttribute("src")!) } })
       .transform(new Response(readFileSync(file, "utf8"))).text()
     pages.set(file, page)
   }
   const errors: string[] = []
+  // Vocs emits a standalone 404 and empty declaration routes without a layout.
+  const withoutTopNav = new Set(["404.html", "404.d/index.html", "_root.d/index.html"])
   const external = (href: string) => /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(href)
   for (const [file, page] of pages) {
     const route = "/" + relative(root, file).replace(/index\.html$/, "")
+    if (!withoutTopNav.has(relative(root, file)) && !page.hasTopNavGitHub)
+      errors.push(relative(root, file) + ": missing top-nav GitHub link (https://github.com/smithersai/vibelang)")
     for (const key of ["og:image", "twitter:image"]) {
       const value = page.meta.get(key) ?? ""
       try {
