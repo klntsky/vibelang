@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { blockFilenames, classify, defaultCompiler, extract, markdownPages, normalizeOutput, parseDiagnostics, writeProject } from "./check-snippets"
+import { blockFilenames, classify, defaultCompiler, extract, linkModules, markdownPages, normalizeOutput, parseDiagnostics, writeProject } from "./check-snippets"
 
 const block = extract('```ts\nconst answer = 42\n```')[0]
 const diagnostic = (code: string, message = "example") => ({ code, message })
@@ -58,7 +58,7 @@ test("parses native ES and TS errors and ignores notes and warnings", () => {
   ])
 })
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { join, relative, resolve } from "node:path"
 import { tmpdir } from "node:os"
 const compiler = defaultCompiler()
@@ -286,5 +286,36 @@ test("onboarding pages include the starter and compile their inline hatch exampl
     const blocks = extract(readFileSync(join(repo, file), "utf8"), { hatchExamples: true })
     expect(blocks.filter(b => b.firstLine.startsWith("sync(") || b.firstLine.startsWith("try("))).toHaveLength(2)
     expect(blocks.some(b => b.filename === "hatch-input.ts")).toBe(true)
+  }
+})
+
+test("snippet projects share the Effect resolved from an npm-installed runtime", () => {
+  const root = mkdtempSync(join(tmpdir(), "snippet-installed-runtime-"))
+  const previous = process.env.VIBELANG_RUNTIME_DIR
+  try {
+    const runtime = join(root, "node_modules/vibelang-runtime")
+    const effect = join(root, "node_modules/effect")
+    mkdirSync(join(runtime, "dist"), { recursive: true })
+    mkdirSync(effect, { recursive: true })
+    writeFileSync(join(runtime, "package.json"), '{"name":"vibelang-runtime","type":"module","exports":{".":"./dist/index.js"}}')
+    writeFileSync(join(runtime, "dist/index.d.ts"), "export {}")
+    writeFileSync(join(effect, "package.json"), '{"name":"effect","version":"4.0.5"}')
+    process.env.VIBELANG_RUNTIME_DIR = runtime
+    const project = join(root, "page")
+    linkModules(project)
+    expect(realpathSync(join(project, "node_modules/effect"))).toBe(realpathSync(effect))
+    expect(realpathSync(join(project, "node_modules/vibelang-runtime"))).toBe(realpathSync(runtime))
+
+    const conflicting = join(root, "conflicting")
+    mkdirSync(join(conflicting, "node_modules"), { recursive: true })
+    const other = join(root, "other-effect")
+    mkdirSync(other)
+    writeFileSync(join(other, "package.json"), '{"name":"effect","version":"4.0.5"}')
+    symlinkSync(other, join(conflicting, "node_modules/effect"))
+    expect(() => linkModules(conflicting)).toThrow(/Conflicting Effect copies/)
+  } finally {
+    if (previous === undefined) delete process.env.VIBELANG_RUNTIME_DIR
+    else process.env.VIBELANG_RUNTIME_DIR = previous
+    rmSync(root, { recursive: true, force: true })
   }
 })

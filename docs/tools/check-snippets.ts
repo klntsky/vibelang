@@ -164,18 +164,20 @@ export function runtimeDir(): string {
 export function linkModules(temp: string) {
   const modules = join(temp, "node_modules")
   mkdirSync(modules, { recursive: true })
-  // vibelang-runtime is a symlink to packages/runtime, which resolves effect
-  // from its own node_modules. Give the project that same copy: TypeScript
-  // merges two copies of a package only for files an import loads, so with
-  // two copies a module augmentation such as `declare module "effect/Schema"`
-  // can name the copy outside the program and fail with TS2664, depending on
-  // which copy the parallel file loader reaches first.
-  // A runtime without its own node_modules, such as a release tarball's
-  // package, shares the repo's effect.
-  const runtime = runtimeDir()
-  const ownEffect = join(runtime, "node_modules/effect")
-  const runtimeEffect = existsSync(join(ownEffect, "package.json")) ? ownEffect : join(repo, "packages/runtime/node_modules/effect")
-  if (existsSync(join(runtimeEffect, "package.json"))) symlinkSync(realpathSync(runtimeEffect), join(modules, "effect"))
+  // Resolve as Node does from the selected runtime, including an installed
+  // package whose Effect is hoisted into the parent node_modules.
+  const runtime = realpathSync(runtimeDir())
+  let effect: string
+  try {
+    effect = dirname(realpathSync(createRequire(join(runtime, "package.json")).resolve("effect/package.json")))
+  } catch (cause) {
+    throw new Error(`Cannot resolve effect/package.json from runtime ${runtime}; install its dependencies before checking snippets`, { cause })
+  }
+  const targetEffect = join(modules, "effect")
+  if (existsSync(targetEffect)) {
+    const existing = realpathSync(targetEffect)
+    if (existing !== effect) throw new Error(`Conflicting Effect copies: project ${existing}; runtime ${effect}`)
+  } else symlinkSync(effect, targetEffect)
   const dependencies = [join(repo, "experiments/node_modules"), join(repo, "docs/tools/node_modules")]
   for (const source of dependencies) {
     if (!existsSync(source)) continue
@@ -191,6 +193,12 @@ export function linkModules(temp: string) {
   if (!existsSync(join(modules, "effect/package.json")) || !existsSync(join(runtime, "dist/index.d.ts"))) {
     throw new Error("Install experiments dependencies and build packages/runtime before checking snippets (see docs/tools/README.md)")
   }
+  // Verify both imports after linking, before any compiler or runner starts.
+  const projectRequire = createRequire(join(temp, "package.json"))
+  const projectEffect = dirname(realpathSync(projectRequire.resolve("effect/package.json")))
+  const runtimeEffect = dirname(realpathSync(createRequire(join(realpathSync(join(modules, "vibelang-runtime")), "package.json")).resolve("effect/package.json")))
+  if (projectEffect !== runtimeEffect) throw new Error(`Conflicting Effect copies: project ${projectEffect}; runtime ${runtimeEffect}`)
+  return { runtime, effect }
 }
 
 // Writes one page's blocks to dir, inside a directory that linkModules
@@ -432,7 +440,8 @@ async function main() {
   const temp = mkdtempSync(join(tmpdir(), "vibelang-docs-"))
   const pages: { page: string; blocks: Result[] }[] = []
   try {
-    linkModules(temp)
+    const { runtime, effect } = linkModules(temp)
+    console.log(`Compiler: ${Bun.which(compiler) ?? compiler}\nRuntime: ${runtime}\nEffect: ${effect}`)
     let index = 0
     for (const page of markdownPages(root).filter(p => relative(root, p).includes(filter))) {
       const blocks = extract(readFileSync(page, "utf8"), { hatchExamples: [join(repo, "docs/user/llms-essentials.md"), join(repo, "templates/app/AGENTS.md")].includes(page) })
