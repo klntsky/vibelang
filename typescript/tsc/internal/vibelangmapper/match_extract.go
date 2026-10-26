@@ -62,7 +62,10 @@ func (w *printer) errorExtractorFlow(n *ast.Node, e env) bool {
 	if checking == "" {
 		return false
 	}
+	old := w.runtimeText
+	w.runtimeText = true
 	runtime := w.patternText(n, e)
+	w.runtimeText = old
 	w.chunks = append(w.chunks, chunk{kind: editPatternFlow, part: partWhole, fields: []string{checking, runtime}})
 	return true
 }
@@ -100,7 +103,10 @@ func (w *printer) errorExtraction(n *ast.Node) *ast.Node {
 }
 
 // patternText prints a parser-written test or path without applying another
-// checking witness. Helpers and fresh temporary names are resolved normally.
+// checking witness. Helpers and fresh temporary names are resolved normally;
+// a chunk the renderings write differently, such as a capture's read
+// (captures.go), is written as the checking rendering writes it, or as the
+// executable one does when runtimeText is set.
 func (w *printer) patternText(n *ast.Node, e env) string {
 	start := len(w.chunks)
 	old := w.rawExtraction
@@ -111,9 +117,14 @@ func (w *printer) patternText(n *ast.Node, e env) string {
 	w.chunks = w.chunks[:start]
 	var text strings.Builder
 	for _, c := range parts {
-		if c.node != nil {
+		switch {
+		case c.node != nil:
 			text.WriteString(w.p.text[w.p.tokenStart(c.node):c.node.End()])
-		} else {
+		case c.kind == editPatternFlow && w.runtimeText:
+			text.WriteString(c.fields[1])
+		case c.kind == editPatternFlow:
+			text.WriteString(c.fields[0])
+		default:
 			text.WriteString(c.text)
 		}
 	}

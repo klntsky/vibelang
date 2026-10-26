@@ -161,7 +161,7 @@ func dataVariantTest(c *checker.Checker, node *ast.Node) string {
 // members whose tag may be the variant's, or, when the test fails, drops
 // those whose tag is. A value of no tagged type, such as unknown, narrows to
 // the variant's values, as the data type's own $is("Sent") does.
-func narrowDataVariant(c *checker.Checker, reference *ast.Node, t *checker.Type, test *ast.Node, assumeTrue bool, _ func(*ast.Node, *checker.Type) *checker.Type) *checker.Type {
+func narrowDataVariant(c *checker.Checker, reference *ast.Node, t *checker.Type, test *ast.Node, assumeTrue bool, _ func(*ast.Node, *checker.Type, *ast.Node) *checker.Type) *checker.Type {
 	if !isPatternCall(test, "$is") || !c.IsMatchingReference(reference, test.Arguments()[1]) {
 		return nil
 	}
@@ -515,7 +515,7 @@ func checkVariantPattern(c *checker.Checker, file *ast.SourceFile, call *ast.Nod
 		}
 		return
 	}
-	symbol := c.GetSymbolAtLocation(subject)
+	symbol := c.GetSymbolAtLocation(declaredSubject(c, subject))
 	if symbol == nil {
 		return
 	}

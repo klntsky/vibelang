@@ -18,7 +18,7 @@ import (
 var flowNarrowings atomic.Int64
 
 func init() {
-	checker.RegisterFlowNarrowingHook(func(*checker.Checker, *ast.Node, *checker.Type, *ast.Node, bool, func(*ast.Node, *checker.Type) *checker.Type) *checker.Type {
+	checker.RegisterFlowNarrowingHook(func(*checker.Checker, *ast.Node, *checker.Type, *ast.Node, bool, func(*ast.Node, *checker.Type, *ast.Node) *checker.Type) *checker.Type {
 		flowNarrowings.Add(1)
 		return nil
 	})

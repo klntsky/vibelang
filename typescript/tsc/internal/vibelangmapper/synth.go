@@ -37,6 +37,12 @@ type printer struct {
 	// names maps the parser's temporaries ($match1, $is2) to fresh names.
 	names         map[string]string
 	rawExtraction bool // printing the executable side of an extractor witness
+	// captures maps each capture of the form whose subject is an identifier
+	// expression to that subject (captures.go).
+	captures map[string]*ast.Node
+	// runtimeText makes patternText write the executable side of a chunk
+	// that the renderings write differently.
+	runtimeText bool
 }
 
 func (w *printer) write(text string) {
@@ -114,6 +120,9 @@ func (w *printer) node(n *ast.Node, e env) {
 	}
 	switch n.Kind {
 	case ast.KindIdentifier:
+		if w.captureRead(n, e) {
+			return
+		}
 		w.write(w.identifier(n))
 	case ast.KindStringLiteral:
 		quoted, _ := json.Marshal(n.Text())
@@ -136,7 +145,7 @@ func (w *printer) node(n *ast.Node, e env) {
 		w.node(n.AsElementAccessExpression().ArgumentExpression, e)
 		w.write("]")
 	case ast.KindCallExpression:
-		if w.invokedBlock(n, e) {
+		if w.invokedBlock(n, e) || w.isFunction(n) {
 			return
 		}
 		w.node(n.Expression(), e)
@@ -228,6 +237,9 @@ func (w *printer) statement(n *ast.Node, e env) {
 		w.node(n.Expression(), e)
 		w.write("; ")
 	case ast.KindVariableStatement:
+		if w.captureDeclaration(n, e) {
+			return
+		}
 		list := n.AsVariableStatement().DeclarationList
 		keyword := "var "
 		switch {
@@ -580,8 +592,20 @@ func (w *printer) tagTest(n *ast.Node, e env) bool {
 	subject := w.identifier(b.Left.Expression())
 	value := w.p.freshWord("$tag")
 	literal := jsonString(b.Right.Text())
-	w.write("((" + value + ": typeof " + subject + "): " + value + " is " + helperRef("$TagMatch") + "<typeof " + subject + ", " + literal + "> => " + value + "._tag === ")
+	guard := func(subject string) string {
+		return "((" + value + ": typeof " + subject + "): " + value + " is " + helperRef("$TagMatch") + "<typeof " + subject + ", " + literal + "> => " + value + "._tag === "
+	}
+	captured := w.captures[b.Left.Expression().Text()]
+	if captured == nil {
+		w.write(guard(subject))
+		w.node(b.Right, e)
+		w.write(")(" + subject + ")")
+		return true
+	}
+	// A capture's test reads the subject itself when checking (captures.go).
+	checking := w.patternText(captured, e)
+	w.chunks = append(w.chunks, chunk{kind: editPatternFlow, part: partWhole, fields: []string{guard(checking), guard(subject)}})
 	w.node(b.Right, e)
-	w.write(")(" + subject + ")")
+	w.chunks = append(w.chunks, chunk{kind: editPatternFlow, part: partWhole, fields: []string{")(" + checking + ")", ")(" + subject + ")"}})
 	return true
 }

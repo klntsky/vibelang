@@ -75,7 +75,7 @@ func checkExhaustive(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
 		return
 	}
 	declaredText, leftText := c.TypeToString(declared), c.TypeToString(left)
-	if symbol := c.GetSymbolAtLocation(call.Arguments()[0]); symbol != nil {
+	if symbol := c.GetSymbolAtLocation(declaredSubject(c, call.Arguments()[0])); symbol != nil {
 		// A data type's variants by name, Delivery.Sent, not their object types (D307).
 		if names := dataNamesFor(c, symbol, call); names.hasVariants(c, declared) {
 			declaredText, leftText = names.typeText(c, declared), names.unionText(c, left)
@@ -98,7 +98,9 @@ func provenExhaustive(c *checker.Checker, call *ast.Node) bool {
 
 // matchRemainder returns the declared type of the subject of call, the
 // $noMatch call that ends a match, and its narrowed type there, what no arm
-// matched. It returns nils unless the declared type is a finite union.
+// matched. It returns nils unless the declared type is a finite union. A
+// subject that is an identifier expression has the type its declaration
+// gives it, not the type the subject's capture has (match_capture.go).
 func matchRemainder(c *checker.Checker, call *ast.Node) (declared, left *checker.Type) {
 	args := call.Arguments()
 	if len(args) != 1 {
@@ -109,7 +111,7 @@ func matchRemainder(c *checker.Checker, call *ast.Node) (declared, left *checker
 	if left == nil {
 		return nil, nil
 	}
-	symbol := c.GetSymbolAtLocation(subject)
+	symbol := c.GetSymbolAtLocation(declaredSubject(c, subject))
 	if symbol == nil {
 		return nil, nil
 	}

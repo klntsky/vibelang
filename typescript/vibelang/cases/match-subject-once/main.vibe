@@ -1,0 +1,204 @@
+// expect-result: [[3,1],[3,1],[3,1],[3,1],[false,1],[true,1],[1,1],[3,3],["go",1],30,[3,4,"b","Denied","b",1,2,"none","two",4,1,2]]
+// A match or is reads its subject once, before any pattern runs, as
+// JavaScript's switch reads its discriminant once (D214): a getter there runs
+// once in a returned match, a match expression, a match statement, an is with
+// bindings in an if or a while condition, and an is expression, and a guard
+// that assigns the subject does not change what later arms test. The subject
+// still narrows in each arm as a switch's discriminant does in its clauses.
+data Delivery { Waiting; Sent { tracking: string } }
+error Timeout { ms: number }
+error Denied { user: string }
+error NotFound { id: string }
+type Shape = { kind: "circle"; radius: number } | { kind: "square"; side: number }
+type Pick = { kind: "a"; x: number } | { kind: "b"; x: number } | { kind: "c"; y: string }
+
+// A getter that returns its values in turn, the last one from then on, and
+// counts its reads.
+class Turns<A> {
+  reads = 0
+  values: ReadonlyArray<A>
+  constructor(values: ReadonlyArray<A>) {
+    this.values = values
+  }
+  get value(): A {
+    const value = this.values[Math.min(this.reads, this.values.length - 1)]
+    this.reads++
+    return value
+  }
+}
+
+function abc(): Turns<"a" | "b" | "c"> {
+  return new Turns<"a" | "b" | "c">(["c", "b"])
+}
+
+function returned(box: Turns<"a" | "b" | "c">): number {
+  return match (box.value) {
+    when "a": 1;
+    when "b": 2;
+    when "c": 3;
+  }
+}
+
+function expression(box: Turns<"a" | "b" | "c">): number {
+  const n = match (box.value) {
+    when "a": 1;
+    when "b": 2;
+    when "c": 3;
+  }
+  return n
+}
+
+function statement(box: Turns<"a" | "b" | "c">): number {
+  let n = 0
+  match (box.value) {
+    when "a": n = 1;
+    when "b": n = 2;
+    when "c": n = 3;
+  }
+  return n
+}
+
+// In an Effect function, whose arms can run Effects.
+function effectful(box: Turns<"a" | "b" | "c">) {
+  yieldNow()
+  return match (box.value) {
+    when "a": 1;
+    when "b": do { yieldNow(); 2 };
+    when "c": do { yieldNow(); 3 };
+  }
+}
+
+function either(box: Turns<"a" | "b" | "c">): boolean {
+  return box.value is "a" or "b"
+}
+
+function guardOnly(box: Turns<"a" | "b" | "c">): boolean {
+  return box.value is if (true)
+}
+
+function ifBinds(box: Turns<Option.Option<number>>): number {
+  if (box.value is Option.Some(let n)) return n
+  return -1
+}
+
+function whileBinds(box: Turns<Option.Option<number>>): number {
+  let total = 0
+  while (box.value is Option.Some(let n)) total += n
+  return total
+}
+
+// A guard that assigns the subject's variable: the next arm tests the value
+// the match read.
+function guardAssigns(): number {
+  let x = 1
+  function bump(): boolean {
+    x = 2
+    return false
+  }
+  return match (x) {
+    when 1 and if (bump()): 10;
+    when 2: 20;
+    default: 30;
+  }
+}
+
+class Signal {
+  reads = 0
+  get state(): "red" | "amber" | "green" {
+    this.reads++
+    return this.reads === 1 ? "green" : "amber"
+  }
+  next(): string {
+    return match (this.state) {
+      when "red": "stop";
+      when "amber": "wait";
+      when "green": "go";
+    }
+  }
+}
+
+// Narrowing that each arm relies on, through the subject's capture.
+function width(box: { value: string | number }): number {
+  return match (box.value) {
+    when String: box.value.length;
+    when Number: box.value;
+  }
+}
+
+function area(shape: Shape): number {
+  return match (shape.kind) {
+    when "circle": shape.radius * shape.radius * 3;
+    when "square": shape.side * shape.side;
+  }
+}
+
+function firstTwo(box: { value: "a" | "b" | "c" }): string {
+  if (box.value is "a" or "b") {
+    const v: "a" | "b" = box.value
+    return v
+  }
+  return "c"
+}
+
+function retryable(e: Timeout | Denied | NotFound): string {
+  if (e is Timeout or Denied) {
+    const t: Timeout | Denied = e
+    return t._tag
+  }
+  return e.id
+}
+
+function size(p: Pick): number {
+  if (p.kind is "a" or "b") return p.x
+  return p.y.length
+}
+
+function kindOf(item: { kind: string }): "a" | "b" | "other" {
+  if (item is { kind: "a" or "b" }) return item.kind
+  return "other"
+}
+
+function sum(box: { opt: Option.Option<number> }): number {
+  if (box.opt is Option.Some(let n)) return n + box.opt.value
+  return 0
+}
+
+// An optional chain stays one: a missing object reads undefined, once.
+function optional(a: { b: number } | undefined): string {
+  return match (a?.b) {
+    when 1: "one";
+    when 2: "two";
+    default: "none";
+  }
+}
+
+// The subject's declared type, string and Delivery, still decides
+// exhaustiveness (EK4701) and a variant's case (EK4707), not the type its
+// capture narrows to.
+function narrowedFirst(x: string): number {
+  if (x !== "a" && x !== "b") return 0
+  return match (x) {
+    when "a": 1;
+  }
+}
+
+function variantAfterIs(d: Delivery): number {
+  if (d is Delivery.Sent) return 0
+  return match (d) {
+    when Delivery.Sent: 1;
+    when Delivery.Waiting: 2;
+  }
+}
+
+export function main() {
+  const a = abc(), b = abc(), c = abc(), d = abc(), e = abc(), f = abc()
+  const some = new Turns<Option.Option<number>>([Option.some(1), Option.none()])
+  const loop = new Turns<Option.Option<number>>([Option.some(1), Option.some(2), Option.none()])
+  const signal = new Signal()
+  return [
+    [returned(a), a.reads], [expression(b), b.reads], [statement(c), c.reads], [effectful(f), f.reads],
+    [either(d), d.reads], [guardOnly(e), e.reads], [ifBinds(some), some.reads], [whileBinds(loop), loop.reads],
+    [signal.next(), signal.reads], guardAssigns(),
+    [width({ value: "abc" }), area({ kind: "square", side: 2 }), firstTwo({ value: "b" }), retryable(new Denied({ user: "Ada" })), kindOf({ kind: "b" }), size({ kind: "a", x: 1 }), size({ kind: "c", y: "yy" }), optional(undefined), optional({ b: 2 }), sum({ opt: Option.some(2) }), narrowedFirst("a"), variantAfterIs(Delivery.Waiting())]
+  ]
+}

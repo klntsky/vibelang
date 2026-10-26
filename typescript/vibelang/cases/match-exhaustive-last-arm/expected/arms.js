@@ -11,14 +11,15 @@ export class Denied extends TaggedError("Denied") {
 }
 export function phaseLabel$direct(phase) {
     {
+        const $match2 = phase;
         {
-            if (phase
+            if ($match2
                 === "draft") {
                 return "Draft";
             }
         }
         {
-            if (phase
+            if ($match2
                 === "review") {
                 return "Review";
             }
@@ -35,14 +36,15 @@ export function phaseLabel(...args) { return Effect_1.sync(() => phaseLabel$dire
 phaseLabel[runtime.$direct] = phaseLabel$direct;
 export function width$direct(phase) {
     const label = (() => {
+        const $match3 = phase;
         {
-            if (phase
+            if ($match3
                 === "draft") {
                 return 5;
             }
         }
         {
-            if (phase
+            if ($match3
                 === "review") {
                 return 6;
             }
@@ -59,25 +61,26 @@ export function width$direct(phase) {
 export function width(...args) { return Effect_1.sync(() => width$direct(...args)); }
 width[runtime.$direct] = width$direct;
 export function record$direct(phase, log) {
-    $match1: {
+    $match5: {
+        const $match6 = phase;
         {
-            if (phase
+            if ($match6
                 === "draft") {
                 log.push("draft");
-                break $match1;
+                break $match5;
             }
         }
         {
-            if (phase
+            if ($match6
                 === "review") {
                 log.push("review");
-                break $match1;
+                break $match5;
             }
         }
         {
             {
                 log.push("published");
-                break $match1;
+                break $match5;
             }
         }
     }
@@ -87,25 +90,26 @@ export function record(...args) { return Effect_1.sync(() => record$direct(...ar
 record[runtime.$direct] = record$direct;
 export function describe$direct(failure) {
     {
+        const $match8 = failure;
         {
-            if ($is(NotFound, failure) && typeof failure === "object" && failure
+            if ($is(NotFound, $match8) && typeof $match8 === "object" && $match8
                 !== null && "id" in
-                failure) {
-                let id = failure.id;
+                $match8) {
+                let id = $match8.id;
                 return `no user ${id}`;
             }
         }
         {
-            if ($is(Timeout, failure)) {
+            if ($is(Timeout, $match8)) {
                 return "retry";
             }
         }
         {
             {
-                runtime.$assertMatch($is(Denied, failure) && typeof failure === "object" && failure
+                runtime.$assertMatch($is(Denied, $match8) && typeof $match8 === "object" && $match8
                     !== null && "user" in
-                    failure, failure);
-                let user = failure.user;
+                    $match8, $match8);
+                let user = $match8.user;
                 return `denied ${user}`;
             }
         }
@@ -116,14 +120,15 @@ export function describe(...args) { return Effect_1.sync(() => describe$direct(.
 describe[runtime.$direct] = describe$direct;
 export function greeting$direct(name) {
     {
+        const $match10 = name;
         {
-            if (Option.isNone(name)) {
+            if (Option.isNone($match10)) {
                 return "Hello";
             }
         }
         {
             {
-                let n = name.value;
+                let n = $match10.value;
                 return `Hello, ${n}`;
             }
         }
@@ -134,25 +139,26 @@ greeting[runtime.$direct] = greeting$direct;
 // In an Effect function, whose arms run Effects.
 export function announce(arg_1) {
     return Effect_1.fnUntraced(function* announce(phase) {
-        $match2: {
+        $match12: {
+            const $match13 = phase;
             {
-                if (phase
+                if ($match13
                     === "draft") {
                     yield* Effect.log("draft");
-                    break $match2;
+                    break $match12;
                 }
             }
             {
-                if (phase
+                if ($match13
                     === "review") {
                     yield* Effect.log("review");
-                    break $match2;
+                    break $match12;
                 }
             }
             {
                 {
                     yield* Effect.log("published");
-                    break $match2;
+                    break $match12;
                 }
             }
         }

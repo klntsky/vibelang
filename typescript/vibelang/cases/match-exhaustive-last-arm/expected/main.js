@@ -14,13 +14,14 @@ import { announce, Denied, describe, greeting, NotFound, phaseLabel, record, Tim
 import { record$direct, phaseLabel$direct, width$direct, describe$direct, greeting$direct } from "./arms.js";
 function text$direct(value) {
     {
+        const $match2 = value;
         {
-            if (typeof value === "string") {
-                let s = value;
+            if (typeof $match2 === "string") {
+                let s = $match2;
                 return `text: ${s}`;
             }
         }
-        return $noMatch(value);
+        return $noMatch($match2);
     }
 }
 function text(...args) { return Effect.sync(() => text$direct(...args)); }

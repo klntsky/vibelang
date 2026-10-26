@@ -921,3 +921,67 @@ export function scenario() {
 	assert.NilError(t, err, "%s\n%s", out, js)
 	assert.Equal(t, strings.TrimSpace(string(out)), `{"value":"b","reads":1}`)
 }
+
+// A match or is reads its subject once when the program runs (D214), in every
+// form, while the checking rendering keeps its tests on a subject that is an
+// identifier expression, so stock TypeScript narrows it in each arm.
+func TestCapturedSubjectReads(t *testing.T) {
+	t.Parallel()
+	root, err := filepath.Abs("../../../..")
+	assert.NilError(t, err)
+	scope := mapperTestScope(t, root)
+	node, err := exec.LookPath("node")
+	assert.NilError(t, err)
+	source := `interface Box { state: "a" | "b" | "c"; reads: number }
+function box(): Box {
+ let reads = 0
+ return { get state(): "a" | "b" | "c" { reads++; return reads === 1 ? "c" : "b" }, get reads(): number { return reads } }
+}
+function returned(b: Box): number {
+ return match (b.state) { when "a": 1; when "b": 2; when "c": 3; }
+}
+function expression(b: Box): number {
+ const n = match (b.state) { when "a": 1; when "b": 2; when "c": 3; }
+ return n
+}
+function statement(b: Box): number {
+ let n = 0
+ match (b.state) { when "a": n = 1; when "b": n = 2; when "c": n = 3; }
+ return n
+}
+function either(b: Box): boolean {
+ return b.state is "a" or "b"
+}
+export function scenario() {
+ const r = box(), e = box(), s = box(), i = box()
+ return [returned(r), r.reads, expression(e), e.reads, statement(s), s.reads, either(i), i.reads]
+}`
+	js, _, diagnostics := Emit(source, testContext)
+	assert.Equal(t, len(diagnostics), 0, "%v", diagnostics)
+	cmd := exec.Command(node, "--no-warnings", "--input-type=module")
+	cmd.Dir = scope
+	cmd.Stdin = strings.NewReader(js + "\nimport { runPromise as runCapturedCase } from 'effect/Effect'; console.log(JSON.stringify(await runCapturedCase(scenario())))")
+	out, err := cmd.CombinedOutput()
+	assert.NilError(t, err, "%s\n%s", out, js)
+	assert.Equal(t, strings.TrimSpace(string(out)), `[3,1,3,1,3,1,false,1]`)
+	projection := Project(source, testContext)
+	assert.Equal(t, len(projection.Diagnostics), 0, "%v", projection.Diagnostics)
+	for _, checking := range []string{`void b.state; { if (b.state === "a")`, `return (((b.state === "a") || (b.state === "b")))`} {
+		assert.Assert(t, strings.Contains(projection.Text, checking), "%s", projection.Text)
+	}
+}
+
+// An is whose pattern reads its subject not at all, such as a guard, still
+// reads it when checking, so the subject counts as read under
+// noUnusedParameters, and once when the program runs.
+func TestCapturedSubjectReadByAGuard(t *testing.T) {
+	t.Parallel()
+	source := `function guardOnly(box: { v: number }): boolean {
+ return box.v is if (true)
+}`
+	projection := Project(source, testContext)
+	assert.Equal(t, len(projection.Diagnostics), 0, "%v", projection.Diagnostics)
+	assert.Assert(t, strings.Contains(projection.Text, `return (void box.v, (true))`), "%s", projection.Text)
+	executable := Executable(source, testContext)
+	assert.Assert(t, strings.Contains(executable.Text, `=> (true))(box.v)`), "%s", executable.Text)
+}

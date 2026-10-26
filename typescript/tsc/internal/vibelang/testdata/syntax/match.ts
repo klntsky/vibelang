@@ -1,12 +1,13 @@
 function f(value: unknown) { {
+    const $match2 = value;
     {
-        if (value === 1) {
+        if ($match2 === 1) {
             return "one";
         }
     }
     {
-        if (typeof value === "string") {
-            let text = value;
+        if (typeof $match2 === "string") {
+            let text = $match2;
             return text;
         }
     }

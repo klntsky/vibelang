@@ -4,14 +4,15 @@ import * as runtime from "vibelang-runtime";
 const Delivery = Data.taggedEnum();
 function describe(delivery) {
     {
+        const $match2 = delivery;
         {
-            if (Delivery.$is("Waiting")(delivery)) {
+            if (Delivery.$is("Waiting")($match2)) {
                 return "waiting";
             }
         }
         {
             {
-                let tracking = delivery.tracking;
+                let tracking = $match2.tracking;
                 return tracking;
             }
         }

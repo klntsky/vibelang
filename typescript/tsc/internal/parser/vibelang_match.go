@@ -13,13 +13,15 @@ import (
 // operator of the TC39 pattern matching proposal (stage 1). The parser writes
 // them as TypeScript that the checker already narrows: typeof, in, ===,
 // Array.isArray, and the guards Option.isSome, Exit.isFailure, Result.isSuccess,
-// and the runtime's $is, with each binding a const.
+// and the runtime's $is, with each binding a const. A match reads its subject
+// once, into a const that its tests read (subjectPath):
 //
 //	match (e) {                              (() => {
-//	  when NotFound and { let id }:            { if ($is(NotFound, e) && typeof e === "object" && e !== null && "id" in e) { const id = e.id; return `no user ${id}` } }
-//	    `no user ${id}`;                       { if ($is(Timeout, e)) { return "retry" } }
-//	  when Timeout: "retry";                   return $noMatch(e)
-//	}                                        })()
+//	  when NotFound and { let id }:            const $match1 = e
+//	    `no user ${id}`;                       { if ($is(NotFound, $match1) && typeof $match1 === "object" && $match1 !== null && "id" in $match1) { const id = $match1.id; return `no user ${id}` } }
+//	  when Timeout: "retry";                   { if ($is(Timeout, $match1)) { return "retry" } }
+//	}                                          return $noMatch($match1)
+//	                                         })()
 //
 // A match that a return statement returns, or that stands as a statement,
 // is written without the function: return match (...) { ... } becomes a
@@ -42,7 +44,7 @@ import (
 // in scope in its body:
 //
 //	if (exit is Exit.Failure(let cause)) log(cause)
-//	                                         if (Exit.isFailure(exit)) { const cause = exit.cause; log(cause) }
+//	                                         { const $is1 = exit; if (Exit.isFailure($is1)) { const cause = $is1.cause; log(cause) } }
 //
 // A pattern form VibeLang does not support yet becomes a call of
 // $patternError, which the checker reports (EK4702-EK4705).
@@ -621,31 +623,19 @@ func (p *Parser) cloneIdentExpression(expr *ast.Node) *ast.Node {
 	return nil
 }
 
-// subjectPath returns the path of a match or is subject: the subject itself
-// when it is an identifier expression, so the checker narrows it, and
-// otherwise a const that holds it, with the declaration to write first.
+// subjectPath holds a match or is subject in a const that reads it once,
+// before any pattern runs, as JavaScript's switch reads its discriminant
+// once (D214). It returns the path of the const and its declaration, to
+// write first. The declaration starts at the anchor, so the references
+// written at the anchor do not come before it for TypeScript's
+// use-before-declaration check, and it stands outside every arm, so a
+// binding that shadows the subject's name cannot put the read in its
+// temporal dead zone. The checker narrows the subject through the const,
+// as TypeScript narrows a switch's discriminant in its clauses
+// (match_subject.go in package vibelang).
 func (p *Parser) subjectPath(subject *ast.Node, anchor core.TextRange, prefix string) (matchPath, *ast.Node) {
-	inner := ast.SkipParentheses(subject)
-	if p.cloneIdentExpression(inner) != nil {
-		used := false
-		return func() *ast.Node {
-			if !used {
-				used = true
-				return inner
-			}
-			return p.cloneIdentExpression(inner)
-		}, nil
-	}
-	return p.cachedSubjectPath(subject, anchor, prefix)
-}
-
-// cachedSubjectPath reads a match subject outside all arm scopes, including
-// identifiers that a pattern may shadow and property accesses with getters.
-func (p *Parser) cachedSubjectPath(subject *ast.Node, anchor core.TextRange, prefix string) (matchPath, *ast.Node) {
 	p.vibelangMatchTemps++
 	name := prefix + strconv.Itoa(p.vibelangMatchTemps)
-	// The declaration starts at the anchor, so the references written at the
-	// anchor do not come before it for TypeScript's use-before-declaration check.
 	decl := p.mConst(p.mIdent(name, anchor), ast.NodeFlagsConst, subject, core.NewTextRange(min(anchor.Pos(), subject.Pos()), subject.End()))
 	return func() *ast.Node { return p.mIdent(name, anchor) }, decl
 }
@@ -972,14 +962,24 @@ func (p *Parser) emitSteps(steps []matchStep, success []*ast.Node, at core.TextR
 }
 
 // isExpression writes subject is pattern, a pattern without bindings, as a
-// boolean expression. A subject other than an identifier expression is held
-// by the parameter of a function called on it.
+// boolean expression. A pattern that reads its subject once tests an
+// identifier expression in place, so the checker narrows it. Any other
+// subject, and one that the pattern reads more than once or not at all, is
+// held by the parameter of a function called on it, so it is evaluated
+// once; the checker narrows an identifier expression through the parameter
+// (match_subject.go in package vibelang).
 func (p *Parser) isExpression(info *isInfo, pos int) *ast.Node {
 	ctx := &matchCompile{anchor: info.anchor, inline: true}
 	inner := ast.SkipParentheses(info.subject)
 	if p.cloneIdentExpression(inner) != nil {
-		path, _ := p.subjectPath(info.subject, info.anchor, "$is")
-		return p.finishNode(p.mParens(p.inlinePattern(info.pattern, path, ctx), info.anchor), pos)
+		// Count the reads with copies first, so that a pattern which reads
+		// the subject more than once leaves the subject node to the call
+		// below.
+		reads := 0
+		p.inlinePattern(info.pattern, func() *ast.Node { reads++; return p.cloneIdentExpression(inner) }, ctx)
+		if reads == 1 {
+			return p.finishNode(p.mParens(p.inlinePattern(info.pattern, func() *ast.Node { return inner }, ctx), info.anchor), pos)
+		}
 	}
 	p.vibelangMatchTemps++
 	name := "$is" + strconv.Itoa(p.vibelangMatchTemps)
@@ -992,59 +992,12 @@ func (p *Parser) isExpression(info *isInfo, pos int) *ast.Node {
 	return p.finishNode(call, pos)
 }
 
-// matchSubjectIsShadowed reports a pattern binding with the subject's root
-// name, including a root used through a property or element access.
-func matchSubjectIsShadowed(info *matchInfo) bool {
-	root := ast.SkipParentheses(info.subject)
-	for root.Kind == ast.KindPropertyAccessExpression || root.Kind == ast.KindElementAccessExpression {
-		root = ast.SkipParentheses(root.Expression())
-	}
-	if root.Kind != ast.KindIdentifier {
-		return false
-	}
-	var binds func(*pattern) bool
-	binds = func(pat *pattern) bool {
-		if pat == nil {
-			return false
-		}
-		if pat.kind == patternBinding && pat.name != nil && pat.name.Text() == root.Text() {
-			return true
-		}
-		for _, item := range pat.items {
-			if binds(item) {
-				return true
-			}
-		}
-		for _, clause := range pat.clauses {
-			if binds(clause.pattern) {
-				return true
-			}
-		}
-		return binds(pat.rest)
-	}
-	for _, arm := range info.arms {
-		if binds(arm.pattern) {
-			return true
-		}
-	}
-	return false
-}
-
-// matchStatements writes the arms of a match: the subject's const when it
-// needs one, then a block per arm whose tests guard success(value), then
-// the default arm or the fallthrough for an unmatched subject.
+// matchStatements writes the arms of a match: the subject's const, then a
+// block per arm whose tests guard success(value), then the default arm or
+// the fallthrough for an unmatched subject.
 func (p *Parser) matchStatements(info *matchInfo, success func(value *ast.Node, at core.TextRange) []*ast.Node, unmatched func(subject *ast.Node, at core.TextRange) *ast.Node) []*ast.Node {
 	path, decl := p.subjectPath(info.subject, info.anchor, "$match")
-	// Keep direct references for the checker's narrowing in existing arms.
-	// A binding which shadows the subject would put those references in its
-	// temporal dead zone, so hold that subject outside every arm instead.
-	if decl == nil && matchSubjectIsShadowed(info) {
-		path, decl = p.cachedSubjectPath(info.subject, info.anchor, "$match")
-	}
-	var out []*ast.Node
-	if decl != nil {
-		out = append(out, decl)
-	}
+	out := []*ast.Node{decl}
 	defaulted := false
 	for _, arm := range info.arms {
 		span := core.NewTextRange(arm.anchor.Pos(), arm.end)
@@ -1137,9 +1090,7 @@ func (p *Parser) conditionSteps(condition *ast.Node) []matchStep {
 			continue
 		}
 		path, decl := p.subjectPath(info.subject, info.anchor, "$is")
-		if decl != nil {
-			steps = append(steps, matchStep{decl: decl})
-		}
+		steps = append(steps, matchStep{decl: decl})
 		p.compilePattern(info.pattern, path, &steps, &matchCompile{anchor: info.anchor})
 	}
 	return steps

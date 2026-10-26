@@ -29,7 +29,7 @@ function describe(failure: Failure) {
 // Output: ["no user 7","retry","denied by policy","denied Ada"]
 ```
 
-Each arm, `when pattern: expression;`, is tried in order; the first match gives the value. A `default: expression;` arm matches anything and must come last. `match` is an expression: it can follow `return`, initialize a `const`, or be an argument.
+Each arm, `when pattern: expression;`, is tried in order; the first match gives the value. A `default: expression;` arm matches anything and must come last. The value is read once, before the first arm, as `switch` reads its discriminant, so a getter such as `user.role` runs once. `match` is an expression: it can follow `return`, initialize a `const`, or be an argument.
 
 An arm is one expression. Use `do { }` for several statements; its value is its last statement's:
 
@@ -301,6 +301,5 @@ For any other type, a match without `default` that no arm fits throws a `TypeErr
 - Object patterns do not match primitives, so `{ length: let n }` does not match a string.
 - An extractor with a custom matcher types its bindings loosely; a class or a listed matcher types them exactly.
 - `is` bindings are not in scope in an `else` branch or after the statement.
-- A subject such as `user.role` is read once per test, not once, so a getter there runs more than once; assign it to a `const` first when that matters.
 - A match inside a larger expression runs its arms in their own function, so an arm there cannot `yield`. A match after `return` or as a statement can.
 - `async match` and the proposal's regular expression and relational patterns.

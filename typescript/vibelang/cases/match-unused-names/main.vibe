@@ -1,13 +1,22 @@
-// expect-result: 1
+// expect-result: [1,1,true]
 // The parser writes names of its own, such as the const that holds a match's
 // subject. None is reported unused (TS6133), under noUnusedLocals and
-// noUnusedParameters too.
+// noUnusedParameters too, and a subject that no pattern reads is still read
+// once, so it is not unused either.
 function next(): number {
   return 7
 }
 
-export function main() {
-  return match (next()) {
+function onlyDefault(x: number): number {
+  return match (x) {
     default: 1;
   }
+}
+
+function guardOnly(box: { v: number }): boolean {
+  return box.v is if (true)
+}
+
+export function main() {
+  return [match (next()) { default: 1; }, onlyDefault(2), guardOnly({ v: 3 })]
 }

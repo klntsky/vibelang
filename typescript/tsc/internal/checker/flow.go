@@ -395,11 +395,14 @@ func (c *Checker) getTypeAtFlowCondition(f *FlowState, flow *ast.FlowNode) FlowT
 // will be a subtype or the same type as the argument.
 func (c *Checker) narrowType(f *FlowState, t *Type, expr *ast.Node, assumeTrue bool) *Type {
 	for _, hook := range flowNarrowingHooks {
-		if narrowed := hook(c, f.reference, t, expr, assumeTrue, func(reference *ast.Node, aliasType *Type) *Type {
+		if narrowed := hook(c, f.reference, t, expr, assumeTrue, func(reference *ast.Node, aliasType *Type, aliasExpr *ast.Node) *Type {
 			alias := *f
 			alias.reference = reference
 			alias.declaredType = aliasType
-			return c.narrowType(&alias, aliasType, expr, assumeTrue)
+			if aliasExpr == nil {
+				aliasExpr = expr
+			}
+			return c.narrowType(&alias, aliasType, aliasExpr, assumeTrue)
 		}); narrowed != nil {
 			return narrowed
 		}

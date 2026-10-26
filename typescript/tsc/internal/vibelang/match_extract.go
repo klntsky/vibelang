@@ -16,7 +16,7 @@ func init() { checker.RegisterFlowNarrowingHook(narrowExtractedError) }
 // relationship in flow analysis, including negative branches: otherwise B
 // remains at $noMatch and at a default rethrow even after B(let b).
 // Custom matchers have no such guarantee and keep ordinary tuple narrowing.
-func narrowExtractedError(c *checker.Checker, reference *ast.Node, t *checker.Type, test *ast.Node, assumeTrue bool, narrowAlias func(*ast.Node, *checker.Type) *checker.Type) *checker.Type {
+func narrowExtractedError(c *checker.Checker, reference *ast.Node, t *checker.Type, test *ast.Node, assumeTrue bool, narrowAlias func(*ast.Node, *checker.Type, *ast.Node) *checker.Type) *checker.Type {
 	// Only parser-written tests describe the extraction relationship. In
 	// particular, never search a user guard's callbacks for nested matches.
 	switch {
@@ -38,7 +38,7 @@ func narrowExtractedError(c *checker.Checker, reference *ast.Node, t *checker.Ty
 	var visit func(*ast.Node) *checker.Type
 	visit = func(node *ast.Node) *checker.Type {
 		if ast.IsIdentifier(node) || ast.IsCallExpression(node) {
-			if call := extractionCall(c, node); call != nil && c.IsMatchingReference(reference, call.Arguments()[1]) {
+			if call := extractionCall(c, node); call != nil && (c.IsMatchingReference(reference, call.Arguments()[1]) || readsThroughCapture(c, reference, call.Arguments()[1])) {
 				matcher := c.TypeOfPatternMatcher(call.Arguments()[0])
 				if symbol := matcher.Symbol(); symbol == nil || !isExtractedErrorClass(symbol.ValueDeclaration()) {
 					return nil
@@ -62,13 +62,13 @@ func narrowExtractedError(c *checker.Checker, reference *ast.Node, t *checker.Ty
 						// e.g. B({ code: String }) when code is a string.
 						for access := parent.Parent; ast.IsAccessExpression(access) && access.Expression() == parent; access = parent.Parent {
 							field := c.GetTypeAtLocation(access)
-							if narrowed := narrowAlias(access, field); narrowed.Flags()&checker.TypeFlagsNever != 0 {
+							if narrowed := narrowAlias(access, field, nil); narrowed.Flags()&checker.TypeFlagsNever != 0 {
 								return narrowed
 							}
 							parent = access
 						}
 						// Use the extracted instance for the subject's own tests.
-						return narrowAlias(node.Parent, t)
+						return narrowAlias(node.Parent, t, nil)
 					}
 				}
 				if ast.IsPropertyAccessExpression(parent) && parent.Expression() == node && parent.Name().Text() == "length" && ast.IsBinaryExpression(test) {
