@@ -3,7 +3,7 @@
 // program needs only Prefix needs nothing. The block needed R itself.
 service Prefix: string
 
-export const withPrefix = <A, E, R>(body: Effect<A, E, R>) => {
+export const withPrefix = <A, E, R>(body: A!E!R) => {
   provide Prefix = "> " {
     return body()
   }
@@ -16,7 +16,7 @@ type Never<T extends never> = T
 
 type Left = Never<Effect.Services<ReturnType<typeof withPrefix<string, never, Prefix>>>>
 
-export const greeting = (): Effect<string> => withPrefix(greet("vibe"))
+export const greeting = (): string!! => withPrefix(greet("vibe"))
 
 // expect-result: "> vibe"
 export function main() {

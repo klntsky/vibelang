@@ -3,15 +3,15 @@
 // service class and control class (D220, now EK2120) and the layer
 // declaration (EK2121). Their quick fixes write the current spellings.
 service class Names {
-  name(): Effect<string>
+  name(): string!!
 }
 
 service class Greeter {
-  greet(name: string): Effect<string>
+  greet(name: string): string!!
 }
 
 control class Approval {
-  approve(request: string): Effect<boolean>
+  approve(request: string): boolean!!
 }
 
 layer NamesLive: Names {

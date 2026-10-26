@@ -3,7 +3,7 @@
 // cannot reach a handler on this one (chapter 9, "Handlers and
 // concurrency"). A call passed by name (D147) is checked as the lambda
 // () => call would be, including a pipe's left side.
-control Ask { ask(): Effect<number> }
+control Ask { ask(): number!! }
 
 export function forked() {
   try {

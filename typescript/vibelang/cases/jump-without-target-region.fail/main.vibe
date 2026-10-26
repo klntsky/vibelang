@@ -6,7 +6,7 @@
 // emits the jump as written instead of crashing.
 error Missing { key: string }
 
-function find(key: string): Effect<number, Missing, infer R> {
+function find(key: string): number!Missing {
   if (key === "") throw new Missing({ key })
   return key.length
 }

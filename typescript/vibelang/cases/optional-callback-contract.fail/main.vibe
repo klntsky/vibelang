@@ -3,11 +3,11 @@
 // required call does, so the callback's E and R reach the contract.
 export error Late { label: string }
 
-export const coalesced = (label?: (seconds: number) => Late): Effect<Late> => {
+export const coalesced = (label?: (seconds: number) => Late): Late!! => {
   return label?.(2) ?? new Late({ label: "default" })
 }
 
-export function announced(log?: (n: number) => void): Effect<boolean> {
+export function announced(log?: (n: number) => void): boolean!! {
   log?.(2)
   return true
 }

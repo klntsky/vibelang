@@ -2,7 +2,7 @@
 error NotFound { id: string }
 error Timeout
 
-function find(id: string): Effect<string, NotFound | Timeout> {
+function find(id: string): string!NotFound | Timeout! {
   if (id === "missing") throw new NotFound({ id })
   if (id === "slow") throw new Timeout()
   return `user ${id}`
@@ -26,7 +26,7 @@ export function constant() {
 }
 
 // default: throw e keeps Timeout in E, which the contract leaves out.
-export function strict(id: string): Effect<string> {
+export function strict(id: string): string!! {
   return find(id) catch (e) => match (e) {
     when NotFound: "missing";
     default: throw e;

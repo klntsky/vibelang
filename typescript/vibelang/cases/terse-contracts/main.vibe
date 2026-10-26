@@ -1,0 +1,81 @@
+// expect-result: {"full":"Ada","noDependencies":1,"inferred":"Ada","neither":3,"onlyDependencies":2,"arrow":2,"find":"none","either":4,"unwrap":5}
+// D309: the ! form of an Effect type is an alias of Effect<A, E, R> again.
+// Each form here was EK1014 under D308 (0.0.8 and 0.0.9) and compiles and
+// runs again: an empty slot is never, and dependencies left out are inferred
+// on a function with a body and never elsewhere. effect-type-spellings is the
+// same program in the Effect<...> spelling that 0.0.8's --fix wrote.
+error NotFound { id: string }
+error Timeout
+
+service Users {
+  find(id: string): string!NotFound
+  count(): number!!
+}
+
+const UsersLive = Layer.succeed(Users, {
+  find(id: string) {
+    if (id !== "42") throw new NotFound({ id })
+    return "Ada"
+  },
+  count() {
+    return 2
+  }
+})
+
+function full(id: string): string!NotFound!Users {
+  return Users.find(id)
+}
+
+function noDependencies(n: number): number!Timeout! {
+  if (n < 0) throw new Timeout()
+  return n
+}
+
+function inferred(id: string): string!NotFound {
+  return Users.find(id)
+}
+
+function neither(): number!! {
+  return 3
+}
+
+function onlyDependencies(): number!!Users {
+  return Users.count()
+}
+
+const arrow = (n: number): number!Timeout => noDependencies(n) + 1
+
+type Finder = (id: string) => string!NotFound
+type Maybe = (number!!) | undefined
+type Nested = (number!!)!NotFound!
+
+function find(finder: Finder, id: string): string!! {
+  return finder(id) catch "none"
+}
+
+function either(program: Maybe): number!! {
+  return program === undefined ? 0 : program()
+}
+
+const five: Effect<number> = Effect.sync(() => 5)
+
+function unwrap(program: Nested): number!NotFound! {
+  const inner = program()
+  return inner()
+}
+
+export function main() {
+  provide UsersLive {
+    return {
+      full: full("42"),
+      noDependencies: noDependencies(1),
+      inferred: inferred("42"),
+      neither: neither(),
+      onlyDependencies: onlyDependencies(),
+      arrow: arrow(1),
+      find: find((id) => { if (id === "7") throw new NotFound({ id }); return id }, "7"),
+      either: either(Effect.succeed(4)),
+      unwrap: unwrap(Effect.succeed(five))
+    }
+  }
+}

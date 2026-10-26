@@ -8,4 +8,4 @@ function read() {
   return Primary()
 }
 
-export const program: Effect<string> = Effect.provide(read(), Layer.succeed(Replica, "replica"))
+export const program: string!! = Effect.provide(read(), Layer.succeed(Replica, "replica"))

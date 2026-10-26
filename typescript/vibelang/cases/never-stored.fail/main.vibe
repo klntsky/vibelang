@@ -31,11 +31,11 @@ export const reassigned = () => {
 // Not reported: a function or a declared Effect type keeps the program, the
 // call runs as a statement, or the call succeeds with a value.
 interface Follower {
-  follow: Effect<never>
-  check: () => Effect<number, Missing>
+  follow: never!!
+  check: () => number!Missing
 }
 export const kept = (ok: boolean): Follower => {
-  const missing: Effect<never, Missing> = Effect.fail(new Missing({ id: "d" }))
+  const missing: never!Missing! = Effect.fail(new Missing({ id: "d" }))
   return { follow: followUntil(), check: () => ok ? 1 : missing() }
 }
 export const later = () => ({ follow: () => followUntil(), id: lookup(1) })

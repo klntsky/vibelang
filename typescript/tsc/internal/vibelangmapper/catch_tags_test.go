@@ -26,7 +26,7 @@ func TestCatchTagExhaustiveStock(t *testing.T) {
 		"export declare const inferredSchema: () => Effect.Effect<number, never, never>;",
 		"export declare function inferredData(): Effect.Effect<number, never, never>;",
 		"export declare function inferredDecl(): Effect.Effect<number, never, never>;",
-		"export declare function partial(data: boolean): Effect.Effect<number, DataFailure>;",
+		"export declare function partial(data: boolean): Effect.Effect<number, DataFailure, never>;",
 	} {
 		if !strings.Contains(declarations, want) {
 			t.Fatalf("missing %s\n%s", want, declarations)

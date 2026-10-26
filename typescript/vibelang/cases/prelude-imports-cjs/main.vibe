@@ -9,7 +9,7 @@ import { EmptyName, greeting } from "./greeting.vibe"
 error Late { ms: number }
 
 service Greeter {
-  greet(name: string): Effect<string, EmptyName>
+  greet(name: string): string!EmptyName
 }
 
 const GreeterLive = Layer.succeed(Greeter, {

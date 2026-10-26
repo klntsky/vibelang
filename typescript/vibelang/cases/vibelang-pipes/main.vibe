@@ -45,7 +45,7 @@ function hello() {
 
 // At the top level a runner receives its program by name, so EK1001 does not
 // apply; the runner starts tracedHello, the whole pipe, as one program.
-function tracedHello(): Effect<string> { return hello() |> withSpan(%, "hello") }
+function tracedHello(): string!! { return hello() |> withSpan(%, "hello") }
 export const started = runFork(tracedHello())
 
 // A pipe passed by name as a whole: fork runs it on a child fiber.

@@ -5,7 +5,7 @@
 // it, so where its value is used as the program's success, which TypeScript
 // reports as a type error, EK1001 names the code; a module-level class field's
 // program was EK1001 already, which named the module's top level.
-function now(): Effect<number> { return Clock.currentTimeMillis() }
+function now(): number!! { return Clock.currentTimeMillis() }
 
 class Box {
   created = now()

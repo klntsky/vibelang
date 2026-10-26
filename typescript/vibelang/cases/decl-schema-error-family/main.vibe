@@ -33,7 +33,7 @@ schema Envelope { id: string; error: StoreError }
 
 export schema error Late extends StoreError
 
-function fail(error: StoreError): Effect<never, StoreError, infer R> {
+function fail(error: StoreError): never!StoreError {
   throw error
 }
 

@@ -1,0 +1,52 @@
+// expect-result: {"terse":"Ada","spelled":"Ada","guest":"guest","count":2,"sum":5}
+// D309: both spellings of a contract in one file, interchangeably. A service
+// declared in one spelling is implemented and called under the other, a
+// function written in one passes where the other is expected, and a program
+// of either type runs where a parameter writes the other.
+error NotFound { id: string }
+
+service Users {
+  find(id: string): string!NotFound
+  count(): Effect<number>
+}
+
+const UsersLive = Layer.succeed(Users, {
+  find(id: string) {
+    if (id !== "42") throw new NotFound({ id })
+    return "Ada"
+  },
+  count() {
+    return 2
+  }
+})
+
+type Lookup = (id: string) => Effect<string, NotFound, Users>
+type Counted = number!!
+
+export function terse(id: string): string!NotFound!Users {
+  return Users.find(id)
+}
+
+export function spelled(id: string): Effect<string, NotFound, Users> {
+  return terse(id)
+}
+
+export function guest(lookup: Lookup, id: string): string!!Users {
+  return lookup(id) catch "guest"
+}
+
+export function add(program: Counted, extra: Effect<number>): Effect<number, never, Users> {
+  return program() + extra() + Users.count()
+}
+
+export function main() {
+  provide UsersLive {
+    return {
+      terse: terse("42"),
+      spelled: spelled("42"),
+      guest: guest(terse, "7"),
+      count: Users.count(),
+      sum: add(Effect.succeed(1), Effect.succeed(2))
+    }
+  }
+}

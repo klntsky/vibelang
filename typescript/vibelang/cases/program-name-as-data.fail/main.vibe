@@ -4,24 +4,24 @@
 // any, or a type parameter its call infers), as a program literal is (D24,
 // D269), where Effect code would run it. EK4802 is an error here
 // (tsconfig.json).
-service Status { set(code: number): Effect<void> }
+service Status { set(code: number): void!! }
 
 const listFlows = () => {
   Console.log("listing")
 }
 const handlers = { list: listFlows }
 
-// A command handler whose contract is Effect<void>.
-const command = (name: string, handler: (n: number) => Effect<void>) => handler
+// A command handler whose contract is void!!.
+const command = (name: string, handler: (n: number) => void!!) => handler
 export const ls = command("ls", () => listFlows)
 export const fromField = command("list", () => handlers.list)
 
 // A written unknown success.
-export const written = (): Effect<unknown> => listFlows
+export const written = (): unknown!! => listFlows
 
 // A callback whose success is a type parameter, and a parameter by name.
 export const thunk = () => Effect.suspend(() => listFlows)
-export const param = (body: () => Effect<void>) => Effect.suspend(() => body)
+export const param = (body: () => void!!) => Effect.suspend(() => body)
 
 // An arm of a conditional whose other arm runs.
 export const arm = (code: number) => Effect.suspend(() => code > 0 ? listFlows : Status.set(code))
@@ -29,5 +29,5 @@ export const arm = (code: number) => Effect.suspend(() => code > 0 ? listFlows :
 // Not reported: the call runs, the success type names the function, or no
 // Effect is expected.
 export const called = command("ls", () => listFlows())
-export const kept = (): Effect<() => Effect<void>> => listFlows
+export const kept = (): (() => void!!)!! => listFlows
 export const plain = (n: number) => listFlows

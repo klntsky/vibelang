@@ -7,13 +7,13 @@
 import { Context } from "effect"
 
 export service Users {
-  find(id: string): Effect<string>
+  find(id: string): string!!
   region: string
-  size: (name: string) => Effect<number>
+  size: (name: string) => number!!
 }
 
 interface NamedShape {
-  read(): Effect<string>
+  read(): string!!
 }
 class Named extends Context.Service<Named, NamedShape>()("app/Named") {}
 class Port extends Context.Service<Port, number>()("app/Port") {}

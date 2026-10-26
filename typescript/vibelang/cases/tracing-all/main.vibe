@@ -18,7 +18,7 @@ function inner() {
   return Effect.currentSpan().name
 }
 
-const viaArrow = (): Effect<string, Cause.NoSuchElementError> => Effect.currentSpan().name
+const viaArrow = (): string!Cause.NoSuchElementError! => Effect.currentSpan().name
 
 // expect-result: ["inner","viaArrow","Hello.greet",["main"]]
 export function main() {

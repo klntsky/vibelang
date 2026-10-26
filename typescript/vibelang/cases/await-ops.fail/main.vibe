@@ -1,5 +1,5 @@
 // expect: EK4607 EK4608 EK4604
-function load(): Effect<number> {
+function load(): number!! {
   return 1
 }
 

@@ -1,11 +1,11 @@
 // expect: EK1001 EK2005 EK2107 EK2108
 control Approval {
-  approve(request: string): Effect<boolean>
-  note(text: string): Effect<void>
+  approve(request: string): boolean!!
+  note(text: string): void!!
 }
 
 service Users {
-  find(id: string): Effect<string>
+  find(id: string): string!!
 }
 
 // EK2108: Approval.note has no clause.
@@ -40,11 +40,11 @@ function service() {
 }
 
 service Secret {
-  read(): Effect<string>
+  read(): string!!
 }
 
 control Ask {
-  ask(question: string): Effect<string>
+  ask(question: string): string!!
 }
 
 // EK2005: the program passed to resumeWith needs Secret, which the try block

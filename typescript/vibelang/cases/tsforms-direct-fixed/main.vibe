@@ -18,8 +18,8 @@ function lookup(id: number) {
 }
 
 interface Store {
-  readonly read: () => Effect<boolean, Missing>
-  readonly gone: () => Effect<never, Missing>
+  readonly read: () => boolean!Missing
+  readonly gone: () => never!Missing
 }
 
 const store: Store = {
@@ -27,13 +27,13 @@ const store: Store = {
   gone: () => throw new Missing({ id: 1 })
 }
 
-function record(): Effect<{ ok: boolean }, never, never> {
+function record(): { ok: boolean }!! {
   return { ok: true }
 }
 
 export function main() {
   const stubbed = store.gone() catch "gone"
-  const free = { run: () => Effect.succeed("program") } as unknown as { run: () => Effect<string> }
+  const free = { run: () => Effect.succeed("program") } as unknown as { run: () => string!! }
   return {
     found: find(1),
     missing: find(0) catch (e) => `missing ${e.id}`,

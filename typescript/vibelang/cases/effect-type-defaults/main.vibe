@@ -1,0 +1,79 @@
+// expect-result: {"plain":3,"failing":"Gone","found":"Ada","guest":"guest","inferred":"Ada","onlyErrors":"x","partial":"Ada","count":2,"all":["Ada"],"ran":3}
+// D308, D309: an Effect<...> contract, the spelling accepted beside the !
+// form, means what the same type means in TypeScript. A type argument left
+// out is never: Effect<A> cannot fail and needs nothing, and Effect<A, E>
+// needs nothing, on a function with a body as everywhere.
+// infer in a return annotation still takes a channel from the body (D57),
+// and a service's members write Effect types with the same defaults.
+// effect-type-defaults.fail holds the bodies these contracts reject.
+error Gone { id: string }
+
+service Users {
+  find(id: string): Effect<string, Gone>
+  count(): Effect<number>
+  all(): Effect<ReadonlyArray<string>, never, never>
+}
+
+const UsersLive = Layer.succeed(Users, {
+  find(id: string) {
+    if (id !== "42") throw new Gone({ id })
+    return "Ada"
+  },
+  count() {
+    return 2
+  },
+  all() {
+    return ["Ada"]
+  }
+})
+
+export function plain(): Effect<number> {
+  return 3
+}
+
+export function failing(id: string): Effect<string, Gone> {
+  if (id === "") throw new Gone({ id })
+  return id
+}
+
+export function found(id: string): Effect<string, Gone, Users> {
+  return Users.find(id)
+}
+
+export function guest(id: string): Effect<string, never, Users> {
+  return Users.find(id) catch "guest"
+}
+
+export function inferred(id: string): Effect<string, Gone, infer R> {
+  return Users.find(id)
+}
+
+export function onlyErrors(id: string): Effect<string, infer E> {
+  if (id === "") throw new Gone({ id })
+  return id
+}
+
+export function partial(id: string): Effect<string, infer E, infer R> {
+  return Users.find(id)
+}
+
+export function run(program: Effect<number>): Effect<number> {
+  return program()
+}
+
+export function main() {
+  provide UsersLive {
+    return {
+      plain: plain(),
+      failing: failing("") catch (e) => e._tag,
+      found: found("42"),
+      guest: guest("7"),
+      inferred: inferred("42"),
+      onlyErrors: onlyErrors("x"),
+      partial: partial("42"),
+      count: Users.count(),
+      all: Users.all(),
+      ran: run(plain())
+    }
+  }
+}

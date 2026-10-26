@@ -20,11 +20,11 @@ const announced = (log?: (n: number) => void) => {
 }
 
 // An omitted callback adds no failure and needs nothing: E and R default to never.
-function defaulted(): Effect<Late> {
+function defaulted(): Late!! {
   return coalesced()
 }
 
-function unscaled(): Effect<number> {
+function unscaled(): number!! {
   return scaled() ?? -1
 }
 

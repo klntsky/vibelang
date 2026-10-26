@@ -13,7 +13,7 @@ export function load(loader: any) {
 }
 
 // A typed callee says which it returns, so these are not reported.
-export const typed = (execute: () => Effect<number>) => Effect.updateContext(() => execute(), (context) => context)
+export const typed = (execute: () => number!!) => Effect.updateContext(() => execute(), (context) => context)
 
 export function parse(text: string) {
   sleep("1 millis")

@@ -23,7 +23,7 @@ function roundTrip() {
 export function main() {
   return {
     plain: probe((n): boolean => n > 0),
-    pausing: probe((n): Effect<boolean> => isSmall(n)),
+    pausing: probe((n): boolean!! => isSmall(n)),
     roundTrip: roundTrip()
   }
 }

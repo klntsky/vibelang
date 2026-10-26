@@ -4,9 +4,9 @@ error Late { label: string }
 // E names nothing a call passes. A call of late runs, so its contextual type,
 // a Late, is the type of the Late it succeeds with: it says nothing about E,
 // though a Late is itself an Effect that fails with a Late.
-const late = <E = never>(label?: string): Effect<Late, E, infer R> => new Late({ label: label ?? "default" })
+const late = <E = never>(label?: string): Late!E => new Late({ label: label ?? "default" })
 
-function returned(): Effect<Late> {
+function returned(): Late!! {
   return late()
 }
 
@@ -15,7 +15,7 @@ function bound() {
   return value
 }
 
-function inArray(): Effect<Array<Late>> {
+function inArray(): Array<Late>!! {
   return [late("given")]
 }
 

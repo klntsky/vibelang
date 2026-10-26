@@ -5,17 +5,17 @@
 error UserNotFound { id: string }
 
 service Directory {
-  lookup(id: string): Effect<string | undefined>
+  lookup(id: string): string | undefined!!
 }
 
 service Users {
-  find(id: string): Effect<string, UserNotFound>
+  find(id: string): string!UserNotFound
   region: string
 }
 
 service Stats {
-  count(): Effect<number>
-  record(): Effect<void>
+  count(): number!!
+  record(): void!!
 }
 
 const DirectoryLive = Layer.succeed(Directory, {
@@ -53,7 +53,7 @@ const StatsLive = Layer.effect(Stats) {
 }
 
 service Session {
-  name(): Effect<string>
+  name(): string!!
 }
 
 // Setup that acquires a resource with using: the layer releases it when its scope closes.

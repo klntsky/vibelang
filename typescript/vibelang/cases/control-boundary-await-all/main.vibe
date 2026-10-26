@@ -2,7 +2,7 @@
 // await.all runs each element in its own fiber, so an element that handles
 // its own control operations runs (chapter 9, "Handlers and concurrency"). A
 // fiber already running is waited for, not started again.
-control Ask { ask(): Effect<number> }
+control Ask { ask(): number!! }
 
 function answered(n: number) {
   try {

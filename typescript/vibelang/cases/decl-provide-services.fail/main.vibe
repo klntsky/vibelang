@@ -2,7 +2,7 @@
 // A provider written Key = value needs a service key, or a module whose
 // export of the same name is one, and a value of that service's shape (D173).
 service Greeting {
-  text(): Effect<string>
+  text(): string!!
 }
 
 const answer = 42

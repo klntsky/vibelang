@@ -2,11 +2,11 @@
 error NotFound { id: string }
 
 service Names {
-  name(id: string): Effect<string, NotFound>
+  name(id: string): string!NotFound
 }
 
 service Counter {
-  next(): Effect<number>
+  next(): number!!
 }
 
 const NamesLive = Layer.succeed(Names, {
@@ -27,7 +27,7 @@ const CounterLive = Layer.effect(Counter) {
 }
 
 // The block provides Names, so the function needs no services.
-function greeting(id: string): Effect<string, NotFound> {
+function greeting(id: string): string!NotFound! {
   provide NamesLive {
     return `Hello, ${Names.name(id)}`
   }
@@ -52,7 +52,7 @@ function counted() {
 }
 
 // An array of layers provides all of their services.
-function both(): Effect<string, NotFound> {
+function both(): string!NotFound! {
   provide [NamesLive, CounterLive] {
     return `${Names.name("42")} ${Counter.next()}`
   }

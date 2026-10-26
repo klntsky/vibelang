@@ -28,11 +28,11 @@ export error Integration extends Failure {
 
 export error Plain extends Failure
 
-function fail(error: Integration | Plain): Effect<never, Integration | Plain, infer R> {
+function fail(error: Integration | Plain): never!(Integration | Plain) {
   throw error
 }
 
-function route(error: Integration | Plain): Effect<string> {
+function route(error: Integration | Plain): string!! {
   return fail(error)
     |> Effect.catchTag(%, "Integration", (caught) => `integration ${caught.reason}`)
     |> Effect.catchTag(%, "Plain", (caught) => `plain ${caught.code}`)

@@ -3,26 +3,26 @@ error NotFound { id: string }
 error Timeout
 
 // Success, errors, and no dependencies.
-export function find(id: string): Effect<string, NotFound> {
+export function find(id: string): string!NotFound! {
   if (id === "42") return "Ada"
   throw new NotFound({ id })
 }
 
 // Dependencies left out: the body supplies them. The union is the error slot.
-export function lookup(id: string): Effect<string, NotFound | Timeout, infer R> {
+export function lookup(id: string): string!NotFound | Timeout {
   if (id === "slow") throw new Timeout()
   return find(id)
 }
 
 // Neither errors nor dependencies.
-export function count(): Effect<number> {
+export function count(): number!! {
   return 3
 }
 
 // Effect types in an alias, a function type, and a parameter.
-export type Finder = (id: string) => Effect<string, NotFound>
-export type Scoped = Effect<string, NotFound, Scope>
-export type Values = ReadonlyArray<Effect<number>>
+export type Finder = (id: string) => string!NotFound!
+export type Scoped = string!NotFound!Scope
+export type Values = ReadonlyArray<number!!>
 
 function tryFind(f: Finder, id: string) {
   try {

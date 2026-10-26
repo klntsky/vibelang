@@ -16,6 +16,6 @@ const makeProgram = (input: Effect.Effect<number, Unavailable, Needed>) => {
   return p
 }
 // The returned program's channels must survive the plain factory too.
-export function missingChannels(input: Effect.Effect<number, Unavailable, Needed>): Effect<number> {
+export function missingChannels(input: Effect.Effect<number, Unavailable, Needed>): number!! {
   return makeProgram(input)
 }

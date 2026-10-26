@@ -6,11 +6,11 @@
 // these layers compiled, and a member that looked a service up died with
 // "Service not found".
 error Oops { n: number }
-service Clock2 { now(): Effect<number> }
-service Greeter { greet(name: string): Effect<string> }
-service Files { open(name: string): Effect<string> }
+service Clock2 { now(): number!! }
+service Greeter { greet(name: string): string!! }
+service Files { open(name: string): string!! }
 
-function stamp(): Effect<number, never, Clock2> { return Clock2.now() }
+function stamp(): number!!Clock2 { return Clock2.now() }
 function helper(name: string) { return `hi ${name} at ${Clock2.now()}` }
 
 export const Lookup = Layer.effect(Greeter) {

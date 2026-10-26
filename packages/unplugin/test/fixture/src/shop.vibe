@@ -5,7 +5,7 @@ import { teaStock } from "./stock.ts"
 export error OutOfStock { item: string }
 
 service Inventory {
-  stock(item: string): Effect<number, OutOfStock>
+  stock(item: string): number!OutOfStock
 }
 
 const InventoryLive = Layer.succeed(Inventory, {

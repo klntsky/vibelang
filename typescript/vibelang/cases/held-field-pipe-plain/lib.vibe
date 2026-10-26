@@ -1,5 +1,5 @@
 export interface Changes {
-  changes: Effect<number>
+  changes: number!!
 }
 
 // The pipe in an Effect-typed field is held (D265): building the record runs

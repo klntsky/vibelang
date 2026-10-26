@@ -1,7 +1,7 @@
 error Oops { n: number }
 error Bad { code: string }
 
-function step(payload: number): Effect<number, Oops> {
+function step(payload: number): number!Oops! {
   if (payload < 0) throw new Oops({ n: payload })
   return payload
 }
@@ -10,19 +10,19 @@ function mapped(cause: Oops): Bad {
   return new Bad({ code: String(cause.n) })
 }
 
-export function load(n: number): Effect<number, Bad> {
+export function load(n: number): number!Bad! {
   const a = step(n) catch (cause) => throw mapped(cause)
   return a + 1
 }
 
-export function loadDirect(n: number): Effect<number, Bad> {
+export function loadDirect(n: number): number!Bad! {
   return step(n) catch (cause) => throw mapped(cause)
 }
 
-export function orZero(n: number): Effect<number> {
+export function orZero(n: number): number!! {
   return step(n) catch 0
 }
 
-export function neverLoaded(n: number): Effect<number, Bad> {
+export function neverLoaded(n: number): number!Bad! {
   return step(n) catch (cause) => throw mapped(cause)
 }

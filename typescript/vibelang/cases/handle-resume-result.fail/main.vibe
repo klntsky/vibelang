@@ -5,8 +5,8 @@
 // compiled before and failed or returned the wrong value when it ran.
 
 control Steps {
-  first(): Effect<void>
-  second(): Effect<void>
+  first(): void!!
+  second(): void!!
 }
 
 function work() {
@@ -44,7 +44,7 @@ export function passed() {
 }
 
 control Once {
-  step(): Effect<void>
+  step(): void!!
 }
 
 function twice() {

@@ -4,11 +4,11 @@
 error NotFound { id: string }
 
 service Directory {
-  lookup(id: string): Effect<string>
+  lookup(id: string): string!!
 }
 
 service Users {
-  find(id: string): Effect<string, NotFound>
+  find(id: string): string!NotFound
 }
 
 const DirectoryLive = Layer.succeed(Directory, {
@@ -73,8 +73,8 @@ export function lookUp() {
 
 // EK4809: every member of a service needs the same service.
 service Reports {
-  daily(): Effect<string, never, Directory>
-  weekly(): Effect<string, never, Directory>
+  daily(): string!!Directory
+  weekly(): string!!Directory
 }
 
 // EK4810: an assertion that drops a failure.

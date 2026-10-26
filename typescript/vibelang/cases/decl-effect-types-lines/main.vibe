@@ -2,7 +2,7 @@
 // A slot's type starts on the line of its !, so an empty last slot does not
 // take the next member's first word.
 export abstract class Counter {
-  abstract increment(): Effect<void>
+  abstract increment(): void!!
 
   static readonly layer = Layer.effect(Counter, () => {
     const count = Ref.make(0)
@@ -12,7 +12,7 @@ export abstract class Counter {
     }
   })
 
-  abstract read(): Effect<number>
+  abstract read(): number!!
 }
 
 export function main() {

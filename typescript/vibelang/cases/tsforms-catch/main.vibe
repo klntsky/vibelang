@@ -10,13 +10,13 @@ class Tagged {
   readonly _tag = "Tagged" as const
 }
 
-function find(id: number): Effect<string, Missing | Timeout, infer R> {
+function find(id: number): string!Missing | Timeout {
   if (id === 0) throw new Missing({ id })
   if (id < 0) throw new Timeout()
   return "Ada"
 }
 
-function tagged(): Effect<string, Tagged, infer R> {
+function tagged(): string!Tagged {
   throw new Tagged()
 }
 

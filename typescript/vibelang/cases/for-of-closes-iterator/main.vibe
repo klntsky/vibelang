@@ -26,14 +26,14 @@ function counting(name: string): Iterable<number> {
   }
 }
 
-function throwing(): Effect<number, Stop, infer R> {
+function throwing(): number!Stop {
   for (const x of counting("throw")) {
     if (x === 2) throw new Stop({ at: x })
   }
   return 0
 }
 
-function throwingAfterEffect(): Effect<number, Stop, infer R> {
+function throwingAfterEffect(): number!Stop {
   for (const x of counting("throw after an effect")) {
     sleep("0 millis")
     if (x === 2) throw new Stop({ at: x })
@@ -41,14 +41,14 @@ function throwingAfterEffect(): Effect<number, Stop, infer R> {
   return 0
 }
 
-function failingCall(): Effect<number, Stop, infer R> {
+function failingCall(): number!Stop {
   for (const x of counting("failing call")) {
     if (x === 2) throwing()
   }
   return 0
 }
 
-function breaking(): Effect<number> {
+function breaking(): number!! {
   for (const x of counting("break")) {
     sleep("0 millis")
     if (x === 2) break
@@ -56,7 +56,7 @@ function breaking(): Effect<number> {
   return 1
 }
 
-function returning(): Effect<number> {
+function returning(): number!! {
   outer: for (const x of counting("return")) {
     sleep("0 millis")
     if (x === 1) continue outer
@@ -65,7 +65,7 @@ function returning(): Effect<number> {
   return 0
 }
 
-function exhausted(): Effect<number> {
+function exhausted(): number!! {
   let sum = 0
   for (const x of counting("exhausted")) {
     sleep("0 millis")
@@ -74,7 +74,7 @@ function exhausted(): Effect<number> {
   return sum
 }
 
-function slow(): Effect<number> {
+function slow(): number!! {
   for (const x of counting("interrupted")) {
     sleep("1 second")
   }

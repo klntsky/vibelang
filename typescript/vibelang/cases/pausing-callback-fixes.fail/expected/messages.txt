@@ -1,2 +1,2 @@
 Run the Effects the comparator needs first, with Effect.forEach or a for...of loop, then sort by their results with a plain comparator.
-twice calls f as a plain function. Give twice a contract that runs f: f: () => Effect<A, E, R>, with E and R added to twice's contract, Effect<…, E, R>.
+twice calls f as a plain function. Give twice a contract that runs f: f: () => A!E!R, with E and R added to twice's return type, as in …!E!R.

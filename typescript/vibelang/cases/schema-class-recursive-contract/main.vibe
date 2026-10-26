@@ -12,7 +12,7 @@ interface CrateWire {
 export class Crate extends Schema.Class<Crate>("Crate")({
   count: Schema.FiniteFromString,
   children: Schema.Array(
-    Schema.suspend((): Effect<Schema.Codec<Crate, CrateWire>> => Crate)
+    Schema.suspend((): Schema.Codec<Crate, CrateWire>!! => Crate)
   )
 }) {}
 

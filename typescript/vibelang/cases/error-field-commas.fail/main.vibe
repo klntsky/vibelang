@@ -17,12 +17,12 @@ schema error Rejected { sku: string, reason: string }
 
 service Stock {
   region: string,
-  count(sku: string): Effect<number>
+  count(sku: string): number!!
 }
 
 control Ask {
   limit: number,
-  ask(): Effect<number>
+  ask(): number!!
 }
 
 schema Item { sku: string, available: number }

@@ -13,7 +13,7 @@ import { Users } from "./services.vibe"
  * @category constructors
  * @since 0.0.2
  */
-export function list(ids: string[]): Effect<ReadonlyArray<User>, never, Users> {
+export function list(ids: string[]): ReadonlyArray<User>!!Users {
   let found = ids |> %.map((id) => Users.find(id))
   return found
 }

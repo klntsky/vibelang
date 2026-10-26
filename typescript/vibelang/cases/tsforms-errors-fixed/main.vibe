@@ -10,7 +10,7 @@ class Renamed extends Data.TaggedError("app/Renamed")<{ readonly id: string }> {
 class Untagged extends Data.Error<{ readonly id: string }> {}
 class SchemaFail extends Schema.TaggedError<SchemaFail>()("SchemaFail", { id: Schema.String }) {}
 
-function find(id: string): Effect<never, NotFound | Timeout, infer R> {
+function find(id: string): never!NotFound | Timeout {
   if (id === "slow") throw new Timeout()
   throw new NotFound({ id, count: 2 })
 }

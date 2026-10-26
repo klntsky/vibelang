@@ -1,6 +1,6 @@
 // expect: EK1001
 service Names {
-  name(): Effect<string>
+  name(): string!!
 }
 
 const NamesLive = Layer.succeed(Names, {

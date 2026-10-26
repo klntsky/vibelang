@@ -101,7 +101,7 @@ console.log(plain(4))
 
   const main = join(app, "src/main.vibe")
   const original = readFileSync(main, "utf8")
-  writeFileSync(main, 'service Required { read(): Effect<string> }\nexport function main() { Console.log(Required.read()) }\n')
+  writeFileSync(main, 'service Required { read(): string!! }\nexport function main() { Console.log(Required.read()) }\n')
   rmSync(join(app, "dist"), { recursive: true, force: true })
   const missing = run("bun", ["run", "build"], app)
   assert.notEqual(missing.status, 0, missing.output)

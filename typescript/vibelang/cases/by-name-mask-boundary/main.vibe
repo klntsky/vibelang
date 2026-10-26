@@ -3,7 +3,7 @@ import { write, publish, operand, transaction, writeValue, twice, make } from ".
 // Explicit function signatures expose program positions to both compilers.
 const repeat: (program: Effect.Effect<number>) => Effect.Effect<number[]> = twice
 
-export function commitThenPublish(): Effect<void> {
+export function commitThenPublish(): void!! {
   Effect.uninterruptibleMask((restoreInterruptibility) => {
     const restore: (program: Effect.Effect<void>) => Effect.Effect<void> = restoreInterruptibility
     restore(write())
@@ -11,7 +11,7 @@ export function commitThenPublish(): Effect<void> {
   })
 }
 
-export function withOperand(): Effect<void> {
+export function withOperand(): void!! {
   Effect.uninterruptibleMask((restoreInterruptibility) => {
     const restore: (program: Effect.Effect<void>) => Effect.Effect<void> = restoreInterruptibility
     restore(write(operand()))
@@ -19,7 +19,7 @@ export function withOperand(): Effect<void> {
   })
 }
 
-export function withTopic(): Effect<void> {
+export function withTopic(): void!! {
   Effect.uninterruptibleMask((restoreInterruptibility) => {
     const restore: (program: Effect.Effect<void>) => Effect.Effect<void> = restoreInterruptibility
     write() |> restore(%)
@@ -27,7 +27,7 @@ export function withTopic(): Effect<void> {
   })
 }
 
-export function withValue(): Effect<void> {
+export function withValue(): void!! {
   Effect.uninterruptibleMask((restoreInterruptibility) => {
     const restore: (program: Effect.Effect<void>) => Effect.Effect<void> = restoreInterruptibility
     restore(writeValue())
@@ -35,7 +35,7 @@ export function withValue(): Effect<void> {
   })
 }
 
-export function withOptional(): Effect<void> {
+export function withOptional(): void!! {
   const writer: { write?: typeof write } = { write }
   Effect.uninterruptibleMask((restoreInterruptibility) => {
     const restore: (program: Effect.Effect<void>) => Effect.Effect<void> = restoreInterruptibility
@@ -44,7 +44,7 @@ export function withOptional(): Effect<void> {
   })
 }
 
-export function withTag(): Effect<void> {
+export function withTag(): void!! {
   Effect.uninterruptibleMask((restoreInterruptibility) => {
     const restore: (program: Effect.Effect<void>) => Effect.Effect<void> = restoreInterruptibility
     restore(transaction`commit`)
@@ -52,7 +52,7 @@ export function withTag(): Effect<void> {
   })
 }
 
-export function withThis(this: { write: typeof write }): Effect<void> {
+export function withThis(this: { write: typeof write }): void!! {
   Effect.uninterruptibleMask((restoreInterruptibility) => {
     const restore: (program: Effect.Effect<void>) => Effect.Effect<void> = restoreInterruptibility
     restore(this.write())
@@ -60,7 +60,7 @@ export function withThis(this: { write: typeof write }): Effect<void> {
   })
 }
 
-export function withMethod(): Effect<void> {
+export function withMethod(): void!! {
   Effect.uninterruptibleMask((restoreInterruptibility) => {
     const restore: (program: Effect.Effect<void>) => Effect.Effect<void> = restoreInterruptibility
     restore(writeValue.interruptible())

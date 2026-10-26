@@ -6,35 +6,35 @@
 // or yield, or before ++, -- or =>, would change the program (ASI).
 error Bad { message: string }
 
-const later = (n: number): Effect<number> => {
+const later = (n: number): number!! => {
   sleep("1 millis")
   return n
 }
 
-const failing = (): Effect<string, Bad, infer R> => {
+const failing = (): string!Bad => {
   sleep("1 millis")
   throw new Bad({ message: "failed" })
 }
 
 // return: an arrow's concise body, a direct Effect
-const arrowLine = (): Effect<number> =>
+const arrowLine = (): number!! =>
   // line
   later(1)
 
-const arrowBlock = (): Effect<number> =>
+const arrowBlock = (): number!! =>
   /* block */
   later(2)
 
 // return: a parenthesized value of a block-bodied arrow, a function
 // expression and methods
-const blockArrow = (): Effect<number> => {
+const blockArrow = (): number!! => {
   return (
     // line
     later(3)
   )
 }
 
-const expression = function (): Effect<number> {
+const expression = function (): number!! {
   return (
     /* block */
     later(4)
@@ -42,7 +42,7 @@ const expression = function (): Effect<number> {
 }
 
 const box = {
-  read(): Effect<number> {
+  read(): number!! {
     return (
       // line
       later(5)
@@ -51,7 +51,7 @@ const box = {
 }
 
 class Holder {
-  read(): Effect<number> {
+  read(): number!! {
     return (
       /* block */
       later(6)
@@ -60,26 +60,26 @@ class Holder {
 }
 
 // return: a catch handler's value
-function handlerLine(): Effect<string> {
+function handlerLine(): string!! {
   return failing() catch (e) =>
     // line
     "line " + e.message
 }
 
-function handlerBlock(): Effect<string> {
+function handlerBlock(): string!! {
   return failing() catch (e) =>
     /* block */
     "block " + e.message
 }
 
 // return: a closure in a pipe stage that reads the topic
-function topicLine(): Effect<number> {
+function topicLine(): number!! {
   return later(1) |> Effect.map(Effect.succeed(7),
     // line
     (n) => n + %)
 }
 
-function topicBlock(): Effect<number> {
+function topicBlock(): number!! {
   return later(1) |> Effect.map(Effect.succeed(8),
     /* block */
     (n) => n + %)
@@ -95,7 +95,7 @@ const stepped = (n: number) =>
   sync((n) => n + 1, n)
 
 // return: match arms, in an Effect function and a plain function
-function matchEffect(x: string): Effect<number> {
+function matchEffect(x: string): number!! {
   later(0)
   return match (x) {
     when "a":
@@ -119,7 +119,7 @@ function matchPlain(x: string): number {
 }
 
 // return: a do block's value
-function doValue(): Effect<number> {
+function doValue(): number!! {
   const v = do {
     const a = later(13)
     // line
@@ -129,7 +129,7 @@ function doValue(): Effect<number> {
 }
 
 // throw: a statement and an expression
-function throwLine(): Effect<string, Bad, infer R> {
+function throwLine(): string!Bad {
   later(0)
   throw (
     // line
@@ -137,7 +137,7 @@ function throwLine(): Effect<string, Bad, infer R> {
   )
 }
 
-function throwBlock(flag: boolean): Effect<string, Bad, infer R> {
+function throwBlock(flag: boolean): string!Bad {
   const v = flag ? "kept" : throw (
     /* block */
     new Bad({ message: "throw block" })
@@ -157,7 +157,7 @@ function* produced() {
   )
 }
 
-function produce(): Effect<number[]> {
+function produce(): number[]!! {
   const values: number[] = []
   for (const x of produced()) values.push(x)
   return values
@@ -190,12 +190,12 @@ module text {
 
 import { loaded } from text
 
-function awaited(): Effect<number> {
+function awaited(): number!! {
   return sync(async () => loaded())
 }
 
 // break and continue with a label, across a finally region
-function jumps(): Effect<number> {
+function jumps(): number!! {
   let total = 0
   outer: for (const i of [1, 2, 3]) {
     for (const j of [1, 2, 3]) {
@@ -214,7 +214,7 @@ function jumps(): Effect<number> {
 }
 
 // postfix ++ and --
-function counted(): Effect<number> {
+function counted(): number!! {
   let up = 0
   let down = 10
   for (const x of [1, 2, 3]) {
@@ -232,10 +232,10 @@ const sum = (
   a: number,
   /* block */
   b: number
-): Effect<number> => later(a + b)
+): number!! => later(a + b)
 
 // by-name arguments
-function byName(): Effect<number> {
+function byName(): number!! {
   return retry(
     // line
     later(22),

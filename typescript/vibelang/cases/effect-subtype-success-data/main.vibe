@@ -5,29 +5,29 @@ import * as ChildProcess from "effect/process/ChildProcess"
 import type * as Scope from "effect/Scope"
 
 // S22-3: a yieldable command is A, never an instruction to spawn it.
-export function keep(command: ChildProcess.Command): Effect.Effect<ChildProcess.Command, never, Scope.Scope> {
+export function keep(command: ChildProcess.Command): ChildProcess.Command!never!Scope.Scope {
   return command
 }
 export interface Service {
-  readonly confine: (command: ChildProcess.StandardCommand) => Effect.Effect<ChildProcess.StandardCommand, never, Scope.Scope>
+  readonly confine: (command: ChildProcess.StandardCommand) => ChildProcess.StandardCommand!never!Scope.Scope
 }
 export const noop: Service = { confine: (command) => command }
-function keepExit(value: Exit.Exit<number>): Effect.Effect<Exit.Exit<number>> { return (value) }
-function constructed(): Effect.Effect<Exit.Exit<number>> { return Exit.succeed(4) }
-function stored(): Effect.Effect<Exit.Exit<number>> {
+function keepExit(value: Exit.Exit<number>): Exit.Exit<number>!! { return (value) }
+function constructed(): Exit.Exit<number>!! { return Exit.succeed(4) }
+function stored(): Exit.Exit<number>!! {
   const value = Exit.succeed(5)
   return value
 }
-function generic<T extends Exit.Exit<number>>(value: T): Effect.Effect<T> { return value }
-function accept(confine: (value: Exit.Exit<number>) => Effect.Effect<Exit.Exit<number>>, value: Exit.Exit<number>) {
+function generic<T extends Exit.Exit<number>>(value: T): T!! { return value }
+function accept(confine: (value: Exit.Exit<number>) => Exit.Exit<number>!!, value: Exit.Exit<number>) {
   return confine(value)
 }
-function broad(value: Exit.Exit<number>): Effect.Effect<unknown> { return value }
-function broadConstructed(): Effect.Effect<unknown> { return Exit.fail("data") }
-function objectValue(): Effect.Effect<object> { return Exit.succeed(6) }
-function unionValue(): Effect.Effect<Exit.Exit<number> | string> { return Exit.succeed(7) }
+function broad(value: Exit.Exit<number>): unknown!! { return value }
+function broadConstructed(): unknown!! { return Exit.fail("data") }
+function objectValue(): object!! { return Exit.succeed(6) }
+function unionValue(): Exit.Exit<number> | string!! { return Exit.succeed(7) }
 // S5-1 still delegates when the declared A rejects the subtype.
-function run(): Effect.Effect<number> { return Exit.succeed(8) }
+function run(): number!! { return Exit.succeed(8) }
 export function main() {
   // Construct data in a sync hatch to isolate the return-boundary rule in (B).
   const command = sync((): ChildProcess.StandardCommand => ChildProcess.make("s22-3-must-never-spawn"))

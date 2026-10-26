@@ -27,7 +27,7 @@ try {
   assert.equal(good.exitCode, 0, JSON.stringify(good))
   assert.equal(good.timedOut, false)
   assert.deepEqual(good.diagnostics, [])
-  const bad = await post('export function f(): Effect<number> { return "no" }')
+  const bad = await post('export function f(): number!! { return "no" }')
   assert.notEqual(bad.exitCode, 0)
   assert.ok(bad.diagnostics.length > 0)
   assert.match(bad.diagnostics[0].code, /^(TS|EK)\d+$/)

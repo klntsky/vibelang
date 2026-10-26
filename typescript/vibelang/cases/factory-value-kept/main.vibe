@@ -1,8 +1,8 @@
 import { checkNested } from "./caller.js"
 import { Effect } from "effect"
-function functionValue(): Effect.Effect<() => number> { return () => 3 }
-function objectValue(): Effect.Effect<object> { return () => 4 }
-function unionValue(): Effect.Effect<number | (() => number)> { return () => 5 }
+function functionValue(): (() => number)!! { return () => 3 }
+function objectValue(): object!! { return () => 4 }
+function unionValue(): (number | (() => number))!! { return () => 5 }
 export let setups = 0
 export function nested(): Effect.Effect<Effect.Effect<number>, never, never> {
   setups++

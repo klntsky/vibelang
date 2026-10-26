@@ -11,11 +11,11 @@ import * as Exit from "effect/Exit"
 
 error Lost { code: string }
 
-const work = (): Effect.Effect<number, Lost> => {
+const work = (): number!Lost! => {
   throw new Lost({ code: "lost" })
 }
 
-const held = <A, E>(effect: Effect.Effect<A, E>) => Effect.map(effect, (value) => value)
+const held = <A, E>(effect: A!E!) => Effect.map(effect, (value) => value)
 
 export function main() {
   const suspended = Effect.suspend(() => work() |> Effect.exit(%) |> Effect.ensuring(%, Effect.void))

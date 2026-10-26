@@ -5,35 +5,35 @@
 // code would run it. EK4802 is an error here (tsconfig.json).
 
 // A written unknown success.
-export const literal = (n: number): Effect<unknown> => {
+export const literal = (n: number): unknown!! => {
   const copy = n
   return () => copy + 1
 }
-export const held = (n: number): Effect<unknown> => {
-  const program: Effect<unknown> = () => n + 1
+export const held = (n: number): unknown!! => {
+  const program: unknown!! = () => n + 1
   return program
 }
 
 // A block param under a type parameter, inferred from the held program.
-interface Api { refresh: () => Effect<void> }
-export const make = (refresh: Effect<void>): Api => ({
+interface Api { refresh: () => void!! }
+export const make = (refresh: void!!): Api => ({
   refresh: () => withSpan("Api.refresh") { return refresh }
 })
 
 // A callback whose call writes an unknown success.
-export const startBody = (body: Effect<unknown, unknown>) =>
+export const startBody = (body: unknown!unknown!never) =>
   Effect.withFiber<unknown, unknown, never>((fiber) => {
     return fiber === undefined ? Effect.interrupt : body
   })
 
 // A callback whose success is a type parameter.
-const announce: Effect<void> = Console.log("chunk")
+const announce: void!! = Console.log("chunk")
 export function main() {
   Stream.make(1, 2) |> Stream.run(%, Sink.forEach((_n: number) => announce))
 }
 
 // A program literal under a type parameter.
-interface S { go: (n: number) => Effect<void> }
+interface S { go: (n: number) => void!! }
 export const s: S = {
   go: (n) => Effect.uninterruptibleMask((restore) => {
     return () => {
@@ -43,22 +43,22 @@ export const s: S = {
 }
 
 // Not reported: the success type names the program, or the value runs.
-export const kept = (n: number): Effect<Effect<unknown>> => {
-  const program: Effect<unknown> = () => n + 1
+export const kept = (n: number): (unknown!!)!! => {
+  const program: unknown!! = () => n + 1
   return program
 }
 export const ran = () => Stream.make(1) |> Stream.run(%, Sink.forEach((_n: number) => announce()))
-export const factory = (n: number): Effect<number> => {
+export const factory = (n: number): number!! => {
   const copy = n
   return () => copy + 1
 }
 
 // A catalog handler whose field's success is unknown.
-interface Entry { handler: (payload: unknown) => Effect<unknown, string> }
+interface Entry { handler: (payload: unknown) => unknown!string }
 export const entry: Entry = { handler: () => Clock.currentTimeMillis }
 
 // An Effect with structure of its own, such as an Exit, under a written unknown success.
-export function raced(): Effect<unknown> {
+export function raced(): unknown!! {
   return Exit.succeed(1)
 }
 

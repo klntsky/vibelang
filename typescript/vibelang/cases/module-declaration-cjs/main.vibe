@@ -54,7 +54,7 @@ module text {
 
 import Counter, { clean, greet, later, safeLength, separator, type Cleaned, type Mode } from text
 
-function cleaned(input: string, mode: Mode): Effect<Cleaned, Error, infer R> {
+function cleaned(input: string, mode: Mode): Cleaned!Error {
   return try((input, mode) => clean(input, mode), (error) => new Error(String(error)), input, mode)
 }
 

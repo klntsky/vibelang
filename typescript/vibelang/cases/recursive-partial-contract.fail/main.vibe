@@ -4,20 +4,20 @@
 // contract to type it: an argument, a logical operand, or a generic call.
 // EK2102 suggests the whole contract, which compiles (D52).
 error Neg { n: number }
-service Audit { note(n: number): Effect<void> }
+service Audit { note(n: number): void!! }
 
-export function biggest(n: number): Effect<number, Neg, infer R> {
+export function biggest(n: number): number!Neg {
   Audit.note(n)
   if (n < 0) throw new Neg({ n })
   return n === 0 ? 0 : Math.max(biggest(n - 1), n)
 }
 
-export function either(n: number): Effect<number, Neg, infer R> {
+export function either(n: number): number!Neg {
   if (n < 0) throw new Neg({ n })
   return n === 0 ? 0 : (either(n - 1) || n)
 }
 
-export function depth<T>(xs: ReadonlyArray<T>, n: number): Effect<number, Neg, infer R> {
+export function depth<T>(xs: ReadonlyArray<T>, n: number): number!Neg {
   if (n < 0) throw new Neg({ n })
   return xs.length === 0 ? n : 1 + depth(xs.slice(1), n)
 }

@@ -45,7 +45,7 @@ const run = (dir, ...args) => spawnSync(dprint, args, { cwd: dir, encoding: "utf
 
 test("dprint check fails on an unformatted .vibe file and dprint fmt formats it", { skip }, () => {
   const dir = project({
-    "a.vibe": "function f(): Effect<string, Gone> {\n    return withSpan('x') { return g() catch (e) => match (e) { when Gone: \"g\"; } }\n}\n",
+    "a.vibe": "function f(): string!Gone {\n    return withSpan('x') { return g() catch (e) => match (e) { when Gone: \"g\"; } }\n}\n",
     "b.ts": "export const b = 1\n"
   })
   try {
@@ -56,7 +56,7 @@ test("dprint check fails on an unformatted .vibe file and dprint fmt formats it"
     const fmt = run(dir, "fmt")
     assert.equal(fmt.status, 0, fmt.stdout + fmt.stderr)
     assert.equal(readFileSync(join(dir, "a.vibe"), "utf8"),
-      "function f(): Effect<string, Gone> {\n  return withSpan(\"x\") {\n    return g() catch (e) => match (e) { when Gone: \"g\"; }\n  }\n}\n")
+      "function f(): string!Gone {\n  return withSpan(\"x\") {\n    return g() catch (e) => match (e) { when Gone: \"g\"; }\n  }\n}\n")
     const again = run(dir, "check")
     assert.equal(again.status, 0, again.stdout + again.stderr)
   } finally {
@@ -66,13 +66,13 @@ test("dprint check fails on an unformatted .vibe file and dprint fmt formats it"
 
 test("dprint formats a module declaration's body as TypeScript and keeps identifier specifiers", { skip }, () => {
   const dir = project({
-    "m.vibe": "import { clean } from text\nimport { suffix } from './suffix.ts'\n\nmodule text {\nimport { b } from './b.ts'\nimport { a } from \"a\"\nexport function clean(value: string): string { return value.trim() + a + b }\n}\n\nexport * from text\nexport function tidy(value: string): Effect<string> { return sync(() => clean(value) + suffix) }\n"
+    "m.vibe": "import { clean } from text\nimport { suffix } from './suffix.ts'\n\nmodule text {\nimport { b } from './b.ts'\nimport { a } from \"a\"\nexport function clean(value: string): string { return value.trim() + a + b }\n}\n\nexport * from text\nexport function tidy(value: string): string!! { return sync(() => clean(value) + suffix) }\n"
   })
   try {
     const fmt = run(dir, "fmt")
     assert.equal(fmt.status, 0, fmt.stdout + fmt.stderr)
     assert.equal(readFileSync(join(dir, "m.vibe"), "utf8"),
-      "import { clean } from text\nimport { suffix } from \"./suffix.ts\"\n\nmodule text {\n  import { a } from \"a\"\n  import { b } from \"./b.ts\"\n  export function clean(value: string): string {\n    return value.trim() + a + b\n  }\n}\n\nexport * from text\nexport function tidy(value: string): Effect<string> {\n  return sync(() => clean(value) + suffix)\n}\n")
+      "import { clean } from text\nimport { suffix } from \"./suffix.ts\"\n\nmodule text {\n  import { a } from \"a\"\n  import { b } from \"./b.ts\"\n  export function clean(value: string): string {\n    return value.trim() + a + b\n  }\n}\n\nexport * from text\nexport function tidy(value: string): string!! {\n  return sync(() => clean(value) + suffix)\n}\n")
     const again = run(dir, "check")
     assert.equal(again.status, 0, again.stdout + again.stderr)
   } finally {

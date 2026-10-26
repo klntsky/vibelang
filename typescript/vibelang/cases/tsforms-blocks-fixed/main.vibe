@@ -4,11 +4,11 @@
 // a provide block where a block can stand: a return or a statement.
 // tsforms-blocks-fixed is what vibelang --fix writes.
 service Region {
-  name(): Effect<string>
+  name(): string!!
 }
 
 service Size {
-  of(text: string): Effect<number>
+  of(text: string): number!!
 }
 
 const RegionLive = Layer.succeed(Region, { name() { return "eu" } })

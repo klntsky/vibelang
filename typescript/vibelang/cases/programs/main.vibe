@@ -46,7 +46,7 @@ function both() {
 // from scratch, each time.
 function stored() {
   let runs = 0
-  const job = (): Effect.Effect<string> => {
+  const job = (): string!! => {
     runs++
     return fast(`run ${runs}`)
   }

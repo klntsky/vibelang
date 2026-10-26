@@ -1,4 +1,4 @@
-function double(n: number): Effect<number> {
+function double(n: number): number!! {
   return n * 2
 }
 

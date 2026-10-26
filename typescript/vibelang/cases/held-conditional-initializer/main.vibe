@@ -2,13 +2,13 @@
 // is one of the branches, so neither branch runs when the const is
 // initialized, and the chosen branch runs each time the const is run. Only
 // the condition is evaluated at initialization.
-const count = (state: { mutable runs: number }): Effect<number> => {
+const count = (state: { mutable runs: number }): number!! => {
   state.runs++
   return state.runs
 }
 
-const pick = (state: { mutable runs: number }, fixed: number | undefined): Effect<number> => {
-  const program: Effect<number> = fixed === undefined ? count(state) : Effect.succeed(fixed)
+const pick = (state: { mutable runs: number }, fixed: number | undefined): number!! => {
+  const program: number!! = fixed === undefined ? count(state) : Effect.succeed(fixed)
   return program() + program()
 }
 
@@ -17,8 +17,8 @@ export function main() {
   const left = { runs: 0 }
   const right = { runs: 0 }
   const checks = { runs: 0 }
-  const fromCall: Effect<number> = right.runs === 0 ? count(left) : count(right)
-  const fromSucceed: Effect<number> = ((checks.runs++, left.runs === 0) ? Effect.succeed(7) : count(right)) as Effect<number>
+  const fromCall: number!! = right.runs === 0 ? count(left) : count(right)
+  const fromSucceed: number!! = ((checks.runs++, left.runs === 0) ? Effect.succeed(7) : count(right)) as number!!
   const before = [left.runs, right.runs, checks.runs]
   const a = fromCall() + fromCall()
   const after = [left.runs, right.runs, checks.runs]

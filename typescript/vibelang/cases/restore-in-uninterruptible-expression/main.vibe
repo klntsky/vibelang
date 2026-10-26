@@ -20,7 +20,7 @@ function restored() {
 }
 
 // The restore block runs where it stands, inside the region.
-function value(): Effect<number> {
+function value(): number!! {
   let ran = 0
   return uninterruptible {
     restore {

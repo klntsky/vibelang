@@ -1,31 +1,32 @@
 // expect-result: {"loaded":3,"checked":"ok","held":"held","callback":4,"maybe":5,"nested":6,"kept":7}
-// An Effect type written through the Effect module, Effect.Effect<A, E, R>,
-// draws EK4833 (D287, D308); its fix writes Effect<A, E, R>, the prelude's
-// name for the same type, and keeps the type arguments as written. The
-// directive keeps one. tsforms-types-fixed is what vibelang --fix writes.
+// An Effect type written with its type arguments draws EK4833 (D287); its
+// fix writes the ! form, which the parser expands to the same type. In a
+// return annotation with a body, a ! form without dependencies infers them,
+// so never is written as an empty slot there. The directive keeps one.
+// tsforms-types-fixed is what vibelang --fix writes.
 error Missing { id: string }
 
-function load(id: string): Effect<number, Missing, never> {
+function load(id: string): number!Missing! {
   if (id === "") throw new Missing({ id })
   return id.length
 }
 
-function checked(program: Effect<number, Missing>): Effect<string, never, infer R> {
+function checked(program: number!Missing): string!never {
   const n = program() catch -1
   return n >= 0 ? "ok" : "missing"
 }
 
-const held: Effect<string> = Effect.sync(() => "held")
-const six: Effect<number> = Effect.sync(() => 6)
+const held: string!! = Effect.sync(() => "held")
+const six: number!! = Effect.sync(() => 6)
 
-type Callback = (n: number) => Effect<number>
+type Callback = (n: number) => number!!
 const callback: Callback = (n) => n + 1
 
-function maybe(program: Effect<number> | undefined): Effect<number> {
+function maybe(program: (number!!) | undefined): number!! {
   return program === undefined ? 0 : program()
 }
 
-function nested(program: Effect<Effect<number>>): Effect<number> {
+function nested(program: (number!!)!!): number!! {
   const inner = program()
   return inner()
 }
@@ -33,7 +34,7 @@ function nested(program: Effect<Effect<number>>): Effect<number> {
 function kept(
   // @vibelang-diagnostics-next-line EK4833:off
   program: Effect.Effect<number>
-): Effect<number> {
+): number!! {
   return program()
 }
 

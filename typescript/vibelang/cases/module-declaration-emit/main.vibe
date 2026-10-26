@@ -73,7 +73,7 @@ module extras {
   export default "not re-exported"
 }
 
-export function describe(shape: Shape): Effect<string> {
+export function describe(shape: Shape): string!! {
   return `${shape.width}x${shape.height}`
 }
 

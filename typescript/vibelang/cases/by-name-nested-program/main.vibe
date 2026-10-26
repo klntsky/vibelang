@@ -37,7 +37,7 @@ export function viaCatchContinue(ns: ReadonlyArray<number>) {
   return [checks, kept]
 }
 
-export function typedOption(): Effect.Effect<boolean> {
+export function typedOption(): boolean!! {
   const checked: Option.Option<Effect.Effect<void, string, never>> = Effect.option(guard(0))
   return Option.isSome(checked)
 }

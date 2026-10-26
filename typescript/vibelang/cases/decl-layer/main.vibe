@@ -2,17 +2,17 @@
 error UserNotFound { id: string }
 
 service Directory {
-  lookup(id: string): Effect<string | undefined>
+  lookup(id: string): string | undefined!!
 }
 
 service Users {
-  find(id: string): Effect<string, UserNotFound>
+  find(id: string): string!UserNotFound
   readonly region: string
 }
 
 service Stats {
-  count(): Effect<number>
-  record(): Effect<void>
+  count(): number!!
+  record(): void!!
 }
 
 // No setup statements: Layer.succeed.

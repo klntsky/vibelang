@@ -44,11 +44,11 @@ function codeOf(coded: Coded): string {
   return coded.code
 }
 
-function fail(code: string): Effect<never, Validated, infer R> {
+function fail(code: string): never!Validated {
   throw new Validated(code)
 }
 
-function recover(): Effect<string> {
+function recover(): string!! {
   return fail("X") |> Effect.catchTag(%, "Validated", (error) => error.code)
 }
 

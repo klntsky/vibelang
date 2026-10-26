@@ -1,6 +1,6 @@
 import type { Effect } from "vibelang-runtime";
 export interface SearchApi {
-    find(query: string): Effect<string>;
+    find(query: string): Effect.Effect<string, never, never>;
 }
 export interface Search {
     readonly "~vibelang/service"?: "decl-service-type-dts/main#Search";

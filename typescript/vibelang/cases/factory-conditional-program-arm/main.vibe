@@ -5,7 +5,7 @@
 // function literal of the first arm, so the program never ran.
 import * as Effect from "effect/Effect"
 
-type Hook = (n: number) => Effect.Effect<void>
+type Hook = (n: number) => void!!
 
 const concise: Hook = (n) => n > 0 ? () => die("crash") : Effect.void
 

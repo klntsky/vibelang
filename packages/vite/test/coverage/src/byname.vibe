@@ -1,6 +1,6 @@
 error Oops { n: number }
 
-function step(payload: number): Effect<number, Oops> {
+function step(payload: number): number!Oops! {
   if (payload < 0) throw new Oops({ n: payload })
   return payload
 }
@@ -9,15 +9,15 @@ export function timed(n: number) {
   return timeout(step(n), "1 second")
 }
 
-export function pair(n: number): Effect<number, Oops> {
+export function pair(n: number): number!Oops! {
   const [x, y] = Effect.all([step(n), step(n + 1)])
   return x + y
 }
 
-export function retried(n: number): Effect<number, Oops> {
+export function retried(n: number): number!Oops! {
   return retry(step(n), { times: 2 })
 }
 
-export function neverRetried(n: number): Effect<number, Oops> {
+export function neverRetried(n: number): number!Oops! {
   return retry(step(n), { times: 2 })
 }
