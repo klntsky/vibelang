@@ -116,13 +116,27 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 			// identifiers so local names and explicit imports still shadow the
 			// prelude. D67 keeps the written contract; S17-1's specifier rewrite
 			// above still handles inferred and linked dependency types.
+			//
+			// The node builder also copies a library's own type node into an
+			// inferred type, such as SchemaAST.ParseOptions from effect's
+			// Schema.d.ts for Schema.decodeUnknownEffect(…), when its first
+			// name resolves from the .vibe file, as an effect root export or
+			// prelude name does, without asking entity visibility either.
+			bound := map[string]bool{}
+			for _, statement := range declarations.Statements.Nodes {
+				forEachTopLevelName(statement, func(name string) { bound[name] = true })
+			}
 			var visit func(*ast.Node) bool
 			visit = func(n *ast.Node) bool {
-				if ast.IsTypeReferenceNode(n) {
+				if name := typeEntityName(n); name != nil {
 					original := resolver.EmitContext().MostOriginal(n)
-					if ast.IsTypeReferenceNode(original) && ast.GetSourceFileOfNode(original) == sourceFile {
-						first := ast.GetFirstIdentifier(original.AsTypeReferenceNode().TypeName)
-						preludeNameVisible(c, first, c.GetSymbolAtLocation(first))
+					if written := typeEntityName(original); written != nil && original.Kind == n.Kind && !ast.NodeIsSynthesized(original) {
+						first := ast.GetFirstIdentifier(written)
+						if file := ast.GetSourceFileOfNode(original); file == sourceFile {
+							preludeNameVisible(c, first, c.GetSymbolAtLocation(first))
+						} else if file != nil && file != declarations && !bound[first.Text()] {
+							recordLibraryTypeUse(c, state, sourceFile, first)
+						}
 					}
 				}
 				return n.ForEachChild(visit)
@@ -174,6 +188,41 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 		statements := f.NewNodeList(append(imports, declarations.Statements.Nodes...))
 		statements.Loc = declarations.Statements.Loc
 		return f.UpdateSourceFile(declarations, statements, declarations.EndOfFileToken).AsSourceFile()
+	}
+}
+
+// typeEntityName returns the name that n, a type reference such as
+// Effect<number> or a type query such as typeof Schema.Json.Type, writes;
+// or nil.
+func typeEntityName(n *ast.Node) *ast.Node {
+	switch {
+	case ast.IsTypeReferenceNode(n):
+		return n.AsTypeReferenceNode().TypeName
+	case ast.IsTypeQueryNode(n):
+		return n.AsTypeQueryNode().ExprName
+	}
+	return nil
+}
+
+// recordLibraryTypeUse records that the declaration file of file writes
+// identifier, the first name of a type node the node builder copied from a
+// library's declarations, when it names the symbol that the prelude name or
+// effect root export of the same name does from file.
+func recordLibraryTypeUse(c *checker.Checker, state *preludeState, file *ast.SourceFile, identifier *ast.Node) {
+	name := identifier.Text()
+	_, isPrelude := preludeModules[name]
+	_, isRoot := effectRootNames[name]
+	if !isPrelude && !isRoot {
+		return
+	}
+	resolve := func(symbol *ast.Symbol) *ast.Symbol {
+		if symbol != nil && symbol.Flags()&ast.SymbolFlagsAlias != 0 {
+			return c.GetAliasedSymbol(symbol)
+		}
+		return symbol
+	}
+	if want := resolve(preludeSymbol(c, state, file, name)); want != nil && want == resolve(c.GetSymbolAtLocation(identifier)) {
+		recordTypeUse(state, file, identifier)
 	}
 }
 
