@@ -332,22 +332,35 @@ func init() {
 	fileChecks = append(fileChecks, checkPlatform)
 }
 
+// clockRead says what replaces a clock or randomness read.
+type clockRead struct {
+	use     string // the replacement, and how its value differs from the read's
+	service string // the key in platformServices of the service it needs, or "" for Effect's runtime's own
+	test    string // how a test controls the replacement
+}
+
+const (
+	testClock  = "In a test, TestClock sets it."
+	testRandom = "In a test, Random.withSeed(() => program(), seed) fixes it."
+	testCrypto = `In a test, provide TestCrypto.layer(seed) from "effect/testing"; a seeded Random does not reach Crypto.`
+)
+
 // clockReads lists the clock and randomness reads (EK4403), by the
 // declaration that a call resolves to, with what replaces each one.
-var clockReads = map[string]string{
-	"DateConstructor.now":         "Clock.currentTimeMillis()",
-	"DateConstructor":             "DateTime.now()",
-	"DateConstructor.constructor": "DateTime.now()", // new Date()
-	"Math.random":                 "Random.next()",
-	"Crypto.randomUUID":           `Crypto.randomUUIDv4(), from "effect/Crypto"`,
-	"Crypto.getRandomValues":      `Crypto.randomBytes(size), from "effect/Crypto"`,
-	"Performance.now":             "Clock.monotonicTimeNanos()",
-	"Now.instant":                 "DateTime.now()",
-	"Now.zonedDateTimeISO":        "DateTime.nowInCurrentZone()",
-	"Now.plainDateTimeISO":        "DateTime.now()",
-	"Now.plainDateISO":            "DateTime.now()",
-	"Now.plainTimeISO":            "DateTime.now()",
-	"Now.timeZoneId":              "DateTime.CurrentTimeZone()",
+var clockReads = map[string]clockRead{
+	"DateConstructor.now":         {"Clock.currentTimeMillis(), the same number of milliseconds", "", testClock},
+	"DateConstructor":             {"String(DateTime.nowAsDate()), since Date() returns a string", "", testClock},
+	"DateConstructor.constructor": {"DateTime.nowAsDate() for a Date, or DateTime.now() for a DateTime.Utc", "", testClock}, // new Date()
+	"Math.random":                 {"Random.next(), a number from 0 up to 1", "", testRandom},
+	"Crypto.randomUUID":           {"Crypto.randomUUIDv4()", "Crypto", testCrypto},
+	"Crypto.getRandomValues":      {"Crypto.randomBytes(size), which returns new bytes instead of filling an array", "Crypto", testCrypto},
+	"Performance.now":             {"Number(Clock.monotonicTimeNanos()) / 1e6: Clock.monotonicTimeNanos() is a bigint of nanoseconds, and performance.now() a number of milliseconds", "", testClock},
+	"Now.instant":                 {"DateTime.now()", "", testClock},
+	"Now.zonedDateTimeISO":        {"DateTime.nowInCurrentZone()", "", testClock},
+	"Now.plainDateTimeISO":        {"DateTime.now()", "", testClock},
+	"Now.plainDateISO":            {"DateTime.now()", "", testClock},
+	"Now.plainTimeISO":            {"DateTime.now()", "", testClock},
+	"Now.timeZoneId":              {"DateTime.CurrentTimeZone()", "", "In a test, provide DateTime.CurrentTimeZone."},
 }
 
 // platformModule is EK4402's text for a dynamic import of a platform module.
@@ -742,11 +755,16 @@ func checkClockRead(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
 	if key == "" {
 		return
 	}
-	read := nodeText(file, call.Expression()) + "()"
+	text := nodeText(file, call.Expression()) + "()"
 	if ast.IsNewExpression(call) {
-		read = "new " + read
+		text = "new " + text
 	}
-	d := report(c, call, EK4403, read)
-	note(d, "Use {0}, which a test controls with TestClock or a seeded Random.", clockReads[key])
+	read := clockReads[key]
+	d := report(c, call, EK4403, text)
+	note(d, "Use {0}.", read.use)
+	if s := platformServices[read.service]; s != nil {
+		noteService(d, s)
+	}
+	note(d, read.test)
 	note(d, "To allow it, set \"EK4403\": \"warning\" or \"off\" in compilerOptions.vibelang.diagnostics.")
 }

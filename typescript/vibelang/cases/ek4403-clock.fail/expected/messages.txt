@@ -1,0 +1,11 @@
+Date.now() reads the clock or randomness, which a test cannot control.
+Use Clock.currentTimeMillis(), the same number of milliseconds.
+In a test, TestClock sets it.
+Use DateTime.nowAsDate() for a Date, or DateTime.now() for a DateTime.Utc.
+Use Random.next(), a number from 0 up to 1.
+In a test, Random.withSeed(() => program(), seed) fixes it.
+Use Crypto.randomUUIDv4().
+Import it with   import { Crypto } from "effect/Crypto"
+In a test, provide TestCrypto.layer(seed) from "effect/testing"; a seeded Random does not reach Crypto.
+Use Number(Clock.monotonicTimeNanos()) / 1e6: Clock.monotonicTimeNanos() is a bigint of nanoseconds, and performance.now() a number of milliseconds.
+Use String(DateTime.nowAsDate()), since Date() returns a string.

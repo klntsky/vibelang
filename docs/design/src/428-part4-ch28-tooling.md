@@ -292,7 +292,7 @@ coverage. Repairs are suggestions, not shipped code actions:
 | EK4301 | A callback that can pause or fail where a plain function is expected | Rewrite as `Effect.forEach` or `for...of`; a visitor returning a program uses `() => () => call()` when its result is used | 10, 16 |
 | EK4401 | Packages matching the `vibelang` setting `trustedPackages` are trusted (D261); otherwise, a plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `try`, or tag the declaration `@vibelang trusted` | 10 |
 | EK4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect service the error names, with its import and layer | 11 |
-| EK4403 | Error by default: a clock or randomness read | Use `Clock`, `DateTime`, or `Random` | 10 |
+| EK4403 | Error by default: a clock or randomness read | Use `Clock`, `DateTime`, `Random`, or `Crypto` | 10 |
 | EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try((text) => parse(text), (error) => …, text)` | 10 |
 | EK4405 | A hatch's TypeScript reads a binding the `.vibe` file declares outside the hatch: a local, a parameter, or a module declaration (D229) | Pass the value as an input, an argument after the function that fills its first parameter: `sync((bytes) => crypto.getRandomValues(bytes), bytes)`; the quick fix does this | 10 |
 | EK4406 | A call whose D23-tagged TypeScript declaration changes the emitted failure contract (warning until the emit switch, D249) | Export a `trusted(impl, [Errors])` value beside the implementation and call that value | 10 |

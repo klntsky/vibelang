@@ -34,6 +34,12 @@ compiles the same.
   for `process.cwd()`, `FileSystem.makeTempDirectory()` for `os.tmpdir()`.
   For an API that Effect lacks, such as `os.hostname()`, it shows the call in
   a `sync` hatch instead of suggesting a wrapper module.
+- EK4403 keeps units and test advice exact. `performance.now()` maps to
+  `Number(Clock.monotonicTimeNanos()) / 1e6`, since `monotonicTimeNanos` is a
+  bigint of nanoseconds, and `new Date()` to `DateTime.nowAsDate()`.
+  `crypto.randomUUID()` maps to `Crypto.randomUUIDv4()` with its import and
+  layer; a test controls it with `TestCrypto.layer(seed)`, not a seeded
+  `Random`.
 
 ## 0.0.9
 

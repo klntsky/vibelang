@@ -28,16 +28,17 @@ const (
 	importCrypto        = `Import it with   import { Crypto } from "effect/Crypto"`
 	provideCrypto       = `Provide it in main with NodeServices.layer from "@effect/platform-node", BunServices.layer from "@effect/platform-bun", or BrowserCrypto.layer from "@effect/platform-browser".`
 	noServiceYet        = "Effect, VibeLang's standard library, has no service for it yet."
+	allowEK4403         = `To allow it, set "EK4403": "warning" or "off" in compilerOptions.vibelang.diagnostics.`
 )
 
-// EK4402 names the Effect API that replaces a platform API, the import that
-// brings it in, and the layer that provides it; for an API Effect lacks, it
-// shows the call in a hatch, never in a wrapper module.
+// EK4402 and EK4403 name the Effect API that replaces a platform API, the
+// import that brings it in, and the layer that provides it; for an API Effect
+// lacks, they show it in a hatch, never in a wrapper module.
 func TestPlatformReplacementMessages(t *testing.T) {
 	tests := []struct {
 		name   string
 		source string
-		want   []string // EK4402's lines; none for code that runs no platform API
+		want   []string // EK4402's or EK4403's lines; none for code that runs no platform API
 	}{
 		{"fs", `import { readFile } from "node:fs/promises"
 export const run = (path: string) => readFile(path, "utf8")`, []string{
@@ -122,6 +123,28 @@ export const run = (path: string) => lstat(path)`, []string{
 			"process.pid is a platform API, which VibeLang code does not call directly.",
 			noServiceYet, "Run it in a hatch:   sync(() => process.pid), or with try when it can throw.",
 		}},
+		{"clock", `export const run = () => Date.now()`, []string{
+			"Date.now() reads the clock or randomness, which a test cannot control.",
+			"Use Clock.currentTimeMillis(), the same number of milliseconds.", "In a test, TestClock sets it.", allowEK4403,
+		}},
+		{"monotonic clock", `export const run = () => performance.now()`, []string{
+			"performance.now() reads the clock or randomness, which a test cannot control.",
+			"Use Number(Clock.monotonicTimeNanos()) / 1e6: Clock.monotonicTimeNanos() is a bigint of nanoseconds, and performance.now() a number of milliseconds.",
+			"In a test, TestClock sets it.", allowEK4403,
+		}},
+		{"date", `export const run = () => new Date()`, []string{
+			"new Date() reads the clock or randomness, which a test cannot control.",
+			"Use DateTime.nowAsDate() for a Date, or DateTime.now() for a DateTime.Utc.", "In a test, TestClock sets it.", allowEK4403,
+		}},
+		{"random", `export const run = () => Math.random()`, []string{
+			"Math.random() reads the clock or randomness, which a test cannot control.",
+			"Use Random.next(), a number from 0 up to 1.", "In a test, Random.withSeed(() => program(), seed) fixes it.", allowEK4403,
+		}},
+		{"crypto", `export const run = () => crypto.randomUUID()`, []string{
+			"crypto.randomUUID() reads the clock or randomness, which a test cannot control.",
+			"Use Crypto.randomUUIDv4().", importCrypto, provideCrypto,
+			`In a test, provide TestCrypto.layer(seed) from "effect/testing"; a seeded Random does not reach Crypto.`, allowEK4403,
+		}},
 		{"pure web helpers", `export const run = (text: string, url: string) => [
   new TextEncoder().encode(text), new TextDecoder().decode(new Uint8Array()), new URL(url).host, new URLSearchParams(text).size,
   structuredClone({ text }), atob(btoa(text)), new Headers().has(text), new AbortController().signal.aborted,
@@ -136,7 +159,7 @@ export const run = (path: string) => lstat(path)`, []string{
 			files["/Users/x/src/main.vibe"] = test.source
 			var got []string
 			for _, d := range computedKeyProgram(t, files).GetSemanticDiagnostics(t.Context(), nil) {
-				if d.Code() == EK4402.Code {
+				if d.Code() == EK4402.Code || d.Code() == EK4403.Code {
 					got = append(got, diagnosticWithNotes(d))
 				}
 			}
@@ -171,6 +194,9 @@ func TestPlatformServicesTable(t *testing.T) {
 	for api, entry := range platformAPIs {
 		named("platformAPIs["+api+"]", entry.service)
 	}
+	for read, entry := range clockReads {
+		named("clockReads["+read+"]", entry.service)
+	}
 	imported := regexp.MustCompile(`import \{ ([^}]*) \}|import \* as (\w+)`)
 	receiver := regexp.MustCompile(`(?:^|[^.\w/])([A-Za-z_]\w*)\.`) // not a path's or a member's
 	prelude := []string{"Clock", "Config", "Console", "DateTime", "Inspectable", "Number", "Random", "Schedule", "Stream", "String", "fiber", "import"}
@@ -193,6 +219,11 @@ func TestPlatformServicesTable(t *testing.T) {
 	for api, entry := range platformAPIs {
 		if s := platformServices[entry.service]; s != nil {
 			check("platformAPIs["+api+"]", entry.example, s)
+		}
+	}
+	for read, entry := range clockReads {
+		if s := platformServices[entry.service]; s != nil {
+			check("clockReads["+read+"]", entry.use, s)
 		}
 	}
 }
