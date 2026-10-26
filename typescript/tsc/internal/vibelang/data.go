@@ -8,6 +8,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
+	"github.com/microsoft/TypeScript/tsc/internal/diagnostics"
 	"github.com/microsoft/TypeScript/tsc/internal/parser"
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
@@ -124,7 +125,7 @@ func dataVariantOf(c *checker.Checker, matcher *ast.Node) (tag string, value *ch
 	if slices.Contains(dataReserved, tag) {
 		return "", nil, false
 	}
-	constructors := c.GetTypeAtLocation(matcher.Expression())
+	constructors := c.TypeOfPatternMatcher(matcher.Expression())
 	if !isDataConstructors(c, constructors) {
 		return "", nil, false
 	}
@@ -168,7 +169,7 @@ func narrowDataVariant(c *checker.Checker, reference *ast.Node, t *checker.Type,
 	if !ok {
 		return nil
 	}
-	return narrowByTag(c, t, tag, value, assumeTrue)
+	return narrowByTag(c, test.Arguments()[0], t, tag, value, assumeTrue)
 }
 
 // tagMatch says whether a type's _tag can be a variant's tag.
@@ -192,7 +193,7 @@ func tagMatchOf(c *checker.Checker, t *checker.Type, tag string) tagMatch {
 	}
 	propertyType := c.GetTypeOfSymbol(property)
 	if propertyType.Flags()&checker.TypeFlagsStringLiteral != 0 {
-		if c.TypeToString(propertyType) == strconv.Quote(tag) {
+		if propertyType.AsLiteralType().Value() == tag {
 			return tagAlways
 		}
 		return tagNever
@@ -203,8 +204,67 @@ func tagMatchOf(c *checker.Checker, t *checker.Type, tag string) tagMatch {
 	return tagNever
 }
 
+type tagNarrowing struct {
+	t, value   *checker.Type
+	tag        string
+	assumeTrue bool
+}
+
+type tagNarrowingsKey struct{}
+
+// Bound the union members examined by uncached data-pattern narrowings in
+// one function or module body. Cached hits cost no union work. This also
+// bounds the intermediate union slices retained by the checker: wide tests
+// can retain many unions before reaching TypeScript's flow-depth limit.
+const maxTagNarrowingWork = 3 << 20
+
+type tagNarrowings struct {
+	types map[tagNarrowing]*checker.Type
+	work  map[*ast.Node]int
+}
+
+func tagNarrowingsFor(c *checker.Checker) *tagNarrowings {
+	return c.ExtensionState(tagNarrowingsKey{}, func() any {
+		return &tagNarrowings{types: map[tagNarrowing]*checker.Type{}, work: map[*ast.Node]int{}}
+	}).(*tagNarrowings)
+}
+
 // narrowByTag narrows t by a test of tag, whose values have the type value.
-func narrowByTag(c *checker.Checker, t *checker.Type, tag string, value *checker.Type, assumeTrue bool) *checker.Type {
+// Flow analysis narrows each reference to a subject anew through every arm
+// before it, and union types are interned, so a match of n arms asks the same
+// n narrowings of each of its references. Remembering them keeps the match
+// quadratic in its arms rather than cubic.
+func narrowByTag(c *checker.Checker, matcher *ast.Node, t *checker.Type, tag string, value *checker.Type, assumeTrue bool) *checker.Type {
+	narrowings := tagNarrowingsFor(c)
+	key := tagNarrowing{t, value, tag, assumeTrue}
+	if narrowed, ok := narrowings.types[key]; ok {
+		return narrowed
+	}
+
+	// Arrow functions with expression bodies are scopes too.
+	scope := ast.FindAncestor(matcher, func(n *ast.Node) bool {
+		return ast.IsFunctionLike(n) || ast.IsModuleBlock(n) || ast.IsSourceFile(n)
+	})
+	work := 1
+	if t.Flags()&checker.TypeFlagsUnion != 0 {
+		work = len(t.Types())
+	}
+	used := narrowings.work[scope]
+	if used > maxTagNarrowingWork {
+		return c.GetErrorType()
+	}
+	if work > maxTagNarrowingWork-used {
+		narrowings.work[scope] = maxTagNarrowingWork + 1
+		note(c.AddDiagnostic(ast.NewDiagnostic(ast.GetSourceFileOfNode(matcher), matcher.Loc, diagnostics.The_containing_function_or_module_body_is_too_large_for_control_flow_analysis)), "Data patterns in this body exceed the limit of {0} union members examined by uncached narrowings.", maxTagNarrowingWork)
+		return c.GetErrorType()
+	}
+	narrowings.work[scope] = used + work
+	narrowed := narrowTypeByTag(c, t, tag, value, assumeTrue)
+	narrowings.types[key] = narrowed
+	return narrowed
+}
+
+func narrowTypeByTag(c *checker.Checker, t *checker.Type, tag string, value *checker.Type, assumeTrue bool) *checker.Type {
 	if t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
 		if assumeTrue {
 			return value

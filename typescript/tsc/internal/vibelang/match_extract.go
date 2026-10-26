@@ -2,6 +2,7 @@ package vibelang
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
@@ -38,7 +39,7 @@ func narrowExtractedError(c *checker.Checker, reference *ast.Node, t *checker.Ty
 	visit = func(node *ast.Node) *checker.Type {
 		if ast.IsIdentifier(node) || ast.IsCallExpression(node) {
 			if call := extractionCall(c, node); call != nil && c.IsMatchingReference(reference, call.Arguments()[1]) {
-				matcher := c.GetTypeAtLocation(call.Arguments()[0])
+				matcher := c.TypeOfPatternMatcher(call.Arguments()[0])
 				if symbol := matcher.Symbol(); symbol == nil || !isExtractedErrorClass(symbol.ValueDeclaration()) {
 					return nil
 				}
@@ -106,7 +107,10 @@ func narrowExtractedError(c *checker.Checker, reference *ast.Node, t *checker.Ty
 
 func extractionCall(c *checker.Checker, node *ast.Node) *ast.Node {
 	if ast.IsIdentifier(node) {
-		if node.Flags&ast.NodeFlagsReparsed == 0 {
+		// Only the parser's $extracted<N> consts hold an extraction. Test the
+		// name before resolving it: flow analysis asks about every identifier
+		// of every test, once per arm for each reference to the subject.
+		if node.Flags&ast.NodeFlagsReparsed == 0 || !strings.HasPrefix(node.Text(), "$extracted") {
 			return nil
 		}
 		symbol := c.GetSymbolAtLocation(node)
