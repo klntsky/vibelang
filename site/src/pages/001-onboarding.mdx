@@ -27,6 +27,8 @@ function greet(id: string) {
 ```
 
 ```ts [Effect]
+// fragment
+// Uses the User type from the VibeLang tab.
 class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
   id: Schema.String
 }) {}

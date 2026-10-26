@@ -3,6 +3,8 @@
 VibeLang is a language for writing [Effect](https://effect.website) programs with TypeScript syntax. Its compiler checks `.vibe` and `.ts` files together and emits JavaScript and `.d.ts` declarations.
 
 ```ts effect
+// fragment
+// Uses the User type from the VibeLang tab.
 class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
   id: Schema.String
 }) {}

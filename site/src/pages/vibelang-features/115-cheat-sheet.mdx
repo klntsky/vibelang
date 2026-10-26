@@ -5,7 +5,7 @@ description: "Every VibeLang change beside the Effect code it replaces: VibeLang
 
 # Cheat sheet
 
-Every VibeLang change beside the Effect code it replaces: VibeLang and Effect 4 TypeScript in labeled tabs. The [specification](/spec/000-intro) states the rules behind each. In a `.vibe` file, the Effect tab's error classes, services, schemas, Effect types, `Effect.succeed` and `Effect.fail`, catch combinators, and `withSpan` and `provide` calls draw warnings whose quick fixes, and `vibelang --fix`, write the VibeLang tab where it keeps the program's meaning ([TypeScript-style Effect code](/getting-started/012-devtools#typescript-style-effect-code)). The examples share these declarations:
+Every VibeLang change beside the Effect code it replaces: VibeLang and Effect 4 TypeScript in labeled tabs. The [specification](/spec/000-intro) states the rules behind each. In a `.vibe` file, the Effect tab's error classes, services, schemas, Effect types, `Effect.succeed` and `Effect.fail`, catch combinators, and `withSpan` and `provide` calls draw warnings whose quick fixes, and `vibelang --fix`, write the VibeLang tab where it keeps the program's meaning ([TypeScript-style Effect code](/getting-started/012-devtools#typescript-style-effect-code)). Complete Effect tabs import their dependencies and are typechecked. Tabs marked `// fragment` use the declarations below or a surrounding `Effect.gen` body. The VibeLang examples share these declarations:
 
 ```vibe [VibeLang]
 error NotFound { id: string }
@@ -49,6 +49,7 @@ function hello(id: string): string!NotFound {
 ```
 
 ```ts [Effect]
+// fragment
 type Find = (id: string) => Effect.Effect<User, NotFound>
 type Release = (version: string) => Effect.Effect<string, never, Approval>
 type Load = () => Effect.Effect<string>
@@ -70,6 +71,8 @@ error Timeout
 ```
 
 ```ts [Effect]
+import { Data } from "effect"
+
 class Missing extends Data.TaggedError("Missing")<{ readonly id: string }> {}
 class Timeout extends Data.TaggedError("Timeout") {}
 ```
@@ -96,6 +99,8 @@ error Refused extends Failure
 ```
 
 ```ts [Effect]
+import { Data } from "effect"
+
 class Invalid extends Data.TaggedError("Invalid")<{ readonly code: string }> {
   constructor(input: string) {
     super({ code: input.trim() })
@@ -121,6 +126,8 @@ schema error Stored { key: string; attempts?: number }
 ```
 
 ```ts [Effect]
+import { Schema } from "effect"
+
 class Stored extends Schema.TaggedError<Stored>()("Stored", { key: Schema.String, attempts: Schema.optional(Schema.Number) }) {}
 ```
 
@@ -138,6 +145,7 @@ service Users {
 ```
 
 ```ts [Effect]
+// fragment
 class Users extends Context.Service<Users, {
   find(id: string): Effect.Effect<User, NotFound>
   readonly region: string
@@ -159,6 +167,8 @@ service Prefix: string
 ```
 
 ```ts [Effect]
+import { Context, Effect } from "effect"
+
 interface SearchApi {
   find(query: string): Effect.Effect<string>
 }
@@ -203,6 +213,7 @@ const UsersLive = Layer.effect(Users) {
 ```
 
 ```ts [Effect]
+// fragment
 const UsersLive = Layer.effect(Users, Effect.gen(function* () {
   const seen = new Set<string>()
   return Users.of({ find: (id) => getUser(id), region: "eu" })
@@ -225,6 +236,8 @@ schema Account {
 ```
 
 ```ts [Effect]
+import { Schema } from "effect"
+
 const Account = Schema.Struct({
   id: Schema.String,
   nickname: Schema.optional(Schema.String),
@@ -246,6 +259,8 @@ schema Role = "admin" | "member"
 ```
 
 ```ts [Effect]
+import { Schema } from "effect"
+
 const Role = Schema.Literals(["admin", "member"])
 type Role = typeof Role.Type
 ```
@@ -265,6 +280,8 @@ data Delivery {
 ```
 
 ```ts [Effect]
+import { Data } from "effect"
+
 type Delivery = Data.TaggedEnum<{
   Waiting: {}
   Sent: { readonly tracking: string }
@@ -307,9 +324,10 @@ function greetUser(id: string) {
 ```
 
 ```ts [Effect]
+// fragment
 const greetUser = Effect.fn("greetUser")(function* (id: string) {
   const user = yield* getUser(id)
-  yield* Effect.Console.log(`Hello, ${user.name}`)
+  yield* Console.log(`Hello, ${user.name}`)
   return user.name
 })
 ```
@@ -331,6 +349,7 @@ function fastest() {
 ```
 
 ```ts [Effect]
+// fragment
 const user = yield* getUser("1")
 const first = yield* Effect.race(getUser("1"), getUser("2"))
 ```
@@ -351,6 +370,7 @@ function program() {
 ```
 
 ```ts [Effect]
+// fragment
 const program = Effect.gen(function* () {
   const users = yield* Users
   return yield* users.find("1")
@@ -375,6 +395,8 @@ function roll(): number!! {
 ```
 
 ```ts [Effect]
+import { Effect, Logger, Random } from "effect"
+
 const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
 const roll = Random.nextInt.pipe(
   Effect.provideService(Random.Random, seeded),
@@ -402,6 +424,7 @@ function describe(id: string) {
 ```
 
 ```ts [Effect]
+// fragment
 const describe = (id: string) =>
   Effect.map(getUser(id), (user) => user.name).pipe(
     Effect.catchTag("NotFound", (e) => Effect.succeed(`no user ${e.id}`))
@@ -422,6 +445,7 @@ function nameOrGuest(id: string) {
 ```
 
 ```ts [Effect]
+// fragment
 const nameOrGuest = (id: string) =>
   Effect.map(getUser(id), (user) => user.name).pipe(
     Effect.orElseSucceed(() => "guest")
@@ -444,6 +468,7 @@ function nameOrReason(id: string) {
 ```
 
 ```ts [Effect]
+// fragment
 const nameOrReason = (id: string) =>
   Effect.map(getUser(id), (user) => user.name).pipe(
     Effect.catch((e) => Effect.succeed(`no user ${e.id}`))
@@ -492,6 +517,7 @@ export function main() {
 ```
 
 ```ts [Effect]
+// fragment
 // main.ts
 export const main = Effect.log("Hello")
 // run.ts
@@ -518,6 +544,7 @@ function safe(id: string) {
 ```
 
 ```ts [Effect]
+// fragment
 const safe = (id: string) =>
   Effect.map(getUser(id), (user) => user.name).pipe(
     Effect.catchCause((cause) => Effect.succeed(`failed: ${Cause.pretty(cause)}`))
@@ -543,6 +570,7 @@ function logged() {
 ```
 
 ```ts [Effect]
+// fragment
 const logged = getUser("1").pipe(
   Effect.catchCause((cause) => Effect.andThen(Effect.logError(cause), Effect.failCause(cause)))
 )
@@ -567,6 +595,7 @@ function tracked() {
 ```
 
 ```ts [Effect]
+// fragment
 const tracked = getUser("1").pipe(
   Effect.onExit((exit) => Effect.log(`lookup ${exit._tag}`))
 )
@@ -589,6 +618,7 @@ function outcome() {
 ```
 
 ```ts [Effect]
+// fragment
 const result = yield* Effect.exit(getUser("1"))
 yield* Effect.yieldNow
 if (result._tag === "Failure") yield* Effect.interrupt
@@ -619,6 +649,7 @@ function cancellable() {
 ```
 
 ```ts [Effect]
+// fragment
 const guarded = Effect.uninterruptibleMask((restore) =>
   Effect.gen(function* () {
     const user = yield* getUser("1")
@@ -667,6 +698,7 @@ function patient() {
 ```
 
 ```ts [Effect]
+// fragment
 const patient = Effect.gen(function* () {
   yield* Effect.sleep("10 millis")
   return yield* Effect.timeout(Effect.retry(getUser("1"), Schedule.recurs(2)), "1 second")
@@ -687,6 +719,8 @@ function hot() {
 ```
 
 ```ts [Effect]
+import { Stream } from "effect"
+
 const hot = Stream.take(
   Stream.map(Stream.filter(Stream.make(18, 25, 30), (c) => c >= 25), (c) => `${c} C`),
   2
@@ -709,6 +743,7 @@ function piped() {
 ```
 
 ```ts [Effect]
+// fragment
 const piped = getUser("1").pipe(
   Effect.retry(Schedule.recurs(2)),
   Effect.timeout("1 second")
@@ -732,6 +767,7 @@ function findUser(users: Map<string, User>, id: string) {
 ```
 
 ```ts [Effect]
+// fragment
 const findUser = (users: Map<string, User>, id: string) =>
   Effect.fromNullishOr(users.get(id)).pipe(Effect.mapError(() => new NotFound({ id })))
 ```
@@ -757,6 +793,7 @@ function label(id: string) {
 ```
 
 ```ts [Effect]
+// fragment
 const label = (id: string) =>
   Effect.map(getUser(id), (user) => (user.name.length > 3 ? user.name : "short"))
 ```
@@ -779,6 +816,7 @@ function loaded() {
 ```
 
 ```ts [Effect]
+// fragment
 const loaded = Effect.withSpan(
   Effect.gen(function* () {
     const user = yield* getUser("1")
@@ -828,6 +866,8 @@ function phaseLabel(phase: "draft" | "published") {
 ```
 
 ```ts [Effect]
+import { Match } from "effect"
+
 const phaseLabel = (phase: "draft" | "published") =>
   Match.value(phase).pipe(
     Match.when("draft", () => "Draft"),
@@ -853,6 +893,7 @@ function describeFailure(failure: NotFound | Timeout) {
 ```
 
 ```ts [Effect]
+// fragment
 const describeFailure = (failure: NotFound | Timeout) =>
   Match.value(failure).pipe(
     Match.tag("NotFound", (e) => `no user ${e.id}`),
@@ -878,6 +919,7 @@ function deliveryLabel(delivery: Delivery) {
 ```
 
 ```ts [Effect]
+// fragment
 const deliveryLabel = Delivery.$match({
   Waiting: () => "waiting",
   Sent: ({ tracking }) => `sent ${tracking}`
@@ -908,6 +950,7 @@ function failed(outcome: Exit.Exit<User, NotFound>) {
 ```
 
 ```ts [Effect]
+// fragment
 const greet = (name: Option.Option<string>) =>
   Option.match(name, { onNone: () => "Hello", onSome: (n) => `Hello, ${n}` })
 const failed = (outcome: Exit.Exit<User, NotFound>) => Exit.isFailure(outcome)
@@ -929,6 +972,7 @@ function firstFailure(outcome: Exit.Exit<User, NotFound>) {
 ```
 
 ```ts [Effect]
+// fragment
 const firstFailure = (outcome: Exit.Exit<User, NotFound>) =>
   Exit.isFailure(outcome) && Cause.hasFails(outcome.cause) ? Cause.pretty(outcome.cause) : "ok"
 ```
@@ -968,6 +1012,7 @@ function hatches(text: string, url: string) {
 ```
 
 ```ts [Effect]
+// fragment
 const id = Effect.sync(() => crypto.randomUUID())
 const parsed = Effect.try({ try: () => JSON.parse(text), catch: (error) => new BadJson({ error }) })
 const loaded = Effect.promise(() => crypto.subtle.digest("SHA-256", new Uint8Array()))
@@ -1001,6 +1046,7 @@ function requestId() {
 ```
 
 ```ts [Effect]
+// fragment
 // platform.ts
 export function randomId(): string {
   return crypto.randomUUID()
@@ -1028,6 +1074,7 @@ function both() {
 ```
 
 ```ts [Effect]
+// fragment
 const user = yield* Effect.forkChild(getUser("1"))
 const orders = yield* Effect.forkChild(getOrders("1"))
 return [yield* Fiber.join(user), yield* Fiber.join(orders)]
@@ -1049,6 +1096,7 @@ function many() {
 ```
 
 ```ts [Effect]
+// fragment
 const [user, orders] = yield* Effect.all([getUser("1"), getOrders("1")], { concurrency: "unbounded" })
 const pair = yield* Effect.all({ user: getUser("1"), orders: getOrders("1") }, { concurrency: "unbounded" })
 ```
@@ -1072,6 +1120,7 @@ function outcomes() {
 ```
 
 ```ts [Effect]
+// fragment
 const fastest = yield* Effect.raceAll([getUser("1"), getUser("2")])
 const outcomes = yield* Effect.all([getUser("1"), getOrders("1")], { concurrency: "unbounded", mode: "result" })
 ```
@@ -1096,6 +1145,7 @@ function withHeartbeat() {
 ```
 
 ```ts [Effect]
+// fragment
 const withHeartbeat = Effect.scoped(Effect.gen(function* () {
   yield* Effect.forkScoped(Effect.forever(Effect.andThen(Effect.log("tick"), Effect.sleep("1 second"))))
   return yield* getUser("1")
@@ -1120,6 +1170,7 @@ function background() {
 ```
 
 ```ts [Effect]
+// fragment
 yield* Effect.forkDetach(getUser("1"))
 const scope = yield* Scope.make()
 const fiber = yield* Effect.forkIn(getUser("2"), scope)
@@ -1141,6 +1192,7 @@ function signal() {
 ```
 
 ```ts [Effect]
+// fragment
 const ready = yield* Deferred.make<string>()
 yield* Deferred.succeed(ready, "go")
 const value = yield* Deferred.await(ready)
@@ -1168,6 +1220,7 @@ function next() {
 ```
 
 ```ts [Effect]
+// fragment
 const next = yield* Effect.raceFirst(
   Effect.map(Queue.take(jobs), (job) => `ran ${job}`),
   Effect.as(Effect.sleep("1 second"), "timeout")
@@ -1189,6 +1242,7 @@ function logAll(ids: string[]) {
 ```
 
 ```ts [Effect]
+// fragment
 yield* Effect.forEach(ids, (id) => Effect.flatMap(getUser(id), (user) => Effect.log(user.name)), {
   concurrency: 8,
   discard: true

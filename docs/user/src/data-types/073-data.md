@@ -68,6 +68,8 @@ A data type takes up to four type parameters, which the constructors infer from 
 `data Delivery { ... }` declares what Effect's documentation writes for a tagged union, so TypeScript code that imports `Delivery` gets Effect's types, `Delivery.$is` and `Delivery.$match`:
 
 ```ts effect
+import { Data } from "effect"
+
 type Delivery = Data.TaggedEnum<{
   Waiting: {}
   Sent: { readonly tracking: string }
@@ -79,6 +81,8 @@ const Delivery = Data.taggedEnum<Delivery>()
 Declaration files write the constant's type out, `Data.TaggedEnum.Constructor<Delivery>`, which is what `Data.taggedEnum<Delivery>()` returns. A generic data type passes its type parameters through the interface `Data.TaggedEnum.WithGenerics` describes, named for the type: `LoadStateDefinition`, which `export data` exports with the type and the constructors.
 
 ```ts effect
+import { Data } from "effect"
+
 type LoadState<A, E> = Data.TaggedEnum<{
   Idle: {}
   Loaded: { readonly value: A }

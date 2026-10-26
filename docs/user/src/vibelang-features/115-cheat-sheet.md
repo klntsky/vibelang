@@ -1,6 +1,6 @@
 # Cheat sheet
 
-Every VibeLang change beside the Effect code it replaces: VibeLang and Effect 4 TypeScript in labeled tabs. The [specification](../../../design/src/000-intro.md) states the rules behind each. In a `.vibe` file, the Effect tab's error classes, services, schemas, Effect types, `Effect.succeed` and `Effect.fail`, catch combinators, and `withSpan` and `provide` calls draw warnings whose quick fixes, and `vibelang --fix`, write the VibeLang tab where it keeps the program's meaning ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). The examples share these declarations:
+Every VibeLang change beside the Effect code it replaces: VibeLang and Effect 4 TypeScript in labeled tabs. The [specification](../../../design/src/000-intro.md) states the rules behind each. In a `.vibe` file, the Effect tab's error classes, services, schemas, Effect types, `Effect.succeed` and `Effect.fail`, catch combinators, and `withSpan` and `provide` calls draw warnings whose quick fixes, and `vibelang --fix`, write the VibeLang tab where it keeps the program's meaning ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). Complete Effect tabs import their dependencies and are typechecked. Tabs marked `// fragment` use the declarations below or a surrounding `Effect.gen` body. The VibeLang examples share these declarations:
 
 ```vibe es
 // run: Console.log(JSON.stringify([getUser("1"), getOrders("1"), handle(() => release("v1"), Approval, { approve: (_request, k) => resume(k, true) })]))
@@ -33,6 +33,7 @@ function release(version: string) {
 **Effect types** (D127, D309). An empty slot is `never`. Omitted dependencies are inferred from a function's body, and are `never` elsewhere. `Effect<A, E, R>` is accepted too.
 
 ```ts effect
+// fragment
 type Find = (id: string) => Effect.Effect<User, NotFound>
 type Release = (version: string) => Effect.Effect<string, never, Approval>
 type Load = () => Effect.Effect<string>
@@ -56,6 +57,8 @@ function hello(id: string): string!NotFound {
 **Errors** (D126).
 
 ```ts effect
+import { Data } from "effect"
+
 class Missing extends Data.TaggedError("Missing")<{ readonly id: string }> {}
 class Timeout extends Data.TaggedError("Timeout") {}
 ```
@@ -68,6 +71,8 @@ error Timeout
 **Errors are classes** (D278, D304). Constructors, methods, accessors, statics, `abstract`, `implements` and `extends` keep their TypeScript meaning, and each subclass is tagged with its own name. A family's base declares `_tag: string` so its subclasses' tags fit. Effect has no subclass with its own tag, so the Effect tab writes the tag by hand.
 
 ```ts effect
+import { Data } from "effect"
+
 class Invalid extends Data.TaggedError("Invalid")<{ readonly code: string }> {
   constructor(input: string) {
     super({ code: input.trim() })
@@ -101,6 +106,8 @@ error Refused extends Failure
 **Errors that encode** (D279). Fields map to schemas as a `schema` declaration's do.
 
 ```ts effect
+import { Schema } from "effect"
+
 class Stored extends Schema.TaggedError<Stored>()("Stored", { key: Schema.String, attempts: Schema.optional(Schema.Number) }) {}
 ```
 
@@ -111,6 +118,7 @@ schema error Stored { key: string; attempts?: number }
 **Services** (D128, D223). Members have no bodies; value members are readonly.
 
 ```ts effect
+// fragment
 class Users extends Context.Service<Users, {
   find(id: string): Effect.Effect<User, NotFound>
   readonly region: string
@@ -127,6 +135,8 @@ service Users {
 **Services of any shape** (D281). The shape is any type: an interface, a primitive, a function type. A body is optional and holds only static members.
 
 ```ts effect
+import { Context, Effect } from "effect"
+
 interface SearchApi {
   find(query: string): Effect.Effect<string>
 }
@@ -159,6 +169,7 @@ control Review {
 **Layers** (D221). A layer is Effect's own call: the block after `Layer.effect(Users)` is its effect (block params, D188), runs once when the layer builds, and returns members typed by the service. Without setup, write `Layer.succeed(Users, { ... })`.
 
 ```ts effect
+// fragment
 const UsersLive = Layer.effect(Users, Effect.gen(function* () {
   const seen = new Set<string>()
   return Users.of({ find: (id) => getUser(id), region: "eu" })
@@ -181,6 +192,8 @@ const UsersLive = Layer.effect(Users) {
 **Schemas** (D133). One declaration gives the schema and its type.
 
 ```ts effect
+import { Schema } from "effect"
+
 const Account = Schema.Struct({
   id: Schema.String,
   nickname: Schema.optional(Schema.String),
@@ -202,6 +215,8 @@ schema Account {
 **Schema aliases** (D280). A schema of any type the struct form maps, and the type, under one name.
 
 ```ts effect
+import { Schema } from "effect"
+
 const Role = Schema.Literals(["admin", "member"])
 type Role = typeof Role.Type
 ```
@@ -216,6 +231,8 @@ schema Role = "admin" | "member"
 **Data types** (D307). A tagged union: Effect's `Data.TaggedEnum` type and its `Data.taggedEnum` constructors under one name. A variant without fields is a bare name.
 
 ```ts effect
+import { Data } from "effect"
+
 type Delivery = Data.TaggedEnum<{
   Waiting: {}
   Sent: { readonly tracking: string }
@@ -247,9 +264,10 @@ interface Cart { id: string; mutable items: Array<string> }
 **Statements instead of generators.** Calls run; there is no `yield*`.
 
 ```ts effect
+// fragment
 const greetUser = Effect.fn("greetUser")(function* (id: string) {
   const user = yield* getUser(id)
-  yield* Effect.Console.log(`Hello, ${user.name}`)
+  yield* Console.log(`Hello, ${user.name}`)
   return user.name
 })
 ```
@@ -272,6 +290,7 @@ function greetUser(id: string) {
 **Programs passed by name** (D147). A call runs where it stands, and is passed as a program where a parameter expects one.
 
 ```ts effect
+// fragment
 const user = yield* getUser("1")
 const first = yield* Effect.race(getUser("1"), getUser("2"))
 ```
@@ -288,6 +307,7 @@ function fastest() {
 **Providing layers** (D130). `return` inside the block returns from the function.
 
 ```ts effect
+// fragment
 const program = Effect.gen(function* () {
   const users = yield* Users
   return yield* users.find("1")
@@ -307,6 +327,8 @@ function program() {
 **Providing one service** (D173, D174). `provide Key = value` provides one implementation without a layer; layers and services mix in one list, and an effect module such as `Random` stands for its key, `Random.Random`.
 
 ```ts effect
+import { Effect, Logger, Random } from "effect"
+
 const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
 const roll = Random.nextInt.pipe(
   Effect.provideService(Random.Random, seeded),
@@ -329,6 +351,7 @@ function roll(): number!! {
 **Catching by tag** (D216). Catch the failure and `match` on it. A match naming every failure needs no rethrow; `default: throw e` passes on the rest.
 
 ```ts effect
+// fragment
 const describe = (id: string) =>
   Effect.map(getUser(id), (user) => user.name).pipe(
     Effect.catchTag("NotFound", (e) => Effect.succeed(`no user ${e.id}`))
@@ -352,6 +375,7 @@ function describe(id: string) {
 **Falling back in an expression** (D236). `x catch fallback` runs the fallback only after an expected failure; defects and interrupts pass through. Both sides take the expression's contextual type, as a conditional's branches do (D293).
 
 ```ts effect
+// fragment
 const nameOrGuest = (id: string) =>
   Effect.map(getUser(id), (user) => user.name).pipe(
     Effect.orElseSucceed(() => "guest")
@@ -369,6 +393,7 @@ function nameOrGuest(id: string) {
 **Catching in an expression** (D236). `x catch (e) => …` passes the failure to a handler, which can `match` on it; a match naming every failure removes them all.
 
 ```ts effect
+// fragment
 const nameOrReason = (id: string) =>
   Effect.map(getUser(id), (user) => user.name).pipe(
     Effect.catch((e) => Effect.succeed(`no user ${e.id}`))
@@ -414,6 +439,7 @@ function auto(version: string) {
 **Entry point** (D135). An exported `main` runs when Node starts its module, not when a test imports it.
 
 ```ts effect
+// fragment
 // main.ts
 export const main = Effect.log("Hello")
 // run.ts
@@ -433,6 +459,7 @@ export function main() {
 **Catch every cause** (D217). `match` on `exit(…)`: a `Failure` exit's cause also holds defects and interrupts.
 
 ```ts effect
+// fragment
 const safe = (id: string) =>
   Effect.map(getUser(id), (user) => user.name).pipe(
     Effect.catchCause((cause) => Effect.succeed(`failed: ${Cause.pretty(cause)}`))
@@ -454,6 +481,7 @@ function safe(id: string) {
 **Rethrow a cause** (D177). `throw` with a `Cause` fails with every reason it holds.
 
 ```ts effect
+// fragment
 const logged = getUser("1").pipe(
   Effect.catchCause((cause) => Effect.andThen(Effect.logError(cause), Effect.failCause(cause)))
 )
@@ -475,6 +503,7 @@ function logged() {
 **Run on every exit** (D178). The block runs without interruption; a success carries no value.
 
 ```ts effect
+// fragment
 const tracked = getUser("1").pipe(
   Effect.onExit((exit) => Effect.log(`lookup ${exit._tag}`))
 )
@@ -496,6 +525,7 @@ function tracked() {
 **Exit, yield, and interrupt** (D179). `exit` takes its program by name.
 
 ```ts effect
+// fragment
 const result = yield* Effect.exit(getUser("1"))
 yield* Effect.yieldNow
 if (result._tag === "Failure") yield* Effect.interrupt
@@ -515,6 +545,7 @@ function outcome() {
 **Interruption** (D180). In the blocks, `return` and `break` keep their meaning in the function; `uninterruptible(program)` also works.
 
 ```ts effect
+// fragment
 const guarded = Effect.uninterruptibleMask((restore) =>
   Effect.gen(function* () {
     const user = yield* getUser("1")
@@ -567,6 +598,7 @@ function ready() {
 **Common functions without the `Effect.` prefix** (D151): `sleep`, `log`, `retry`, `repeat`, `timeout`, `race`, `all`, `forEach`, `die`, `withSpan`, and the `log` levels.
 
 ```ts effect
+// fragment
 const patient = Effect.gen(function* () {
   yield* Effect.sleep("10 millis")
   return yield* Effect.timeout(Effect.retry(getUser("1"), Schedule.recurs(2)), "1 second")
@@ -585,6 +617,8 @@ function patient() {
 **Methods on Effect's data types** (D152).
 
 ```ts effect
+import { Stream } from "effect"
+
 const hot = Stream.take(
   Stream.map(Stream.filter(Stream.make(18, 25, 30), (c) => c >= 25), (c) => `${c} C`),
   2
@@ -604,6 +638,7 @@ A method is a data-first overload: its first parameter is named `self`, ends in 
 **The pipe operator** (D154). `%` is the value on the left; where it lands in a program parameter, the left side is passed as a program.
 
 ```ts effect
+// fragment
 const piped = getUser("1").pipe(
   Effect.retry(Schedule.recurs(2)),
   Effect.timeout("1 second")
@@ -623,6 +658,7 @@ function piped() {
 **Throw in an expression** (D186, [throw expressions](https://github.com/tc39/proposal-throw-expressions)).
 
 ```ts effect
+// fragment
 const findUser = (users: Map<string, User>, id: string) =>
   Effect.fromNullishOr(users.get(id)).pipe(Effect.mapError(() => new NotFound({ id })))
 ```
@@ -641,6 +677,7 @@ In expression position, `throw` takes a unary operand (D186), so it binds more t
 **Blocks as values** (D187, [do expressions](https://github.com/tc39/proposal-do-expressions)). The value is the last statement's.
 
 ```ts effect
+// fragment
 const label = (id: string) =>
   Effect.map(getUser(id), (user) => (user.name.length > 3 ? user.name : "short"))
 ```
@@ -661,6 +698,7 @@ function label(id: string) {
 **Blocks after calls** (D188, [block params](https://github.com/samuelgoto/proposal-block-params)). The block is the call's program; it needs `return` for a value.
 
 ```ts effect
+// fragment
 const loaded = Effect.withSpan(
   Effect.gen(function* () {
     const user = yield* getUser("1")
@@ -708,6 +746,8 @@ From the TC39 [pattern matching](https://github.com/tc39/proposal-pattern-matchi
 **Match a value** (D206, D209). `match` is exhaustive: without `default`, a match that misses a case of a finite union is EK4701, as with `Match.exhaustive`. Leave out the second arm below and the compiler reports `This match does not handle every case of "draft" | "published": "published" is left.`
 
 ```ts effect
+import { Match } from "effect"
+
 const phaseLabel = (phase: "draft" | "published") =>
   Match.value(phase).pipe(
     Match.when("draft", () => "Draft"),
@@ -730,6 +770,7 @@ function phaseLabel(phase: "draft" | "published") {
 **Match errors by class** (D215). An `error` class is a pattern; `and { let id }` binds a property.
 
 ```ts effect
+// fragment
 const describeFailure = (failure: NotFound | Timeout) =>
   Match.value(failure).pipe(
     Match.tag("NotFound", (e) => `no user ${e.id}`),
@@ -752,6 +793,7 @@ function describeFailure(failure: NotFound | Timeout) {
 **Match a data type's variants** (D307). A variant tests the tag; braces bind the fields they list.
 
 ```ts effect
+// fragment
 const deliveryLabel = Delivery.$match({
   Waiting: () => "waiting",
   Sent: ({ tracking }) => `sent ${tracking}`
@@ -772,6 +814,7 @@ function deliveryLabel(delivery: Delivery) {
 **Option, Exit, and Result** (D208). Arms can run Effect functions.
 
 ```ts effect
+// fragment
 const greet = (name: Option.Option<string>) =>
   Option.match(name, { onNone: () => "Hello", onSome: (n) => `Hello, ${n}` })
 const failed = (outcome: Exit.Exit<User, NotFound>) => Exit.isFailure(outcome)
@@ -798,6 +841,7 @@ function failed(outcome: Exit.Exit<User, NotFound>) {
 **Test and bind** (D211). Bindings in an `is` work in an `if` or `while` condition.
 
 ```ts effect
+// fragment
 const firstFailure = (outcome: Exit.Exit<User, NotFound>) =>
   Exit.isFailure(outcome) && Cause.hasFails(outcome.cause) ? Cause.pretty(outcome.cause) : "ok"
 ```
@@ -821,6 +865,7 @@ function firstFailure(outcome: Exit.Exit<User, NotFound>) {
 Use ordinary `catch` to map a built-in’s expected failure; reserve hatches for foreign or platform operations.
 
 ```ts effect
+// fragment
 const id = Effect.sync(() => crypto.randomUUID())
 const parsed = Effect.try({ try: () => JSON.parse(text), catch: (error) => new BadJson({ error }) })
 const loaded = Effect.promise(() => crypto.subtle.digest("SHA-256", new Uint8Array()))
@@ -858,6 +903,7 @@ function hatches(text: string, url: string) {
 **TypeScript modules inline** (D283, [module declarations](https://github.com/tc39/proposal-module-declarations)). A module's body is TypeScript, compiled as a `.ts` file would be, so JavaScript's `throw` and `catch` and `async` keep their meaning there. It is self-contained: it imports what it needs, and the file reaches it only through imports.
 
 ```ts effect
+// fragment
 // platform.ts
 export function randomId(): string {
   return crypto.randomUUID()
@@ -888,6 +934,7 @@ function requestId() {
 **Fork and join** (D166, D225). A fiber belongs to the block that forks it. `join [a, b]` joins several and interrupts the rest on a failure.
 
 ```ts effect
+// fragment
 const user = yield* Effect.forkChild(getUser("1"))
 const orders = yield* Effect.forkChild(getOrders("1"))
 return [yield* Fiber.join(user), yield* Fiber.join(orders)]
@@ -906,6 +953,7 @@ function both() {
 **Wait for several** (D196). `await.all` behaves like `Promise.all`: it starts each element in its own fiber, keeps the shape, and a failure interrupts the rest.
 
 ```ts effect
+// fragment
 const [user, orders] = yield* Effect.all([getUser("1"), getOrders("1")], { concurrency: "unbounded" })
 const pair = yield* Effect.all({ user: getUser("1"), orders: getOrders("1") }, { concurrency: "unbounded" })
 ```
@@ -923,6 +971,7 @@ function many() {
 **First success, expected outcomes** (D196, D258). `await.any` waits for the first success. `await.allSettled` returns successes and typed failures as `Result` values, not JavaScript's settlement objects, and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"`; a cause with no typed failure still propagates. To make every cause data, wrap each element in `exit(...)`.
 
 ```ts effect
+// fragment
 const fastest = yield* Effect.raceAll([getUser("1"), getUser("2")])
 const outcomes = yield* Effect.all([getUser("1"), getOrders("1")], { concurrency: "unbounded", mode: "result" })
 ```
@@ -943,6 +992,7 @@ function outcomes() {
 **Fork a block** (D166). The loop stops when the enclosing block exits.
 
 ```ts effect
+// fragment
 const withHeartbeat = Effect.scoped(Effect.gen(function* () {
   yield* Effect.forkScoped(Effect.forever(Effect.andThen(Effect.log("tick"), Effect.sleep("1 second"))))
   return yield* getUser("1")
@@ -966,6 +1016,7 @@ function withHeartbeat() {
 **Detached and scoped fibers** (D170).
 
 ```ts effect
+// fragment
 yield* Effect.forkDetach(getUser("1"))
 const scope = yield* Scope.make()
 const fiber = yield* Effect.forkIn(getUser("2"), scope)
@@ -986,6 +1037,7 @@ function background() {
 **Wait for a Deferred** (D227). `await` waits for promises in JavaScript, so a Deferred uses its method.
 
 ```ts effect
+// fragment
 const ready = yield* Deferred.make<string>()
 yield* Deferred.succeed(ready, "go")
 const value = yield* Deferred.await(ready)
@@ -1004,6 +1056,7 @@ function signal() {
 **Race** (D196, D197). `await.race` behaves like `Promise.race`: the first to finish wins, success or failure, and the rest are interrupted. It replaced `select` (EK4607); poll with `Queue.poll` and an `if`.
 
 ```ts effect
+// fragment
 const next = yield* Effect.raceFirst(
   Effect.map(Queue.take(jobs), (job) => `ran ${job}`),
   Effect.as(Effect.sleep("1 second"), "timeout")
@@ -1029,6 +1082,7 @@ function next() {
 **A concurrent loop** (D169). At most `n` items run at once, and all finish before the loop ends.
 
 ```ts effect
+// fragment
 yield* Effect.forEach(ids, (id) => Effect.flatMap(getUser(id), (user) => Effect.log(user.name)), {
   concurrency: 8,
   discard: true

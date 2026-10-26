@@ -56,3 +56,10 @@ test("4: the token headline leads with the corpus and discloses longer pairs", (
   assert.match(text, /\*\*\d+\.\d+% fewer tokens across \d+ cheat-sheet pairs; VibeLang is longer in \d+ pairs\.\*\*/)
   assert.ok(text.indexOf("cheat-sheet pairs") < text.indexOf("The example above uses **"))
 })
+
+test("5: comparisons use real Console and the homepage uses the fair generator", () => {
+  assert.doesNotMatch(read("docs/user/src/vibelang-features/115-cheat-sheet.md"), /Effect\.Console/)
+  const homepage = read("site/src/pages/index.mdx")
+  assert.doesNotMatch(homepage, /Effect\.fn\("greet"\)|Schema\.TaggedError<UserNotFound>/)
+  assert.match(homepage, /Data\.TaggedError\("UserNotFound"\)/)
+})

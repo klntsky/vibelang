@@ -15,8 +15,9 @@ bun docs/tools/check-snippets.ts
 ```
 
 The checker extracts `vibe` and `ts` fences under `docs/user`. The fence sets the language: a `vibe` block
-compiles as a `.vibe` module, a `ts` block as a `.ts` module. It skips
-`ts effect` blocks (Effect TypeScript shown for comparison) and `ts` blocks
+compiles as a `.vibe` module, a `ts` block as a `.ts` module. It also checks
+`ts effect` comparison blocks. Mark deliberate fragments with `// fragment`;
+missing names in an unmarked comparison fail. It skips `ts` blocks
 whose first line is `// TypeScript (.ts)` and that name no file. It creates one
 temporary project per page, linking the local runtime and Vite plugin packages,
 and runs `vibelang --noEmit` once per page; each block gets its own module. A

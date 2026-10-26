@@ -6,7 +6,7 @@ import { createRequire } from "node:module"
 
 const repo = resolve(import.meta.dir, "../..")
 export type Diagnostic = { code: string; message: string; line?: number; column?: number }
-export type Block = { number: number; line: number; language: "vibe" | "ts"; source: string; filename?: string; firstLine: string; expected: string[]; fragment: boolean; gap?: string; output?: string; run?: string }
+export type Block = { number: number; line: number; language: "vibe" | "ts"; source: string; filename?: string; firstLine: string; expected: string[]; fragment: boolean; comparison?: boolean; gap?: string; output?: string; run?: string }
 export type Result = Block & { status: "ok" | "fragment" | "compiler-gap" | "fail"; diagnostics: Diagnostic[]; reason?: string; execution?: Execution }
 export type Execution = { phase: "compile" | "run"; status: "passed" | "failed"; expectedStdout: string; stdout: string; stderr: string; exitCode: number; timedOut: boolean }
 
@@ -22,11 +22,9 @@ export function extract(markdown: string, options: { hatchExamples?: boolean } =
     const close = new RegExp(`^\\s{0,3}${fence[1][0]}{${fence[1].length},}\\s*$`)
     while (++i < lines.length && !close.test(lines[i])) body.push(lines[i])
     // The fence decides the language: ```vibe is VibeLang and ```ts is
-    // TypeScript. ```ts effect marks Effect TypeScript shown for comparison,
-    // which is not checked.
+    // TypeScript. Effect comparisons are checked too; fragments opt out explicitly.
     const [lang, role] = fence[2].trim().split(/\s+/)
     if (lang !== "vibe" && lang !== "ts") continue
-    if (lang === "ts" && role === "effect") continue
     const language = lang
     number++
     const filename = body.slice(0, 2).map(line => /^\s*\/\/\s+((?:[\w.-]+\/)*[\w.-]+\.(?:vibe|ts))\s*$/.exec(line)?.[1]).find(Boolean)
@@ -61,6 +59,7 @@ export function extract(markdown: string, options: { hatchExamples?: boolean } =
     blocks.push({ number, line: start + 1, language, source: body.join("\n"), filename, output, run,
       firstLine: body.find(l => l.trim() && !/^\s*\/\//.test(l)) ?? body[0] ?? "",
       expected: [...(header.match(/\/\/ expect-error:\s*([^\n]+)/)?.[1] ?? "").matchAll(/(?:EK|TS)\d+/g)].map(m => m[0]),
+      comparison: lang === "ts" && role === "effect",
       fragment: /\/\/ fragment\s*(?:$|\n)/.test(header),
       gap: header.match(/\/\/ compiler-gap:\s*([^\n]+)/)?.[1] })
   }
@@ -117,7 +116,7 @@ export function classify(block: Block, diagnostics: Diagnostic[]): Result {
     return { ...block, diagnostics, status: "compiler-gap", reason: absent.length ? `${block.gap}; missing ${absent.join(", ")}` : block.gap }
   }
   if (absent.length) return { ...block, diagnostics, status: "fail", reason: `Expected ${absent.join(", ")} was not reported` }
-  return { ...block, diagnostics, status: unexpected.length === 0 ? "ok" : unexpected.every(missing) ? "fragment" : "fail" }
+  return { ...block, diagnostics, status: unexpected.length === 0 ? "ok" : !block.comparison && unexpected.every(missing) ? "fragment" : "fail" }
 }
 
 export function parseDiagnostics(output: string): { file?: string; diagnostic: Diagnostic }[] {
@@ -217,7 +216,7 @@ export function writeProject(dir: string, blocks: Block[], options: { exportFunc
     mkdirSync(dirname(join(dir, filename)), { recursive: true })
     if (filename.endsWith(".ts")) {
       offsets.set(filename, 0)
-      writeFileSync(join(dir, filename), block.source + "\n")
+      writeFileSync(join(dir, filename), block.source + "\nexport {}\n")
       continue
     }
     const ast = ts.createSourceFile(filename, block.source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)

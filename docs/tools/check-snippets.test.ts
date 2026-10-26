@@ -9,10 +9,11 @@ test("extracts vibe and ts fences, skips unnamed TypeScript examples, and preser
   expect(blocks[0].expected).toEqual(["EK2001", "TS2322"])
   expect(blocks[1].gap).toBe("return contract")
 })
-test("skips Effect comparison fences without numbering them", () => {
-  const blocks = extract('```ts effect\nconst x = yield* work\n```\n```vibe es\nconst x = work()\n```')
-  expect(blocks.map(b => [b.number, b.firstLine])).toEqual([[1, "const x = work()"]])
+test("extracts Effect comparison fences and keeps explicit fragment markers", () => {
+  const blocks = extract(["```ts effect", "// fragment", "const x = yield* work", "```", "```vibe es", "const x = work()", "```"].join("\n"))
+  expect(blocks.map(b => [b.number, b.comparison, b.fragment])).toEqual([[1, true, true], [2, false, false]])
 })
+
 test("the fence decides the language: vibe is VibeLang, ts is TypeScript", () => {
   const blocks = extract([
     "```vibe", "const a = 1", "```",

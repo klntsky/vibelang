@@ -105,21 +105,24 @@ function greet(id: string) {
 ```
 
 ```ts [Effect]
-class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
-  id: Schema.String
-}) {}
+import { Context, Data, Effect } from "effect"
 
+interface User { id: string; name: string }
+class UserNotFound extends Data.TaggedError("UserNotFound")<{ id: string }> {}
 class Users extends Context.Service<Users, {
   find(id: string): Effect.Effect<User, UserNotFound>
 }>()("app/Users") {}
 
-const greet = Effect.fn("greet")(function* (id: string) {
-  const users = yield* Users
-  const user = yield* users.find(id).pipe(
-    Effect.catchTag("UserNotFound", () => Effect.succeed({ name: "guest" }))
-  )
-  return `Hello, ${user.name}`
-})
+function greet(id: string) {
+  return Effect.gen(function* () {
+    const users = yield* Users
+    const name = yield* users.find(id).pipe(
+      Effect.map((user) => user.name),
+      Effect.orElseSucceed(() => "guest")
+    )
+    return `Hello, ${name}`
+  })
+}
 ```
 
 :::
@@ -291,7 +294,7 @@ When coding agents write a growing share of your code, the hard part moves from 
 - **The compiler checks what agents write.** Every function's type lists what it can fail with and what it needs, and code that breaks a declared type does not compile.
 {/* token-headline:start */}
 
-- **People can review what agents write.** [11.4% fewer tokens across the 46 cheat-sheet pairs](/vibelang-features/117-token-counts); VibeLang is longer in 12 pairs.
+- **People can review what agents write.** [14.9% fewer tokens across the 46 cheat-sheet pairs](/vibelang-features/117-token-counts); VibeLang is longer in 12 pairs.
 
 {/* token-headline:end */}
 - **Agents write less.** Fewer tokens per program means less to generate and less context to read back.
