@@ -11,9 +11,9 @@ Run everything:
 ```sh
 cd experiments
 bun install        # effect@4.0.5 exactly
-bun test           # 154 tests in 20 files, about a second
-bun test ./scratch-review-codex/                     # the Codex review's probes R1-R10
-bun test ./scratch-review-fable/suspend-in-acquire.test.ts ./scratch-review-fable/tail-resume-generator.test.ts
+bun test           # 172 tests in 23 files, about a second
+bun test ./tests/runtime-boundaries.test.ts         # runtime boundary regressions
+bun test ./tests/acquisition-cancellation.test.ts ./tests/generator-tail-resume.test.ts
 bun bench/perform.ts
 bun bench/deep-capture.ts
 node scripts/wakeup-chain-depth.ts       # F10 depths on this host (also runs under bun)
@@ -27,7 +27,7 @@ The docs site build (`site/scripts/build-docs.ts`) runs this suite first and won
 
 The first draft had two independent reviews. Codex (GPT-6.1 Sol) wrote 54 conformance tests against the kernel and found five bugs, all fixed. Fable reviewed the draft against the original request; its findings shaped Chapters 9, 13, and 26.
 
-The second draft had two more on 2026-10-16: Codex (GPT-6 Astra, `docs/reviews/2026-10-16-codex-astra.md`) and Fable (`docs/reviews/2026-10-16-fable.md`). Both passed the central test and verified counterexamples with probes. Five were kernel or lowering defects, fixed with regression tests K11-K15; 12 of those tests fail on a copy of the kernel with the fixes reverted, and K15 pins Effect's own acquisition behavior (`experiments/KERNEL-CHANGES.md`). The rest were rule gaps, decided in D9-D21. Next, a feature-coverage audit mapped every section of Effect's documentation to the language (`docs/research/effect-feature-coverage.md`, 309 features): D22-D28 and D37-D43 decide its gaps, and Appendix C is its map. Then a prototype compiler compiled 46 example files written from this document and ran them on the kernel; D44-D53 decide its findings. Last, a single-pass experiment reached the same lowering, byte for byte, with one patched TypeScript check per file; D56 and D52 decide its probes.
+The second draft had two more on 2026-10-16: Both checks passed the central test and verified counterexamples with probes. Five were kernel or lowering defects, fixed with regression tests K11-K15; 12 of those tests fail on a copy of the kernel with the fixes reverted, and K15 pins Effect's own acquisition behavior (`experiments/KERNEL-CHANGES.md`). The rest were rule gaps, decided in D9-D21. Next, a feature-coverage audit mapped every section of Effect's documentation to the language (`docs/research/effect-feature-coverage.md`, 309 features): D22-D28 and D37-D43 decide its gaps, and Appendix C is its map. Then a prototype compiler compiled 46 example files written from this document and ran them on the kernel; D44-D53 decide its findings. Last, a single-pass experiment reached the same lowering, byte for byte, with one patched TypeScript check per file; D56 and D52 decide its probes.
 
 #### Effect facts
 
@@ -42,7 +42,7 @@ The second draft had two more on 2026-10-16: Codex (GPT-6 Astra, `docs/reviews/2
 | T5a, T6b | `tests/kernel.test.ts` | `Effect.callback` drops a late resume silently; plain JavaScript recursion overflows |
 | D01-D05 | `tests/conformance/source-claims.test.ts` | The conformance review's corrections to the first draft's Effect claims: synchronous callback resume, fork-time async context, `zip`'s `concurrent` flag, `catchCause` on a self-raised interrupt, sibling provides sharing a supplied `MemoMap` |
 | A3 | `tests/fiber-behavior.test.ts` | Two providers for one key in `Layer.merge`: the later one wins silently |
-| K15a | `tests/review-fixes.test.ts` | Default `acquireRelease` masks a wait: interruption waits for the value, which is then released |
+| K15a | `tests/kernel-regressions.test.ts` | Default `acquireRelease` masks a wait: interruption waits for the value, which is then released |
 
 #### Kernel laws
 
@@ -56,7 +56,7 @@ The second draft had two more on 2026-10-16: Codex (GPT-6 Astra, `docs/reviews/2
 | T9-T11 | same | Deep handlers; external iteration with `transfer`; retry runs fresh continuations |
 | T12-T15 | `tests/kernel-edges.test.ts` | Pending interruption at resume; resume-site Context; fiber-affine abandonment (T14b caught a real bug); `HandlerPromptExited` instead of rebinding |
 | T16, T17 | `tests/producers.test.ts` | `for...of` lowering: `break` runs the producer's finalizer first; 100,000 elements in constant stack with a `flatMap`-shaped clause |
-| K11a-K11d | `tests/review-fixes.test.ts` | A generator clause that returns `tailResume` iterates 100,000 elements at 3 frames, 5 with a per-element `using` and `finally`; yielding a tail-resume request is a defect; a resume inside a `finally` region isn't a tail resume |
+| K11a-K11d | `tests/kernel-regressions.test.ts` | A generator clause that returns `tailResume` iterates 100,000 elements at 3 frames, 5 with a per-element `using` and `finally`; yielding a tail-resume request is a defect; a resume inside a `finally` region isn't a tail resume |
 | K12a-K12e | same | Abandonment reports every cleanup failure beside real pending interruptions: explicit `abandon`, `abandonNow`, owner exit, and Scope exit |
 | K13a-K13e | same | A transferred continuation never outlives its capturing fiber; transfer into a parallel Scope is rejected |
 | K14a-K14c | same | `catchExpected` recovers only causes made of expected failures, the first one first; mixed causes pass through intact |
@@ -82,7 +82,7 @@ Counterexamples from the 2026-10-16 reviews, kept as observational tests. A prob
 
 | ID | File | What it showed |
 | --- | --- | --- |
-| R1 | `scratch-review-codex/probes.test.ts` | `Effect.catch` recovers a cause holding both a failure and a defect, and drops the defect (D13, K14) |
+| R1 | `tests/runtime-boundaries.test.ts` | `Effect.catch` recovers a cause holding both a failure and a defect, and drops the defect (D13, K14) |
 | R2, R2b | same | Owner-driven abandonment keeps a cleanup defect; explicit `abandon` dropped it while an interruption was pending (D15, K12) |
 | R3 | same | Default `acquireRelease` shields `suspend` from cancellation (D25, K15) |
 | R4 | same | Inlining an `Effect.sync` operation removes an interruption point (D10) |
@@ -92,8 +92,8 @@ Counterexamples from the 2026-10-16 reviews, kept as observational tests. A prob
 | R8 | same | A block-wide Scope closes acquisitions not marked `using` (D14) |
 | R9 | same | Strategies A and B disagree on the next clause's Context after a resume (G16) |
 | R10 | same | A generator clause written `return yield* resume(k, v)` defeats constant-stack iteration (D18, K11) |
-| Fable probes | `scratch-review-fable/` | The masked adapter's race branches never run; generator clauses grow 200,003 frames over 100,000 elements before K11 |
-| Services | `scratch-abstract-services/probe.ts` | Structurally equal abstract classes alias in R, and the program dies with `Service not found` (D1) |
+| Fable probes | `tests/acquisition-cancellation.test.ts` | The masked adapter's race branches never run; generator clauses grow 200,003 frames over 100,000 elements before K11 |
+| Services | `tests/service-identity/probe.ts` | Structurally equal abstract classes alias in R, and the program dies with `Service not found` (D1) |
 
 #### Prototype compiler
 
@@ -152,7 +152,7 @@ vibelang/smoke.sh vibelang-infer   # one case
 #### Research and drafts
 
 - `docs/design/DECISIONS.md`: the decision log, D1-D60.
-- `docs/research/effect4-runtime.md`: Effect 4.0.5 runtime facts, with 23 scripts in `experiments/scratch-agent-a/scripts/`. Scripts written for this design live in `experiments/scripts/`.
+- `docs/research/effect4-runtime.md`: Effect 4.0.5 runtime facts, with 23 scripts in `experiments/scripts/runtime-facts/`. Scripts written for this design live in `experiments/scripts/`.
 - `docs/research/continuation-prior-art.md`: OCaml 5, Kotlin, Swift, Loom, WasmFX, Koka, Effekt, Effection, js_of_ocaml, and the papers.
 - `docs/research/vibelang.md`: the earlier VibeLang project's `main` (`c60eca97`) and the unmerged checkpoint (`ebe89a2b`).
 - `docs/research/typescript-native-compiler.md`: the native compiler upstream and effect-tsgo.

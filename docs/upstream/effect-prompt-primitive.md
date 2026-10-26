@@ -24,9 +24,9 @@ Effect.runSync(Effect.withFiber(fiber => Effect.sync(() => {
 })))
 ```
 
-The [minimal shift/reset prototype](../../experiments/scratch-agent-a/scripts/q9-shift-reset-proto.ts)
+The [minimal shift/reset prototype](../../experiments/scripts/runtime-facts/q9-shift-reset-proto.ts)
 is an executable example of the missing operation. Run
-`cd experiments && bun scratch-agent-a/scripts/q9-shift-reset-proto.ts`.
+`cd experiments && bun scripts/runtime-facts/q9-shift-reset-proto.ts`.
 Its basic reset example produces 21: the body multiplies the resumed value 10
 by 2, then the clause adds 1. It also demonstrates abort, one-shot rejection,
 and Context restoration. That early prototype is not the final ownership

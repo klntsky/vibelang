@@ -1,4 +1,4 @@
-// Review probe (Fable): does P22 ("a resume in tail position drops its clause's
+// Runtime regression probe: does P22 ("a resume in tail position drops its clause's
 // owner frame") hold when the clause is a generator, as Chapter 24's for...of
 // lowering (design.md lines 2408-2421) and every compiled EffectScript function
 // (Effect.fnUntraced) would be?

@@ -26,10 +26,10 @@ cd reference-machine && bun install && bun test   # independent strategy-B machi
 | `bench/deep-capture.ts` | Capture at every level of a deep recursion: the quadratic copy cost |
 | `tests/context-bridges.test.ts` | Tracing spans and `AsyncLocalStorage` across a prompt capture |
 | `tests/handoff.test.ts` | Handoff for producers with asynchronous shutdown |
-| `tests/review-fixes.test.ts` | K11-K15: regressions for the 2026-10-16 review findings |
+| `tests/kernel-regressions.test.ts` | K11-K15: regressions for the 2026-10-16 review findings |
 | `KERNEL-CHANGES.md` | The 2026-10-16 kernel fixes, their laws, and the lowerings the compiler must emit for tail resume and source `catch` |
 | `scripts/v3-wakeup-chain.mjs` | The F10 wake-up chain on `effect@3.22.3`, showing the Effect 4 regression |
 | `reference-machine/` | Strategy B: an explicit-frame machine over public APIs, written independently by Codex (GPT-6.1 Sol) |
-| `scratch-agent-a/` | Scripts behind `docs/research/effect4-runtime.md` (`v3pkg/` is an extracted `effect@3.22.3` for the v3 interop check) |
+| `scripts/runtime-facts/` | Scripts behind `docs/research/effect4-runtime.md` |
 
 The kernel reaches undocumented `FiberImpl` fields (`_stack`, `interruptible`, `_interruptedCause`). It is a prototype of an Effect runtime extension, not a supported integration.

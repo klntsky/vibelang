@@ -25,8 +25,8 @@ console.log(observed) // 200000: every completed yield ran before the observer
 ```
 
 Run the existing comparison:
-`cd experiments && bun scratch-agent-a/scripts/q2-gen-exit-starvation.ts`.
-[The script](../../experiments/scratch-agent-a/scripts/q2-gen-exit-starvation.ts)
+`cd experiments && bun scripts/runtime-facts/q2-gen-exit-starvation.ts`.
+[The script](../../experiments/scripts/runtime-facts/q2-gen-exit-starvation.ts)
 also yields `Effect.sync(bump)` in the loop as a control; that observer runs
 before the loop finishes. `fromIteratorUnsafe` consumes successful Exit values
 inside its own `while` loop without returning to `runLoop`'s yield check.

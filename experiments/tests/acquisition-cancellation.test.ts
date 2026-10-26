@@ -1,4 +1,4 @@
-// Review probe (Fable): Chapter 6's callback adapter (design.md lines 845-856)
+// Runtime regression probe: Chapter 6's callback adapter (design.md lines 845-856)
 // wraps kernel `suspend` in Effect.acquireRelease and annotates two paths:
 //   if (!waiter.resume(socket)) socket.destroy()   // "nobody is waiting anymore"
 //   return () => socket.destroy()                  // "the waiter was cancelled first"

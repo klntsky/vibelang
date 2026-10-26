@@ -19,7 +19,7 @@ abstract class Users {
 ```
 
 - A class declared in a `.vibe` file is a service when it is `abstract`, has no `extends` clause or type parameters, and every instance member is abstract (methods with full contracts, `abstract readonly` values). Static members are allowed and stay on the class, matching Effect 4's `static readonly layer` idiom.
-- The compiler makes service classes nominal: plain abstract classes with the same members collapse structurally, so providing one service type-checks as providing another, and the program dies at run time with `Service not found` (`experiments/scratch-abstract-services/probe.ts`).
+- The compiler makes service classes nominal: plain abstract classes with the same members collapse structurally, so providing one service type-checks as providing another, and the program dies at run time with `Service not found` (`experiments/tests/service-identity/probe.ts`).
 - The key is derived from package, module path, and class name, and duplicates are rejected program-wide (unchanged from the earlier `service` rule).
 - Emit: an Effect 4 `Context.Service` class, so TypeScript code sees an ordinary service. (Superseded by D45: the class form breaks `implements`; the emission is an interface plus a key class.)
 - Implement a service with an object literal or a class that `implements Users`. `extends Users`, `new Users()`, `instanceof Users`, and a generic service class are errors with fixes.

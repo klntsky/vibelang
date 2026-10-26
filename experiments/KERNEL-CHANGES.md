@@ -1,6 +1,6 @@
 # Kernel changes, 2026-10-16
 
-This change fixes the five kernel defects found in the 2026-10-16 reviews (`docs/reviews/2026-10-16-codex-astra.md` findings 1, 2, 3, 7 and 10; `docs/reviews/2026-10-16-fable.md` findings 1 and 2). Each fix has regression tests in `tests/review-fixes.test.ts`. `bun test` now passes 148 of 148 tests: the original 128 plus 20 new ones.
+This change fixes the five kernel defects found in the 2026-10-16 reviews. Each fix has regression tests in `tests/kernel-regressions.test.ts`. `bun test` now passes 148 of 148 tests: the original 128 plus 20 new ones.
 
 | # | Defect | Law now guaranteed | Tests | Kernel change |
 | --- | --- | --- | --- | --- |
@@ -172,6 +172,6 @@ Which policy `using` applies to an EffectScript `acquireRelease` remains a desig
 ## Verification
 
 - `bun test`: 148 pass, 0 fail.
-- `bun test ./scratch-review-codex/`: 11 pass. R2b and R5 now assert the fixed behavior. R1 and R10 also assert the replacement (`catchExpected`, `tailResume`). R3 is annotated as unchanged Effect behavior.
-- `bun test ./scratch-review-fable/suspend-in-acquire.test.ts ./scratch-review-fable/tail-resume-generator.test.ts`: 7 pass. The masked probe's expected order was corrected to match the order its review recorded: the release runs before `waiter.resume` returns. Two probes were added that show a clause returning `tailResume` holds 3 frames at N = 100,000.
+- `bun test ./tests/runtime-boundaries.test.ts`: 11 pass. R2b and R5 now assert the fixed behavior. R1 and R10 also assert the replacement (`catchExpected`, `tailResume`). R3 is annotated as unchanged Effect behavior.
+- `bun test ./tests/acquisition-cancellation.test.ts ./tests/generator-tail-resume.test.ts`: 7 pass. The masked probe's expected order was corrected to match the order its review recorded: the release runs before `waiter.resume` returns. Two probes were added that show a clause returning `tailResume` holds 3 frames at N = 100,000.
 - Falsification: the new tests were also run against a copy of the kernel with the four kernel fixes reverted. K11a-c, K12a-b, K13a-e and K14b-c fail there (12 tests). The 8 that pass on both guard behavior the fixes must preserve.

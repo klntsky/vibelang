@@ -10,6 +10,5 @@ packages/compiler/native/
 packages/compiler/dprint-plugin.json
 templates/app/dist/
 templates/app/.prototype/
-experiments/scratch-agent-a/v3pkg/
 dist-npm/
 .wrangler/

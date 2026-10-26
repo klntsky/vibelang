@@ -22,9 +22,9 @@ console.log(after) // Success("recovered"); the cleanup defect is gone
 ```
 
 Existing reproduction:
-[R1](../../experiments/scratch-review-codex/probes.test.ts), run with
-`cd experiments && bun test scratch-review-codex/probes.test.ts -t 'R1 '`.
-[K14](../../experiments/tests/review-fixes.test.ts) checks the replacement
+[R1](../../experiments/tests/runtime-boundaries.test.ts), run with
+`cd experiments && bun test tests/runtime-boundaries.test.ts -t 'R1 '`.
+[K14](../../experiments/tests/kernel-regressions.test.ts) checks the replacement
 policy. `internal/effect.ts`'s `findError` selects the first Fail reason, and
 `Effect.catch` replaces the entire cause with the handler's result.
 

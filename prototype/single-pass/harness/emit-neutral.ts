@@ -1251,7 +1251,7 @@ export class NeutralEmitter {
    * the implementation's shape, so `implements Users` and `db: Database` work)
    * merged with a class whose static side is an Effect 4 Context key. An
    * optional brand carrying the key keeps two services with the same members
-   * distinct in R (the structural collapse in scratch-abstract-services/probe.ts).
+   * distinct in R (the structural collapse in tests/service-identity/probe.ts).
    */
   private serviceClass(cls: ts.ClassDeclaration, svc: ServiceDecl) {
     const name = svc.name

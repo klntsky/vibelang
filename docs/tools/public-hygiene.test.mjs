@@ -28,3 +28,7 @@ test("the hygiene check rejects references as well as service files", () => {
   assert.equal(publicHygiene("scripts/check.mjs", "import '../packages/" + retired + "/compile.mjs'").length, 1)
   assert.deepEqual(publicHygiene("packages/compiler/index.mjs", "export const version = '0.0.9'"), [])
 })
+
+test("the public tree contains no review artifacts or scratch paths", () => {
+  assert.deepEqual(findings.filter(p => p.endsWith("a removed review artifact or scratch path")), [])
+})

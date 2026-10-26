@@ -2,7 +2,7 @@
 // D1: service classes are nominal. Primary and Replica have identical members; providing only
 // Primary must leave Replica in R, so onlyPrimary's contract (R = never) is violated. If the
 // identities collapsed structurally, this file would compile and then die at run time with
-// "Service not found" (experiments/scratch-abstract-services/probe.ts).
+// "Service not found" (experiments/tests/service-identity/probe.ts).
 
 abstract class Primary {
   abstract query(sql: string): Effect<string, never, never>

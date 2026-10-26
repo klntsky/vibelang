@@ -22,7 +22,7 @@ console.log(events) // []
 [F1-F3](../../experiments/tests/effect-facts.test.ts) assert this behavior on
 failed yields and interruption. Run
 `cd experiments && bun test tests/effect-facts.test.ts`.
-[q8-generators.ts](../../experiments/scratch-agent-a/scripts/q8-generators.ts)
+[q8-generators.ts](../../experiments/scripts/runtime-facts/q8-generators.ts)
 extends it to `Effect.fn`, untraced variants, and JavaScript disposal.
 
 The [dated research](../research/effect4-runtime.md), section 8, records that

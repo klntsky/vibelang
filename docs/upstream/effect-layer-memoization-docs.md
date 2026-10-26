@@ -20,8 +20,8 @@ console.log(result, builds) // [1, 2], 2
 
 The same Layer object builds twice under sibling provides, even when the calls
 overlap. Run
-`cd experiments && bun scratch-agent-a/scripts/q6-siblings.ts` for the
-[resource-owning reproduction](../../experiments/scratch-agent-a/scripts/q6-siblings.ts).
+`cd experiments && bun scripts/runtime-facts/q6-siblings.ts` for the
+[resource-owning reproduction](../../experiments/scripts/runtime-facts/q6-siblings.ts).
 For shared prebuilt ambient memoization, run
 `bun test tests/conformance/source-claims.test.ts -t D05`:
 [D05](../../experiments/tests/conformance/source-claims.test.ts) builds the

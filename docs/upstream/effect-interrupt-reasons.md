@@ -23,8 +23,8 @@ if (Exit.isFailure(exit)) {
 // Tracing can produce several reasons for the same single interruptor.
 ```
 
-Run the [existing comparison](../../experiments/scratch-agent-a/scripts/q3-fn-interrupt-reasons.ts):
-`cd experiments && bun scratch-agent-a/scripts/q3-fn-interrupt-reasons.ts`.
+Run the [existing comparison](../../experiments/scripts/runtime-facts/q3-fn-interrupt-reasons.ts):
+`cd experiments && bun scripts/runtime-facts/q3-fn-interrupt-reasons.ts`.
 The research observed one Interrupt reason for `Effect.gen`, three for one
 `Effect.fn`, six for nested `Effect.fn` calls, and two for `withSpan`, all with
 the same interruptor id. Cause annotations differ by reference as stack

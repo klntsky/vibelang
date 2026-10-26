@@ -63,7 +63,6 @@ export const EXEMPT_PATHS = [
   ["scripts/brand-gate.mjs", "spells the retired names to find them"],
   ["scripts/brand-gate.test.mjs", "writes retired spellings into its fixtures"],
   ["artifacts/", "artifact docs: snapshots, never edited (doc-lifecycle doctrine)"],
-  ["docs/reviews/", "dated review artifacts, never edited"],
   ["docs/research/", "research reports are artifacts, never edited"],
 ]
 /** A file whose name carries a date is an artifact (doc-lifecycle doctrine, rule 3). */

@@ -43,9 +43,9 @@ make JavaScript `catch` recover Effect failures automatically.
 
 **Evidence:** [F1-F3](../../experiments/tests/effect-facts.test.ts), with the
 generator variants and disposal in
-[q8-generators.ts](../../experiments/scratch-agent-a/scripts/q8-generators.ts).
+[q8-generators.ts](../../experiments/scripts/runtime-facts/q8-generators.ts).
 Run `cd experiments && bun test tests/effect-facts.test.ts`, or
-`bun scratch-agent-a/scripts/q8-generators.ts`. The failed-yield and interrupted
+`bun scripts/runtime-facts/q8-generators.ts`. The failed-yield and interrupted
 cases record no JavaScript cleanup; the JavaScript-throw control does run it.
 
 The [language-service draft](language-service-generator-cleanup.md) addresses

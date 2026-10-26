@@ -1,6 +1,5 @@
 // Regressions for the kernel defects the 2026-10-16 reviews found
-// (docs/reviews/2026-10-16-codex-astra.md findings 1, 2, 3, 7, 10;
-// docs/reviews/2026-10-16-fable.md findings 1, 2). One block per fix;
+// One block per fix;
 // experiments/KERNEL-CHANGES.md states the law each block checks.
 import { afterEach, describe, expect, test } from "bun:test"
 import { Cause, Effect, Exit, Fiber, Scope } from "effect"
