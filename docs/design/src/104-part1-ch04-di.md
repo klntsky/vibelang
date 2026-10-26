@@ -13,8 +13,8 @@ class Users extends Context.Service<Users, {
 
 ```ts es
 service Users {
-  find(id: string): Effect<User, UserNotFound>
-  rename(id: string, name: string): Effect<void, UserNotFound>
+  find(id: string): User!UserNotFound
+  rename(id: string, name: string): void!UserNotFound
 }
 ```
 
@@ -23,7 +23,7 @@ service Users {
 - **What makes a class a service.** In a `.vibe` file, a class is a service when it is `abstract`, has no `extends` clause and no type parameters, and every instance member is abstract: methods with full contracts, and `abstract readonly` values. Static members are allowed and stay on the class. An abstract class with a concrete instance member is an ordinary class.
 - **Identity.** Effect identifies a service by its key string, and two services with the same string silently share a slot. The compiler derives the key from the package, module path, and class name (`@acme/app/src/users#Users`) and rejects a duplicate anywhere in the program (EK3001).
 - **Each service is its own type.** TypeScript compares classes by shape, so two abstract classes with the same members would be one type: providing one would type-check as providing the other, and the program would die at run time with `Service not found`. The compiler gives every service class its own identity, as `Context.Service` classes have.
-- **Contracts are written out.** A service has no body to infer from, so each method states its full `Effect<A, E, R>` (EK2101, Chapter 14).
+- **Contracts are written out.** A service has no body to infer from, so each method states its contract, `A!E!R` or `Effect<A, E, R>` (EK2101, Chapter 14).
 - **A service is a key, not a base class.** `extends Users` (EK3002), `new Users()` (EK3003), `instanceof Users` (EK3004), and a generic service class (EK3005) are errors. Implement a service with an object literal or a class that `implements Users`.
 
 ```text
@@ -83,13 +83,13 @@ Calling the service with no arguments, `Users()`, returns its implementation obj
 ```ts es
 service Settings {
   baseUrl: string
-  scale(): Effect<number>
+  scale(): number!!
 }
 
 function apiUrl(path: string) {
   return `${Settings().baseUrl}/${path}`
 }
-// Effect<string, never, Settings>
+// string!!Settings
 ```
 
 Calling any member through the service looks the service up, so the service joins R whatever the member returns: `Path.join(a, b)`, from Effect's `Path` service, returns a string and still adds `Path`. A member that is itself an `Effect` value runs when called: `Terminal.readLine()`. A member the service declares wins over the key's own members, such as `pipe`, `use`, and `key`, so `Rpc.call(…)` reaches the service even though the key, a class, has its own `call`. A static member named like a service member is EK3006.
@@ -147,8 +147,8 @@ Effect 4 code often keeps the default Layer on the service class as `static read
 
 ```ts es
 service Users {
-  find(id: string): Effect<User, UserNotFound>
-  rename(id: string, name: string): Effect<void, UserNotFound>
+  find(id: string): User!UserNotFound
+  rename(id: string, name: string): void!UserNotFound
 
   static readonly layer = Layer.effect(Users) {
     const db = Database()
@@ -187,8 +187,8 @@ Effect 4's `make` option becomes a static method, and a service that should work
 
 ```ts es
 service Sessions {
-  get(token: string): Effect<Session | undefined>
-  set(token: string, session: Session): Effect<void>
+  get(token: string): Session | undefined!!
+  set(token: string, session: Session): void!!
 
   static make() {
     const entries = new Map<string, Session>()
@@ -241,7 +241,7 @@ const DatabaseLive = Layer.effect(Database) {
 // Layer<Database, ConnectError, DatabaseConfig>
 ```
 
-`Postgres.connect` returns `Effect<Pool, ConnectError, Scope>`. Without `using`, the pool belongs to whoever supplies the `Scope` (Chapter 6); `Layer.effect` supplies the layer's own Scope, as in Effect today, so the pool closes when the program that provided `DatabaseLive` finishes. `using pool = …` would close it when the provider function returned, before any query ran.
+`Postgres.connect` returns `Pool!ConnectError!Scope`. Without `using`, the pool belongs to whoever supplies the `Scope` (Chapter 6); `Layer.effect` supplies the layer's own Scope, as in Effect today, so the pool closes when the program that provided `DatabaseLive` finishes. `using pool = …` would close it when the provider function returned, before any query ran.
 
 #### Requirements that would leak
 
@@ -307,7 +307,7 @@ function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
   log(`welcomed ${name}`)
 }
-// Effect<void, UserNotFound | MailError | ConfigError | ConnectError>
+// void!UserNotFound | MailError | ConfigError | ConnectError!
 ```
 
 `main`'s contract shows what providing costs: `ConfigError` and `ConnectError` come from building the layers. The layers are built when `Effect.provide` runs, shared by everything inside it, and released in reverse order when it finishes. If building a layer fails, the program fails with that error and releases anything already acquired.
@@ -332,7 +332,7 @@ function preview() {
     log(`welcomed ${welcome("42")}`)
   }
 }
-// Effect<void, UserNotFound | MailError | ConfigError | ConnectError>
+// void!UserNotFound | MailError | ConfigError | ConnectError!
 ```
 
 Each `Effect.provide` builds its layers once, so two sibling `provide` calls build them twice:

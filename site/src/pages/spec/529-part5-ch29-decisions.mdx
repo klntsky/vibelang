@@ -91,7 +91,7 @@ D57 supplies decision 2's partial-annotation spelling: explicit `infer Name` slo
 | D54 | Inside a plain-JavaScript function, `try`, `catch`, and `finally` are JavaScript's own statements, and its catch still receives typed failures only (D282) | D10 with D5: nothing in the function can pause | 15 |
 | D55 | A method implementing a plain-function member (`[Equal.symbol]`, `[Hash.symbol]`) compiles to a plain JavaScript method, or EK4301 | The member's declared type is not an Effect | 15 |
 | D56 | Each overload candidate's declared parameter type, never the lambda's own inferred type, decides a lambda's form (plain, Effect function, program); the first candidate that accepts it wins. D10 eligibility is computed on demand | Single-pass experiment: 0 disagreements in 46 files; 6 probe lambdas with two self-consistent lowerings | 13, 15, 27 |
-| D57 | **Controversial.** Partial annotations use `infer Name` per channel in a function return annotation with a body; omitted slots were EK2003 until D308 made them `never`, as in TypeScript. D12 stands | TypeScript 7 parses `infer`; explicit slots distinguish inference from `never` | 2, 14, 16, 28 |
+| D57 | **Controversial.** Partial annotations use `infer Name` per channel in a function return annotation with a body; a slot left out of `Effect<…>` is `never`, as in TypeScript (D308, D309). D12 stands | TypeScript 7 parses `infer`; explicit slots distinguish inference from `never` | 2, 14, 16, 28 |
 | D58 | **Controversial.** Keep EffectScript, `esc`, `.es`, and `@effectscript`; superseded by D125 | Another compile-to-JavaScript language uses the name | 28 |
 | D59 | Draft upstream issues and proposals in `docs/upstream/`; status: drafted, not filed | Filing speaks for the owner in a third-party project and needs his go-ahead | 24, 25, 30 |
 | D60 | **Will.** One private repository, `effectscript on GitHub`; the compiler is in `typescript/` | Spec and implementations change together; the imported TypeScript tree omits 349 MB of baselines | 27, 28 |
@@ -157,7 +157,7 @@ These rows record build defaults, not new language decisions. Lane U recorded D9
 | D124 | Setup relinks vibelang launchers pointing into another checkout or at missing files | Keep the launcher usable after workspace changes | 28 |
 | D125 | **Controversial.** The language is Effeck: binary `effeck`, files `.effeck`, codes `EK`, unscoped npm packages `effeck`, `effeck-runtime`, `effeck-vite` | The `@effectscript` npm scope belongs to another language | 28 |
 | D126 | `error NotFound { id: string }` declares a tagged error class with readonly fields | Fewer tokens for the most common declaration | 3 |
-| D127 | (Superseded by D308.) Effect types were written `Result!Error!Dependencies`; an empty slot was never, and left-out dependencies were inferred on a function with a body | Fewer tokens than `Effect<A, E, R>` in every contract | 14 |
+| D127 | **Controversial.** (Superseded by D308, restored by D309.) Effect types are written `Result!Error!Dependencies`; an empty slot is never, and left-out dependencies are inferred on a function with a body | Fewer tokens than `Effect<A, E, R>` in every contract | 14 |
 | D128 | (Amended by D220, reverted by D223.) `service` and `control` declare abstract classes whose bodiless members are abstract; an implemented member is EK2103 | Fewer tokens than `abstract class` and `abstract` on every member | 4, 9 |
 | D129 | (Superseded by D221.) `layer UsersLive: Users { setup; find(id) { ... } }` is `Layer.effect` (or `Layer.succeed` without setup); setup after members is EK2104 | Fewer tokens than `Layer.effect(S, () => { return { ... } })` | 4 |
 | D130 | A block form provides a layer to statements that stay code of the enclosing function; its keyword is `provide` since D172 | Fewer tokens than `Effect.provide(() => { ... }, AppLive)`, and `return` keeps its meaning | 4 |
@@ -238,7 +238,8 @@ These rows record build defaults, not new language decisions. Lane U recorded D9
 | D281 | `service Name: Type` declares a service of any shape, `Context.Service<Name, Type>`; its body holds only static members (EK2103) | Smithers: 103 services with the interface beside them, 8 of shape `string` | 4 |
 | D282 | `throw` always fails and `catch` receives typed failures only, outside hatches; a plain function never fails and needs nothing, so a throw that can escape it, or a constructor, an accessor or a static block, is EK2003 (supersedes D263) | Will, 2026-10-21 | 3, 15 |
 | D307 | `data Name { Variant; Variant { field: Type } }` declares Effect's `Data.TaggedEnum` type and its `Data.taggedEnum` constructors; `when Name.Variant { let field }` tests the tag and binds fields; EK2122-EK2127, EK4706, EK4707 (Will) | Effect's own tagged union, without writing the type and the constructors apart | 3, 11 |
-| D308 | A contract is written `Effect<A, E, R>`, and a type argument left out is `never`, as in TypeScript; the `!` form is retired: EK1014, whose quick fix and `vibelang --fix` write the `Effect<…>` type (Will; supersedes D127) | Will: least surprising, idiomatic Effect; the shorthand is a proposal | 2, 14, 28 |
+| D308 | (Superseded by D309.) A contract was written `Effect<A, E, R>`, a type argument left out was `never`, as in TypeScript, and the `!` form was retired as EK1014 (Will; superseded D127) | Will: least surprising, idiomatic Effect | 2, 14, 28 |
+| D309 | The `!` form is restored as an alias of `Effect<A, E, R>` and is the documented form; `Effect<…>` keeps D308's meaning; EK1014 is retired; EK4833 reports only `Effect.Effect<…>` and its fix writes the `!` form (Will; supersedes D308, restores D127) | Will: "go back to the terse syntax"; fewer tokens in every contract | 2, 14, 28 |
 
 #### Rules of the runtime and compiler
 
@@ -286,7 +287,7 @@ Proposed in the first draft as P1-P22; adopted by D29. A row marked **revised** 
 
 | Former item | Decision | Result |
 | --- | --- | --- |
-| O7 | D57 (**controversial**), D308 | `infer Name` marks an inferred channel; a slot left out is `never` (D308); D12 stands |
+| O7 | D57 (**controversial**), D308, D309 | `infer Name` marks an inferred channel; a slot left out of `Effect<…>` is `never`; D12 stands |
 | O8 | D59 | Upstream issues and proposals are drafted in `docs/upstream/`, not filed |
 | O9 | D58, superseded by D125, then D255 (**controversial**) | VibeLang: `vibelang`, `.vibe`, `EK` codes, and unscoped npm packages |
 | Remote and repository layout | D60 | One repository, with the compiler in `typescript/`: private at `effectscript on GitHub` when decided, now public at `github.com/smithersai/vibelang` |

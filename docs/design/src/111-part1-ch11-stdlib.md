@@ -69,7 +69,7 @@ import { FileSystem } from "effect/FileSystem"
 function countLines(path: string) {
   return FileSystem.readFileString(path).split("\n").length
 }
-// Effect<number, PlatformError, FileSystem>
+// number!PlatformError!FileSystem
 ```
 
 #### Schemas
@@ -126,7 +126,7 @@ function describe(delivery: Delivery) {
     when Delivery.Rejected { let reason }: `rejected: ${reason}`;
   }
 }
-// Effect<string>
+// string!!
 ```
 
 A `data` declaration declares both: the type `Delivery`, Effect's `Data.TaggedEnum` of the variants, and the constant `Delivery`, the constructors `Data.taggedEnum` makes, typed `Data.TaggedEnum.Constructor<Delivery>` (D307). A variant without fields is a bare name; a variant's fields are written as an `error`'s are, `name: Type` or `name?: Type`, and are readonly. A line break or `;` separates fields and variants; a comma is EK1013, as in an `error`'s body. `Delivery.Sent({ tracking: "parcel-8" })` and `Delivery.Waiting()` construct values, plain records with a `_tag` that compare and hash by their fields, and `Delivery.$is` and `Delivery.$match` are Effect's. Type parameters, at most four, pass through the interface `Data.TaggedEnum.WithGenerics` asks for, which the declaration names `NameDefinition`:
@@ -161,7 +161,7 @@ function getTodo(id: number) {
   const response = HttpClient.get(`https://jsonplaceholder.typicode.com/todos/${id}`)
   return HttpClientResponse.schemaBodyJson(Todo)(response)
 }
-// Effect<Todo, HttpClientError | SchemaError, HttpClient>
+// Todo!HttpClientError | SchemaError!HttpClient
 ```
 
 `HttpClient.get` returns an `Effect`, so the call runs it. `HttpClientResponse.schemaBodyJson(Todo)` returns a plain function, which `effect` exports with a trusted contract; calling it with the response returns an `Effect`, which runs.
@@ -207,7 +207,7 @@ const DatabaseUrl = Config.Redacted("DATABASE_URL")
 function serverConfig() {
   return { port: Port(), databaseUrl: DatabaseUrl() }
 }
-// Effect<{ port: number; databaseUrl: Redacted<string> }, ConfigError>
+// { port: number; databaseUrl: Redacted<string> }!ConfigError!
 ```
 
 A `Config` is data until you call it (Chapter 13). The module's top level builds `Port` and `DatabaseUrl`; `Port()` reads the variable and fails with `ConfigError` if it is set but invalid. A test supplies values with a `ConfigProvider` instead of touching the process environment.
@@ -229,7 +229,7 @@ import { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"
 function currentBranch() {
   return ChildProcessSpawner.string(ChildProcess.make("git", ["branch", "--show-current"])).trim()
 }
-// Effect<string, PlatformError, ChildProcessSpawner>
+// string!PlatformError!ChildProcessSpawner
 ```
 
 `ChildProcessSpawner.spawn` gives a handle whose output is a `Stream` and whose process belongs to a scope (its type requires `Scope`), so `using child = ChildProcessSpawner.spawn(command)` ties a long-running process to a block.

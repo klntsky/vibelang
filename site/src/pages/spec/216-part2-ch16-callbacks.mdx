@@ -12,13 +12,13 @@ function mapAll<A, B>(items: ReadonlyArray<A>, f: (a: A) => B) {
   for (const item of items) out.push(f(item))
   return out
 }
-// <A, B, E, R>(items: ReadonlyArray<A>, f: (a: A) => Effect<B, E, R>) => Effect<B[], E, R>
+// <A, B, E, R>(items: ReadonlyArray<A>, f: (a: A) => B!E!R) => B[]!E!R
 
-const names = mapAll(ids, (id) => Users.find(id).name)   // Effect<string[], UserNotFound, Users>
-const sizes = mapAll(words, (w) => w.length)             // Effect<number[]>
+const names = mapAll(ids, (id) => Users.find(id).name)   // string[]!UserNotFound!Users
+const sizes = mapAll(words, (w) => w.length)             // number[]!!
 ```
 
-`f`'s type says nothing about errors or services, so `mapAll` passes through whatever its callback does: a missing contract on a callback parameter means "inferred from each call's argument", never "cannot fail, needs nothing". To restrict a callback, write its contract: `f: (a: A) => Effect<B>`. D12 stands alongside D57: `infer` selects inferred channels in the return annotation of a function with a body, but introduces no inference in parameter types or aliases. In a callback parameter, `(a: A) => Effect<B>` keeps TypeScript's defaults, meaning `(a: A) => Effect<B, never, never>`, while `(a: A) => B` accepts any contract.
+`f`'s type says nothing about errors or services, so `mapAll` passes through whatever its callback does: a missing contract on a callback parameter means "inferred from each call's argument", never "cannot fail, needs nothing". To restrict a callback, write its contract: `f: (a: A) => B!!`. D12 stands alongside D57: `infer` selects inferred channels in the return annotation of a function with a body, but introduces no inference in parameter types or aliases. In a callback parameter, `(a: A) => Effect<B>` keeps TypeScript's defaults, meaning `(a: A) => Effect<B, never, never>`, while `(a: A) => B` accepts any contract.
 
 The rule also covers declarations, methods, and function expressions that are not call arguments. Added channel parameters are named E and R, then E2 and R2 for another callback (D68), and default to `never`, so a call that omits an optional callback adds no failure and needs nothing. An optional call, `f?.(a)`, runs the callback when it is present, as `f(a)` does. A contract-less callback cannot be called inside a synchronous JavaScript callback such as a `sort` comparator, or passed on as one, as in `xs.find(p)`: it can pause and has no plain form, so either is EK4301. Call it in a `for...of` loop instead, or give the parameter a named function type, such as a type alias or `Predicate.Predicate<T>`: only a function type written in place gains a contract, so a named one keeps TypeScript's meaning and takes plain functions.
 
@@ -30,7 +30,7 @@ The declaration file writes the polymorphism out, as the comment shows, so a Typ
 function withRetry<A>(times: number, program: () => A) {
   return retry(program, Schedule.recurs(times))
 }
-// <A, E, R>(times: number, program: () => Effect<A, E, R>) => Effect<A, E, R>
+// <A, E, R>(times: number, program: () => A!E!R) => A!E!R
 ```
 
 #### Callbacks into JavaScript

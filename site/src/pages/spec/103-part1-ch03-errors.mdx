@@ -24,7 +24,7 @@ function parseId(raw: string) {
   if (!/^\d+$/.test(raw)) throw new InvalidId({ raw })
   return Number(raw)
 }
-// Effect<number, InvalidId>
+// number!InvalidId!
 ```
 
 Callee errors flow up the same way: a function's E is everything it throws plus everything its callees can fail with, minus what it catches.
@@ -54,7 +54,7 @@ function lookup(raw: string) {
     return guest
   }
 }
-// Effect<User, InvalidId, Users>
+// User!InvalidId!Users
 ```
 
 To handle some errors and pass on the rest, catch the failure and test it with pattern matching (D216); `default: throw e` passes on the rest with their types:
@@ -70,7 +70,7 @@ function lookupOrGuest(raw: string) {
     }
   }
 }
-// Effect<User, InvalidId, Users>
+// User!InvalidId!Users
 ```
 
 An arm names an error class, or several with `or`, and tests for instances, so it also matches tagged errors from other packages, such as `Schema.SchemaError`. A `match` without `default` must handle every failure the `try` block can raise (EK4701), so a complete match needs no rethrow. As a statement, `if (e is UserNotFound) { ... }` tests one class, and TypeScript narrows `e` after it. The earlier catch clause that names a type, `catch (e: UserNotFound)` (D131), still compiles but is retired: it draws warning EK2112, whose quick fix writes the `match`.
@@ -83,7 +83,7 @@ An arm names an error class, or several with `or`, and tests for instances, so i
 function nameOrGuest(id: string) {
   return Users.find(id).name catch "guest"
 }
-// Effect<string, never, Users>
+// string!!Users
 
 function nameOrReason(raw: string) {
   return Users.find(String(parseId(raw))).name catch (e) => match (e) {
@@ -91,7 +91,7 @@ function nameOrReason(raw: string) {
     when InvalidId: "invalid id";
   }
 }
-// Effect<string, never, Users>
+// string!!Users
 ```
 
 The left side runs inside the catch; the fallback runs only when it fails. Defects and interrupts pass through, as with the statement. The value is the left side's or the handler's, and E is what the fallback or handler lets escape: the `match` above handles every failure, so none escapes; `default: throw e` would pass on the rest. `catch` binds looser than `??` and `||`, tighter than `? :` and assignment, and associates left, so `a() catch b() catch c` tries each in turn (D237). Effect's combinators still work, and a call in a program position is passed by name (D147): `Effect.catchTag(Users.find(id), "UserNotFound", () => guest)`.
@@ -101,7 +101,7 @@ The left side runs inside the catch; the fallback runs only when it fails. Defec
 A contract with `never` in E promises every error is handled inside, and the compiler checks it.
 
 ```ts [VibeLang]
-export function safeLookup(raw: string): Effect<User, never, Users> {
+export function safeLookup(raw: string): User!!Users {
   try {
     return lookupOrGuest(raw)
   } catch (e) {                // e: InvalidId
@@ -205,7 +205,7 @@ error NoAdmin
 function admin(users: ReadonlyArray<{ admin: boolean; name: string }>) {
   return users.find((user) => user.admin)?.name ?? throw new NoAdmin()
 }
-// Effect<string, NoAdmin>
+// string!NoAdmin!
 ```
 
 #### Matching errors and outcomes

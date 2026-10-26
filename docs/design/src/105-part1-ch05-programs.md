@@ -104,7 +104,7 @@ Programs are values: store them in variables, return them, pass them around. Not
 function makeSync(store: Store) {
   return () => syncInventory(store)            // returns a program
 }
-// Effect<() => Effect<SyncReport, SyncError, Inventory>>
+// (() => SyncReport!SyncError!Inventory)!!
 
 function syncEverything(stores: ReadonlyArray<Store>) {
   const syncAll = stores.map(makeSync)                    // an array of programs; nothing ran

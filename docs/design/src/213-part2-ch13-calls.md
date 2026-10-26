@@ -151,7 +151,7 @@ import { Effect } from "effect"
 
 /** @vibelang trusted */
 export declare function register(f: (x: number) => number): string
-export declare function register<E, R>(f: (x: number) => Effect.Effect<number, E, R>): Effect.Effect<string, E, R>
+export declare function register<E, R>(f: (x: number) => number!E!R): string!E!R
 ```
 
 ```ts es
@@ -223,12 +223,12 @@ Generated code keeps JavaScript's evaluation order. Arguments are evaluated left
 A `do { }` expression (D187, the TC39 [do expressions](https://github.com/tc39/proposal-do-expressions) proposal) has the value of its last statement. It runs where it stands; a parameter that expects a program takes it by name, like a call (D147):
 
 ```ts
-function cached(): Effect<string> {
+function cached(): string!! {
   sleep("1 millis")
   return "cached"
 }
 
-function fetched(): Effect<string> {
+function fetched(): string!! {
   sleep("1 second")
   return "fetched"
 }
@@ -243,7 +243,7 @@ function first() {
 A block on the same line after a call or a name is the call's program (D188, the TC39 [block params](https://github.com/samuelgoto/proposal-block-params) proposal). The block is the call's last argument, except when the callee is an Effect dual: there it takes the program's place, as in `withSpan(block, "guarded")` or `semaphore.withPermits(1)(block)`, and the call infers its type parameters from the arguments and the block together:
 
 ```ts
-function work(): Effect<string> {
+function work(): string!! {
   sleep("1 millis")
   return "done"
 }

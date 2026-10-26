@@ -34,7 +34,7 @@ For an unannotated function declaration or an Effect-contract function, the comp
 
 1. **It performs no Effect operation at all.** Its body calls only plain-JavaScript VibeLang functions, trusted built-ins, and trusted functions; it calls no service, control operation, `Effect` function, or boundary hatch such as `sync`. Its control class is `pure` or `sync`.
 2. **Its E is `never`.** A typed failure leaving a plain function would cross JavaScript frames as an exception, and v0 bridges no exception across a call. In Effect code, a trusted function's listed exceptions become typed failures at its call (Chapter 26). A plain function's own catch receives them as typed failures (D54, D282); outside its `try` they propagate as JavaScript exceptions, and an exception from code with no contract passes through that catch and becomes a defect where it reaches an Effect caller. Bridging across calls is experiment G15.
-3. **Its contract, if it has one, writes E and R as `never`.** A caller sees the contract, not the body (Chapter 14), so `function answer(): Effect<number, Gone, Needed> { return 1 }` is an Effect: its callers can fail with `Gone` and need `Needed`, and EK2001 and EK2002 hold them to it. `Effect<number>` keeps the plain path, and a channel written `infer Name` counts what the body raises.
+3. **Its contract, if it has one, writes E and R as `never`.** A caller sees the contract, not the body (Chapter 14), so `function answer(): number!Gone!Needed { return 1 }` is an Effect: its callers can fail with `Gone` and need `Needed`, and EK2001 and EK2002 hold them to it. `number!!` keeps the plain path, and a channel written `infer Name` counts what the body raises.
 
 The test is "can it reach an Effect operation", not "are E and R empty": `Effect.sleep("1 second")` has E = R = `never`, and it pauses the fiber. So the compiler tracks a separate fact per function, its **control class**:
 
@@ -104,11 +104,11 @@ class Money implements Equal.Equal {
 #### Recursion
 
 ```ts es
-function sumTo(n: number): Effect<number> {
+function sumTo(n: number): number!! {
   return n === 0 ? 0 : n + sumTo(n - 1)
 }
 
-function walk(node: TreeNode): Effect<number, never, Nodes> {
+function walk(node: TreeNode): number!!Nodes {
   let total = node.size
   for (const child of Nodes.children(node)) total += walk(child)
   return total

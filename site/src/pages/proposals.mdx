@@ -1,19 +1,18 @@
 ---
 title: "Proposals"
-description: "Features from VibeLang's earlier design that the current language does not have yet, and the Effect type shorthand it removed, with their proposed syntax. Each one is a proposal, not a commitment."
+description: "Features from VibeLang's earlier design that the current language does not have yet, with their proposed syntax. Each one is a proposal, not a commitment."
 ---
 
 # Proposals
 
-VibeLang had an earlier design, documented on this site until October 2026, that kept functions eager and returned failures as `Result` values instead of building on Effect. This page lists the features from that design that the current language does not have yet, or has only in part, and the Effect type shorthand that VibeLang removed. Each section is a proposal, not a commitment: it records what the feature did, the syntax the earlier docs proposed, what VibeLang offers today, and the open questions the earlier docs left. Features the current language already has are listed at the end, with their old and new syntax.
+VibeLang had an earlier design, documented on this site until October 2026, that kept functions eager and returned failures as `Result` values instead of building on Effect. This page lists the features from that design that the current language does not have yet, or has only in part. Each section is a proposal, not a commitment: it records what the feature did, the syntax the earlier docs proposed, what VibeLang offers today, and the open questions the earlier docs left. Features the current language already has are listed at the end, with their old and new syntax.
 
-Code marked **Adapted** rewrites an original example in current VibeLang syntax: `Result<A, E>` becomes `Effect<A, E>`, the postfix `!` propagation operator goes away because calls run and failures propagate, and `class X extends Error` becomes `error X { ... }`. Code marked **Original** is quoted from the earlier docs as proposed. Neither compiles today.
+Code marked **Adapted** rewrites an original example in current VibeLang syntax: `Result<A, E>` becomes `A!E`, the postfix `!` propagation operator goes away because calls run and failures propagate, and `class X extends Error` becomes `error X { ... }`. Code marked **Original** is quoted from the earlier docs as proposed. Neither compiles today.
 
 ## Summary
 
 | Proposal | Status | What VibeLang has today |
 | --- | --- | --- |
-| [Effect type shorthand](#effect-type-shorthand) | Not in VibeLang | `Effect<A, E, R>` |
 | [Durable execution](#durable-execution) | Partial | Effect's `effect/workflow` library |
 | [Compile-time evaluation](#compile-time-evaluation) | Not in VibeLang | Nothing |
 | [Build-time host selection](#build-time-host-selection) | Not in VibeLang | Platform layers chosen at run time |
@@ -31,81 +30,6 @@ Code marked **Adapted** rewrites an original example in current VibeLang syntax:
 | [JSX source files](#jsx-source-files) | Not in VibeLang | `.tsx` files call `.vibe` code |
 | [TC39 adopt-early list](#tc39-adopt-early-list) | Not in VibeLang | A different set of TC39 forms |
 
-## Effect type shorthand
-
-**Status: not in VibeLang.** VibeLang wrote an Effect type as `Result!Error!Dependencies` until the release after 0.0.7 removed the shorthand: a contract is `Effect<A, E, R>`, as in TypeScript, and the old form is the error EK1014, which `vibelang -p tsconfig.json --fix` rewrites. The shorthand stays here as a proposal. In its maintainer's words, Effect "is used enough to warrant its own syntax that reduces tokens."
-
-### Proposed syntax
-
-:::code-group
-
-```vibe [Proposed]
-error NotFound { id: string }
-
-service Users {
-  find(id: string): User!NotFound
-}
-
-function greet(id: string): string!!Users {
-  return Users.find(id).name catch "guest"
-}
-```
-
-```vibe [Today]
-error NotFound { id: string }
-
-service Users {
-  find(id: string): Effect<User, NotFound>
-}
-
-function greet(id: string): Effect<string, never, Users> {
-  return Users.find(id).name catch "guest"
-}
-```
-
-:::
-
-A type followed by `!` is an Effect type. The slot after the first `!` is the error channel, and the slot after the second is the dependency channel:
-
-| Proposed | Today |
-| --- | --- |
-| `User!NotFound!Db` | `Effect<User, NotFound, Db>` |
-| `User!NotFound!` | `Effect<User, NotFound>` |
-| `User!!Db` | `Effect<User, never, Db>` |
-| `User!!` | `Effect<User>` |
-| `User!NotFound`, the return annotation of a function with a body | `Effect<User, NotFound, infer R>` |
-| `User!NotFound` anywhere else | `Effect<User, NotFound>` |
-
-- An empty slot is `never`. Dependencies left out entirely are inferred from the body in the return annotation of a function with a body, and are `never` everywhere else. Errors cannot be left out once a `!` is written, so inferring them takes `Effect<A, infer E, R>` or no annotation.
-- The form stands wherever a type can: return annotations, service members, parameters, and aliases. It is `Effect.Effect<A, E, R>`, so declaration files keep that type and TypeScript callers are unaffected. Hovers and messages about `.vibe` code would show contracts in the `!` form.
-- Unions bind inside a slot: `User!NotFound | Timeout!Db` fails with `NotFound | Timeout`.
-- A function type, a conditional type, or another `!` form inside a slot needs parentheses, and so does an object type after a `!`, because in a declaration a `{` there starts the body: `User!NotFound! { ... }` has no dependencies.
-- A slot's type starts on the line of its `!`, so a service member that ends in `void!!` does not take the next member.
-- The postfix `!` of JSDoc types does not parse in `.vibe` files.
-
-### Token difference
-
-Counted with OpenAI's `o200k_base` encoding (js-tiktoken 1.0.21):
-
-| Today | Tokens | Proposed | Tokens |
-| --- | ---: | --- | ---: |
-| `find(id: string): Effect<User, NotFound>` | 11 | `find(id: string): User!NotFound` | 9 |
-| `function count(): Effect<number> {` | 7 | `function count(): number!! {` | 6 |
-| `function greet(id: string): Effect<string, never, Users> {` | 14 | `function greet(id: string): string!!Users {` | 10 |
-| `function load(id: string): Effect<User, NotFound, infer R> {` | 16 | `function load(id: string): User!NotFound {` | 11 |
-
-The README's program, which writes one contract, is 117 tokens today and was 116 with the shorthand; its Effect TypeScript is 202. Across the [cheat sheet](/vibelang-features/115-cheat-sheet)'s pairs, VibeLang saves 10.9% of the tokens today and saved 11.4% with the shorthand ([token counts](/vibelang-features/117-token-counts)).
-
-### VibeLang today
-
-`Effect<A, E, R>`, the prelude's name for effect's `Effect.Effect`, with TypeScript's defaults: `Effect<User>` cannot fail and needs nothing, and `Effect<User, NotFound>` needs nothing. In the return annotation of a function with a body, `infer R` infers a channel: `Effect<User, NotFound, infer R>` is what `User!NotFound` was there. An unannotated function is fully inferred.
-
-### Open questions and design notes
-
-- `!` reads as negation or a non-null assertion to a TypeScript programmer, which made the form controversial when it was adopted.
-- A missing dependency slot meant "inferred" in one position and `never` in every other; `Effect<A, E>` means `Effect<A, E, never>` everywhere.
-- The form needed parentheses around function types, conditional types and object types, and tools that read TypeScript, such as typescript-eslint, needed a node type of their own for it (`VibeEffectType`).
-
 ## Durable execution
 
 **Status: partial.** Effect's workflow library runs from `.vibe` files today. The language feature does not exist.
@@ -120,11 +44,11 @@ In the earlier design, durable execution was part of the language. An **Action**
 import { Action, durable } from "vibelang:flows"
 
 abstract class Compile extends Action<
-  (input: CompileInput) => Effect<CompileOutput, CompileError>
+  (input: CompileInput) => CompileOutput!CompileError
 > {}
 
 abstract class Package extends Action<
-  (input: PackageInput) => Effect<Artifact, PackageError>
+  (input: PackageInput) => Artifact!PackageError
 > {}
 
 const Build = durable((input: BuildInput) => {
@@ -166,7 +90,7 @@ const Build = durable(function Build(
 ```vibe [Adapted]
 import { Action, durable, fanOut } from "vibelang:flows"
 
-abstract class Double extends Action<(input: number) => Effect<number>> {}
+abstract class Double extends Action<(input: number) => number!!> {}
 
 export const MapValues = durable((input: readonly number[]) => {
   return fanOut(input, (n) => n, (n: number) => Double.run(n))
@@ -562,7 +486,7 @@ A worker was declared inline with a module expression. Calls across the worker b
 
 ```vibe [Adapted]
 const analytics = spawn module {
-  export function summarize(values: Float64Array): Effect<Summary, InvalidSample> {
+  export function summarize(values: Float64Array): Summary!InvalidSample {
     return Statistics.summarize(values)
   }
 }
@@ -732,7 +656,7 @@ These features from the earlier design exist in VibeLang today, most with new sy
 | Feature | Earlier VibeLang | VibeLang today |
 | --- | --- | --- |
 | Source files | `.vibe`; imported `.ts` and `.js` keep TypeScript behavior | The same |
-| Failure in the type | `Result<User, NotFound>` | `Effect<User, NotFound>` |
+| Failure in the type | `Result<User, NotFound>` | `User!NotFound`, which is `Effect<User, NotFound>` |
 | Error declarations | `class NotFound extends Error { ... }` | `error NotFound { id: string }` |
 | `return` and `throw` | `throw` produces the Result's error variant | `throw` adds an expected failure to the error channel |
 | Propagation and must-use | `getUser(id)!`, earlier `getUser(id).unwrap()`; a discarded Result is an error | `getUser(id)`: calls run, and an uncaught failure propagates |
@@ -754,7 +678,7 @@ These features from the earlier design exist in VibeLang today, most with new sy
 | Streams and coordination | `Stream`, `Queue`, `Semaphore`, `Channel` from `vibelang/concurrency` | Effect's `Stream`, `Queue`, and `Semaphore` |
 | Cancellation | `Cancellation.context().checkpoint()!` | Interruption: `interrupt()`, `interruptible { }`, `uninterruptible { }` |
 | Effect handlers | One-shot continuations inside the compiler, not spellable in source | `control Approval { ... }` and `try { ... } handle Approval.approve(request) { resume(true) }` ([control operations](/vibelang-features/111-control-operations-and-handlers)) |
-| Rows on function values | Failure and requirement rows carried by function values | Function types such as `(id: string) => Effect<User, NotFound>` |
+| Rows on function values | Failure and requirement rows carried by function values | Function types such as `(id: string) => User!NotFound` |
 | Declarations keep contracts | `vibe compile --declaration` | `.d.ts` files with `Effect.Effect<A, E, R>` |
 | Diagnostic codes | `VIBE1206` and other `VIBE` codes | `EK4401` and other `EK` codes |
 | Standard library | `vibelang/platform`, `vibelang/data`, `vibelang/schema`, `vibelang/concurrency` | Effect 4's modules |

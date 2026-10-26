@@ -4,7 +4,7 @@
 
 ```ts dts
 import type { Effect } from "vibelang-runtime"
-export declare function double(n: number): Effect<number>
+export declare function double(n: number): number!!
 ```
 
 The compiler writes ordinary TypeScript declarations with Effect contracts.
@@ -122,7 +122,7 @@ shape as an interface plus a class whose base has type `ServiceKey<Users>`
 
 ```ts dts
 export interface Users {
-  find(id: string): Effect<User, UserNotFound>
+  find(id: string): User!UserNotFound!
   readonly "~vibelang/service"?: "@acme/app/src/users#Users"
 }
 declare const Users_base: import("vibelang-runtime").ServiceKey<Users>

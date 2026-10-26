@@ -18,7 +18,7 @@ function loadProfile(id: string) {
   )
   return { user, avatar }
 }
-// Effect<{ user: User; avatar: Avatar }, UserNotFound | AvatarError, Users>
+// { user: User; avatar: Avatar }!UserNotFound | AvatarError!Users
 ```
 
 A call waits for its callee, whether it finishes at once or after a network round trip; meanwhile the fiber is parked and other fibers run. With no `async` function and no `await` on a call, no function is "colored": every function can wait. In VibeLang code, `join` waits for a fiber you forked, `d.await()` for a Deferred, and `await` appears only in the await operations (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning, and a value of the `.vibe` file, such as `user.avatarId`, arrives as an input (D229). Effect modules replace platform APIs that return Promises, such as `fetch` (Chapter 11).
@@ -56,7 +56,7 @@ function parseId(raw: string) {
   if (raw.length > 64) die(new Error("caller bug"))  // a defect, on purpose
   return Number(raw)
 }
-// Effect<number, InvalidId>
+// number!InvalidId!
 ```
 
 In an Effect function, `throw` is `Effect.fail`: every thrown value joins E with its type and can be caught, including `throw new Error("unreachable")`, which inside `Effect.gen` would be a defect. To signal a bug, die explicitly with `Effect.die`. Defects also come from exceptions no contract lists and from `Effect.orDie(() => …)` (Chapter 3).
@@ -71,7 +71,7 @@ function readPort(text: string) {
     return 8080
   }
 }
-// Effect<number>
+// number!!
 ```
 
 JavaScript's built-ins and Effect's own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (EK4401); Effect modules replace platform APIs (EK4402). An exception that no contract lists is a defect, and unlike a JavaScript `catch` inside `Effect.gen`, an Effect catch does not see it. EK2004 warns at a catch whose try block has E = `never`: defects pass through (Chapter 3). A plain function's catch follows the same rule (D282).
@@ -90,7 +90,7 @@ function tryCharge(cartId: string) {
   const outcome = Effect.result(Payments.charge(cartId))    // Result<Receipt, PaymentError>
   return outcome.isSuccess() ? outcome.success : undefined
 }
-// Effect<Receipt | undefined, never, Payments>
+// Receipt | undefined!!Payments
 ```
 
 `Option` and `Result` (Effect 4's name for `Either`) are plain data, imported from `effect` and used as in TypeScript. `Effect.result` and `Effect.option` turn a failure into a value; `throw` turns a value back into a failure.
@@ -107,7 +107,7 @@ function register(body: unknown) {
   const signup = Schema.decodeUnknownEffect(Signup)(body)    // fails with SchemaError
   return Accounts.create(signup.email, signup.plan)
 }
-// Effect<Account, SchemaError | AccountError, Accounts>
+// Account!SchemaError | AccountError!Accounts
 ```
 
 `Schema` is in the prelude and unchanged. A decoder that returns an `Effect` runs when called and fails with a typed `SchemaError`. The other forms (`decodeUnknownSync`, `is`) are trusted functions whose exceptions are defects, so `.vibe` code prefers the `Effect` forms. Errors that must cross a process boundary are `Schema.TaggedError` classes.
@@ -120,7 +120,7 @@ function digestActive(users: Stream.Stream<User, DbError>) {
     if (user.active) Mailer.digest(user)
   }
 }
-// Effect<void, DbError | MailError, Mailer>
+// void!DbError | MailError!Mailer
 
 function firstErrorLines(path: string) {
   return lines(path).filter(isError).take(10).runCollect()
@@ -281,7 +281,7 @@ function countVisits(paths: ReadonlyArray<string>) {
   }, { concurrency: 4 })
   return visits.get()
 }
-// Effect<number, VisitError, Visits>
+// number!VisitError!Visits
 ```
 
 Local variables work inside one function, as in JavaScript. State shared between fibers uses Effect's `Ref`, `SynchronizedRef`, and `SubscriptionRef`, unchanged: `Ref.make(0)` returns an `Effect`, so the call runs it and gives you the `Ref`.
