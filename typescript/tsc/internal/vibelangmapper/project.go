@@ -18,7 +18,8 @@
 //     that collide with no identifier of the file.
 //  2. Declarations and contracts (declarations.go): errors, services,
 //     controls, D1 abstract classes, layers, readonly members (D134), and
-//     A!E!R contracts, D57's infer included.
+//     Effect<A, E, R> contracts, D57's infer included, and the retired
+//     A!E!R form (EK1014).
 //  3. Function bodies (this file): a function with a body is an Effect
 //     function unless its return annotation is a plain type (L2).
 //  4. Calls in an Effect body run (L3), service member calls read the
@@ -28,7 +29,7 @@
 //
 //	error NotFound { id: string }   class NotFound extends TaggedError("NotFound")<{ readonly id: string }> {}
 //	service Users { find(...) }     interface Users { find(...); brand } abstract class Users extends $service<Users>(key) {}
-//	User!NotFound!Db                Effect.Effect<User, NotFound, Db>
+//	User!NotFound!Db (retired)      Effect.Effect<User, NotFound, Db>
 //	function f(p) { body }          function f(p) { return $gen(function* () { body }) }
 //	c(...)  in an Effect body       (yield* $run(c(...)))
 //	throw x in an Effect body       return yield* $fail(x)
@@ -646,7 +647,7 @@ const (
 	contractNone contractKind = iota
 	// contractEffect: an Effect contract that the body is checked against.
 	contractEffect
-	// contractInfer: an A!E!R contract with an infer channel (D57).
+	// contractInfer: an Effect<A, E, R> contract with an infer channel (D57).
 	contractInfer
 	// contractPlain: a plain type; the function stays plain (L2).
 	contractPlain

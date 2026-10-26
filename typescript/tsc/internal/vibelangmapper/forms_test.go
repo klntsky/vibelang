@@ -600,9 +600,9 @@ export function f(obj, xs: number[], socket) {
   }
 }`)
 	choice := func(prefix string) *Choice { return r.lambda(t, prefix).Choice }
-	if c := choice("(depth) =>"); c == nil || c.Callee != "" || c.Path != "assigned to hooks.onResume" || c.Plain != "(depth): T =>" || c.Effect != "(depth): T!! =>" {
+	if c := choice("(depth) =>"); c == nil || c.Callee != "" || c.Path != "assigned to hooks.onResume" || c.Plain != "(depth): T =>" || c.Effect != "(depth): Effect<T> =>" {
 		t.Errorf("free lambda a host calls: choice = %+v", c)
-	} else if got, want := c.Message(), "Cannot tell whether the lambda assigned to hooks.onResume is a plain function or an Effect function: no call gives it a form, and a host that calls it may ignore what it returns. Write `(depth): T =>` for a plain function or `(depth): T!! =>` for an Effect function."; got != want {
+	} else if got, want := c.Message(), "Cannot tell whether the lambda assigned to hooks.onResume is a plain function or an Effect function: no call gives it a form, and a host that calls it may ignore what it returns. Write `(depth): T =>` for a plain function or `(depth): Effect<T> =>` for an Effect function."; got != want {
 		t.Errorf("message = %q\nwant      %q", got, want)
 	}
 	if c := choice("(x) => double(x) + 1)\n  const b"); c == nil || c.Callee != "obj.map" || c.Path != "argument 1" || c.Reason != "the receiver of map is a value whose type this file does not name" {

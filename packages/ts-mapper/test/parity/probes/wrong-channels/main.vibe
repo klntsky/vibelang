@@ -3,22 +3,22 @@
 export class Boom extends Error {}
 
 abstract class Needed {
-  abstract lookup(): number!never!never
+  abstract lookup(): Effect<number>
 }
 
-function fails(n: number): number!Boom!never {
+function fails(n: number): Effect<number, Boom> {
   if (n < 0) throw new Boom("negative")
   return n
 }
 
-export function wrongSuccess(): string!Boom!never {
+export function wrongSuccess(): Effect<string, Boom> {
   return fails(1) // probe-error: TS2322 number
 }
 
-export function wrongError(n: number): number!never!never {
+export function wrongError(n: number): Effect<number> {
   return fails(n) // probe-error: TS2322 Boom
 }
 
-export function wrongRequirement(): number!never!never {
+export function wrongRequirement(): Effect<number> {
   return Needed.lookup() // probe-error: TS2322 Needed
 }

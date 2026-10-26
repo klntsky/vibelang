@@ -11,11 +11,11 @@ export schema Ticket {
 }
 
 export service Seats {
-  take(id: string): string!Gone
+  take(id: string): Effect<string, Gone>
 }
 
 export control Gate {
-  open(request: string): boolean!!
+  open(request: string): Effect<boolean>
 }
 
 export const SeatsLive = Layer.effect(Seats) {

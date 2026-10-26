@@ -1,10 +1,10 @@
 // Refactors, hovers, and completions from Effect's language service (D245, D246).
 service Name {
-  value(): string!!
+  value(): Effect<string>
 }
 
 service Greeting {
-  text(): string!!
+  text(): Effect<string>
 }
 
 const NameLive = Layer.succeed(Name, {

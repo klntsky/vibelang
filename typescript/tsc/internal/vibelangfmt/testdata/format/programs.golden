@@ -1,7 +1,7 @@
 import { describe, it } from "@effect/vitest"
 import * as Route from "./Route.vibe"
 
-export function greetUser(id: string): string!NotFound {
+export function greetUser(id: string): Effect<string, NotFound, infer R> {
   return withSpan("greetUser") {
     const user = getUser(id)
     Console.log(`Hello, ${user.name}`)
@@ -100,7 +100,7 @@ const failingRender = () =>
     }
   )
 
-function sign(n: number): number!! {
+function sign(n: number): Effect<number> {
   if (n < 0) return -1
   return withSpan("sign") {
     return n === 0 ? 0 : 1

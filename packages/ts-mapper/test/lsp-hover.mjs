@@ -28,8 +28,8 @@ const hovers = [
   { at: "export function greet", token: "greet", expect: "function greet(name: string): Effect.Effect<string, EmptyName, never>" },
   // A call runs: loud is shout's success type, not an Effect.
   { at: "const loud", token: "loud", expect: "const loud: string" },
-  // Annotated with the contract string!!.
-  { at: "function shout", token: "shout", expect: "function shout(text: string): Effect.Effect<string, never, never>" },
+  // Annotated with the contract Effect<string>.
+  { at: "function shout", token: "shout", expect: "function shout(text: string): Effect<string>" },
 ]
 
 // position returns the LSP position of token inside the first occurrence of at.

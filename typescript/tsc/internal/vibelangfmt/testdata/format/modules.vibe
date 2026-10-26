@@ -45,7 +45,7 @@ export * from config
 
 error Unclean { reason: string }
 
-export function cleaned(input: string): Cleaned!Unclean {
+export function cleaned(input: string): Effect<Cleaned, Unclean, infer R> {
     return try((input) => clean(input), (error) => new Unclean({ reason: String(error) + suffix }), input)
 }
 

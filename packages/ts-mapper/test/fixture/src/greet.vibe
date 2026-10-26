@@ -1,6 +1,6 @@
 error EmptyName { name: string }
 
-function shout(text: string): string!! {
+function shout(text: string): Effect<string> {
   return text.toUpperCase()
 }
 

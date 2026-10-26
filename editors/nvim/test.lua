@@ -127,7 +127,7 @@ check("hover: a call that runs shows the contract and the success value", functi
       text = text .. (contents.value or vim.inspect(contents))
     end
   end
-  assert(text:find("string!NotFound!", 1, true), "hover " .. text)
+  assert(text:find("Effect<string, NotFound>", 1, true), "hover " .. text)
   assert(text:find("Runs here and returns `string`", 1, true), "hover " .. text)
 end)
 
@@ -192,9 +192,6 @@ local tokens = {
   { "export schema", 7, "keyword.type" },
   { "export service", 7, "keyword.type" },
   { "export control", 7, "keyword.type" },
-  { "string!Gone", 6, "operator" },
-  { "boolean!!", 7, "operator" },
-  { "boolean!!", 8, "operator" },
   { "} handle", 2, "keyword.exception" },
   { "provide SeatsLive", 0, "keyword" },
   { "fork Seats", 0, "keyword.coroutine" },

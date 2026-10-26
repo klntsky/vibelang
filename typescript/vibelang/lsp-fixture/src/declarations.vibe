@@ -1,12 +1,12 @@
 export error MissingUser { id: string }
 
-export function findUser(id: string): string!MissingUser! {
+export function findUser(id: string): Effect<string, MissingUser> {
   if (id === "") throw new MissingUser({ id })
   return id
 }
 
 export service Accounts {
-  balance(id: string): number!MissingUser
+  balance(id: string): Effect<number, MissingUser>
 }
 
 export function total(id: string) {
@@ -39,7 +39,7 @@ export function recover(id: string) {
 }
 
 export control Approval {
-  approve(request: string): boolean!!
+  approve(request: string): Effect<boolean>
 }
 
 export function approved(version: string) {

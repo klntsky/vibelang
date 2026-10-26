@@ -126,7 +126,7 @@ func isServiceClass(node *ast.Node) bool {
 // what the fork's declaration file prints for it (D45, D40 for a service
 // with a static default, whose base is $reference):
 //
-//	service Users { find(id: string): User!NotFound }
+//	service Users { find(id: string): Effect<User, NotFound> }
 //	interface Users { find(id: string): Effect.Effect<User, NotFound, never>; readonly "~vibelang/service"?: "app/main#Users" }
 //	abstract class Users extends $service<Users>("app/main#Users") {}
 //
@@ -474,10 +474,12 @@ func isEffectType(node *ast.Node) bool {
 	return name.Kind == ast.KindQualifiedName && name.Flags&ast.NodeFlagsReparsed != 0 && len(node.TypeArguments()) == 3
 }
 
-// effectType lowers `A!E!R` to `Effect.Effect<A, E, R>`. Each ! becomes a
-// comma, an empty slot becomes never, and an infer channel, written or the
-// dependencies a function's contract leaves out (D57), becomes $Infer. With
-// slotsOnly it writes only the three slots, for $contract's type arguments.
+// effectType lowers the retired `A!E!R` (EK1014) to `Effect.Effect<A, E, R>`.
+// Each ! becomes a comma, an empty slot becomes never, and an infer channel,
+// written or the dependencies a function's contract leaves out (D57), becomes
+// $Infer. With slotsOnly it writes only the three slots, for $contract's type
+// arguments; a written Effect<A> or Effect<A, E> gets never for each slot it
+// leaves out, as TypeScript's defaults give it (D308).
 func (p *projector) effectType(node *ast.Node, slotsOnly bool) {
 	if slotsOnly && !isEffectType(node) {
 		// Written Effect<A, E, R> contracts share D57's channel inference
@@ -491,7 +493,7 @@ func (p *projector) effectType(node *ast.Node, slotsOnly bool) {
 				p.visit(slot, env{})
 			}
 		}
-		p.plan.replace(slots[len(slots)-1].End(), node.End(), "")
+		p.plan.replace(slots[len(slots)-1].End(), node.End(), strings.Repeat(", never", max(0, 3-len(slots))))
 		return
 	}
 	slots := node.TypeArguments()

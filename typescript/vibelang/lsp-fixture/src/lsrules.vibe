@@ -1,10 +1,10 @@
 // Rules from Effect's language service (D240), with their quick fixes.
 service Name {
-  value(): string!!
+  value(): Effect<string>
 }
 
 service Greeting {
-  text(): string!!
+  text(): Effect<string>
 }
 
 const NameLive = Layer.succeed(Name, {

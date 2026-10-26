@@ -17,10 +17,11 @@ func (p *projector) syntaxToken(node *ast.Node, code int32, message string) {
 	p.diagnostics = append(p.diagnostics, Diagnostic{Start: r.Pos(), Length: r.Len(), Code: code, Message: message})
 }
 
-// checkSyntaxDiagnostics mirrors EK1003/EK1004/EK1010, D57's written missing
-// channels (EK2003), D15's finally exits (EK2006), D1's bodiless service
-// contracts (EK2101), D129's setup order (EK2104), and D229's lexical hatch
-// captures (EK4405). Alias/type identity and unresolved types remain native.
+// checkSyntaxDiagnostics mirrors EK1003/EK1004/EK1010, D15's finally exits
+// (EK2006), D1's bodiless service contracts (EK2101), D129's setup order
+// (EK2104), and D229's lexical hatch captures (EK4405). Alias/type identity
+// and unresolved types remain native. A type argument left out of an Effect
+// type means what it means in TypeScript (D308), so Effect<A> is complete.
 func (p *projector) checkSyntaxDiagnostics() {
 	p.checkThrowExpressionPrecedence()
 	var visit func(*ast.Node) bool
@@ -53,10 +54,6 @@ func (p *projector) checkSyntaxDiagnostics() {
 						p.syntaxDiagnostic(m, 1003, "async is not part of VibeLang: a call already waits.")
 					}
 				}
-			}
-			if syntaxLowerable(n) && p.partialEffectContract(n.Type()) {
-				annotation := n.Type()
-				p.syntaxDiagnostic(annotation, 2003, p.text[p.tokenStart(annotation):annotation.End()]+" leaves contract channels unspecified. Did you mean never or inferred?")
 			}
 		case ast.KindAwaitExpression:
 			p.syntaxToken(n, 1003, "await is not part of VibeLang: a call already waits.")
@@ -125,52 +122,15 @@ func syntaxInLowerableBody(n *ast.Node) bool {
 	return false
 }
 
-// partialEffectContract only recognizes the unshadowed prelude Effect name;
-// user aliases, qualified imports, and their type identities need the checker.
-func (p *projector) partialEffectContract(t *ast.Node) bool {
-	if t == nil || !isWrittenEffectReference(t) || len(t.TypeArguments()) == 0 || len(t.TypeArguments()) >= 3 {
-		return false
-	}
-	name := t.AsTypeReferenceNode().TypeName
-	if !ast.IsIdentifier(name) {
-		return false
-	}
-	return p.forms.(*Resolver).binding(name, name.Text()) == nil && !syntaxTypeNameShadowed(name)
-}
-
-// syntaxTypeNameShadowed excludes local type aliases and parameters from
-// the prelude Effect spelling (EK2003); the value resolver handles imports.
-func syntaxTypeNameShadowed(name *ast.Node) bool {
-	for scope := name.Parent; scope != nil; scope = scope.Parent {
-		if ast.IsFunctionLike(scope) || ast.IsClassLike(scope) || scope.Kind == ast.KindInterfaceDeclaration || scope.Kind == ast.KindTypeAliasDeclaration {
-			parameters := scope.TypeParameters()
-			for _, parameter := range parameters {
-				if parameter.Name().Text() == name.Text() {
-					return true
-				}
-			}
-		}
-		switch scope.Kind {
-		case ast.KindSourceFile, ast.KindBlock, ast.KindModuleBlock:
-			for _, s := range scope.Statements() {
-				if (s.Kind == ast.KindTypeAliasDeclaration || s.Kind == ast.KindInterfaceDeclaration) && s.Name().Text() == name.Text() {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
-// checkServiceContracts reports EK2101 only for absent, primitive, or
-// explicitly partial contracts. An alias may already name a complete Effect.
+// checkServiceContracts reports EK2101 only for absent or primitive
+// contracts. An alias may already name an Effect type.
 func (p *projector) checkServiceContracts(class *ast.Node) {
 	for _, member := range class.Members() {
 		if member.Kind != ast.KindMethodDeclaration || ast.IsStatic(member) || member.Name() == nil || !ast.IsIdentifier(member.Name()) {
 			continue
 		}
 		annotation := member.Type()
-		incomplete := annotation == nil || p.partialEffectContract(annotation)
+		incomplete := annotation == nil
 		if annotation != nil {
 			switch annotation.Kind {
 			case ast.KindStringKeyword, ast.KindNumberKeyword, ast.KindBooleanKeyword, ast.KindVoidKeyword, ast.KindNeverKeyword, ast.KindUnknownKeyword, ast.KindAnyKeyword, ast.KindObjectKeyword, ast.KindUndefinedKeyword, ast.KindNullKeyword, ast.KindBigIntKeyword, ast.KindSymbolKeyword:
@@ -182,7 +142,7 @@ func (p *projector) checkServiceContracts(class *ast.Node) {
 			if at == nil {
 				at = member.Name()
 			}
-			p.syntaxDiagnostic(at, 2101, class.Name().Text()+"."+member.Name().Text()+" has no body to infer from, so its contract must be written in full.")
+			p.syntaxDiagnostic(at, 2101, class.Name().Text()+"."+member.Name().Text()+" has no body to infer from, so its contract must be written as an Effect type.")
 		}
 	}
 }

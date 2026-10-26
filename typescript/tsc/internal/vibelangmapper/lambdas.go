@@ -91,7 +91,7 @@ func (p *projector) lambda(fn *ast.Node, e env) {
 // promise a program even though the plain body returns its success value.
 func (p *projector) plainLambda(fn *ast.Node) {
 	ret := fn.Type()
-	if ret == nil || !(isEffectType(ret) || isWrittenEffectReference(ret)) || len(ret.TypeArguments()) != 3 {
+	if ret == nil || !(isEffectType(ret) || isWrittenEffectReference(ret)) || len(ret.TypeArguments()) == 0 {
 		p.visitChildren(fn, env{})
 		return
 	}

@@ -197,7 +197,7 @@ async function run() {
 
   await check("hover: a .vibe function shows its inferred contract", async () => {
     const shown = await hoverText(main, "lookup(id")
-    assert(shown.includes("function lookup(id: number): string!NotFound!"), `hover ${JSON.stringify(shown)}`)
+    assert(shown.includes("function lookup(id: number): Effect<string, NotFound>"), `hover ${JSON.stringify(shown)}`)
   })
 
   await check("hover: a call that runs shows its success value", async () => {

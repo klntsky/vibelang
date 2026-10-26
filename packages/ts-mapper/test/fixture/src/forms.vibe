@@ -2,7 +2,7 @@
 // TypeScript types forms-check.ts pins.
 export error NotFound { id: string }
 
-function find(id: string): string!NotFound! {
+function find(id: string): Effect<string, NotFound> {
   if (id === "") throw new NotFound({ id })
   return id
 }

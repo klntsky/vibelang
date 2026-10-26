@@ -51,10 +51,6 @@
 ; Members are readonly unless written mutable (D134).
 "mutable" @keyword.modifier
 
-; Effect types: Result!Error!Dependencies (D127).
-(effect_type
-  "!" @operator)
-
 ; provide Layer { ... } and the old spelling with Layer { ... } (D130, D172).
 (provide_statement
   [

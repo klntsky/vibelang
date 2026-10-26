@@ -88,13 +88,12 @@ func TestSyntaxEK1004(t *testing.T) {
 	}
 }
 
-// TestSyntaxEK2003 rejects explicitly omitted Effect channels (D57).
+// TestSyntaxEK2003 accepts Effect types with type arguments left out, which
+// mean never as in TypeScript (D308).
 func TestSyntaxEK2003(t *testing.T) {
-	checkSyntaxFixture(t, "ek2003-missing-channels", 2003, 2)
-	for _, annotation := range []string{"Effect<string>", "Effect<string, Missing>"} {
-		checkSyntaxDiagnostic(t, 2003, "function find(): "+annotation+" { return '' }", annotation, annotation+" leaves contract channels unspecified. Did you mean never or inferred?", `function find(): string!! { return '' }`)
-	}
 	for _, valid := range []string{
+		`function f(): Effect<string> { return "" }`,
+		`function f(): Effect<string, Missing> { return "" }`,
 		`function f(): Effect<string, never, never> { return "" }`,
 		`type Effect<A> = A; function f(): Effect<string> { return "" }`,
 		`function outer() { type Effect<A> = A; function f(): Effect<string> { return "" } }`,
@@ -116,14 +115,14 @@ func TestSyntaxEK2006(t *testing.T) {
 	}
 }
 
-// TestSyntaxEK2101 requires full contracts on service and D1 abstract members.
+// TestSyntaxEK2101 requires Effect types on service and D1 abstract members.
 func TestSyntaxEK2101(t *testing.T) {
 	checkSyntaxFixture(t, "ch12-rates-bare-return", 2101, 1)
 	checkSyntaxFixture(t, "decl-service-contract", 2101, 1)
 	for _, source := range []string{`service Rates { lookup(currency: string): number }`, `abstract class Rates { abstract lookup(currency: string): number }`} {
-		checkSyntaxDiagnostic(t, 2101, source, "number", "Rates.lookup has no body to infer from, so its contract must be written in full.", `service Rates { lookup(currency: string): number!! }`)
+		checkSyntaxDiagnostic(t, 2101, source, "number", "Rates.lookup has no body to infer from, so its contract must be written as an Effect type.", `service Rates { lookup(currency: string): Effect<number> }`)
 	}
-	checkSyntaxDiagnostic(t, 2101, `service Rates { lookup() }`, "lookup", "Rates.lookup has no body to infer from, so its contract must be written in full.", `class Rates { lookup(): number { return 1 } }`)
+	checkSyntaxDiagnostic(t, 2101, `service Rates { lookup() }`, "lookup", "Rates.lookup has no body to infer from, so its contract must be written as an Effect type.", `class Rates { lookup(): number { return 1 } }`)
 }
 
 // TestSyntaxEK2104 pins the late setup statement, including its semicolon (D129).

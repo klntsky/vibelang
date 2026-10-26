@@ -31,7 +31,7 @@ function program() {
 Provide a layer list and one service
 ================================================================================
 
-function roll(): number!! {
+function roll(): Effect<number> {
   provide Logger.layer([]), Random = seeded {
     return Random.nextInt()
   }
@@ -44,8 +44,10 @@ function roll(): number!! {
     name: (identifier)
     parameters: (formal_parameters)
     return_type: (type_annotation
-      (effect_type
-        success: (predefined_type)))
+      (generic_type
+        name: (type_identifier)
+        type_arguments: (type_arguments
+          (predefined_type))))
     body: (statement_block
       (provide_statement
         providers: (sequence_expression

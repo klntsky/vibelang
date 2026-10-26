@@ -375,7 +375,7 @@ try {
     assert(layerEdits[0].range.start.line === layerStart.line && layerEdits[0].range.end.line === lineOf(file, "text() { return word }") + 1, `EK2121 edit range ${JSON.stringify(layerEdits[0].range)}`)
   })
 
-  await check("code action: TypeScript-style forms warn as EK4830 and EK4833, and their quick fixes write an error declaration and A!E!R", async () => {
+  await check("code action: TypeScript-style forms warn as EK4830 and EK4833, and their quick fixes write an error declaration and Effect<A, E, R>", async () => {
     const file = "src/ts-forms.vibe"
     open(file, "vibe")
     const items = await diagnostics(file)
@@ -394,9 +394,9 @@ try {
     assert(errorEdits.length === 1 && errorEdits[0].newText === "error NotFound { id: string }", `EK4830 edits ${JSON.stringify(errorEdits)}`)
     assert(errorEdits[0].range.start.line === classAt.line && errorEdits[0].range.start.character === classAt.character, `EK4830 edit range ${JSON.stringify(errorEdits[0].range)}`)
     const type = items.find((d) => d.code === 4833)
-    const typeEdits = await fixOf(type, "Write string!NotFound!")
+    const typeEdits = await fixOf(type, "Write Effect<string, NotFound, never>")
     const typeAt = at(file, "Effect.Effect<string")
-    assert(typeEdits.length === 1 && typeEdits[0].newText === "string!NotFound!", `EK4833 edits ${JSON.stringify(typeEdits)}`)
+    assert(typeEdits.length === 1 && typeEdits[0].newText === "Effect", `EK4833 edits ${JSON.stringify(typeEdits)}`)
     assert(typeEdits[0].range.start.line === typeAt.line && typeEdits[0].range.start.character === typeAt.character, `EK4833 edit range ${JSON.stringify(typeEdits[0].range)}`)
   })
 
@@ -527,7 +527,7 @@ try {
       return apply(relative, action.edit?.changes?.[uri] ?? [])
     }
     const contract = await refactor("greet()", "Write the inferred contract")
-    assert(contract.includes("export function greet(): string!!Greeting {"), `contract: ${contract.split("\n").find((l) => l.includes("greet("))}`)
+    assert(contract.includes("export function greet(): Effect<string, never, Greeting> {"), `contract: ${contract.split("\n").find((l) => l.includes("greet("))}`)
     const schema = await refactor("interface Point", "Convert to a schema declaration")
     assert(schema.includes("schema Point {\n  x: number\n  y: number\n}"), "schema not written")
     const plain = await refactor("async function", "Convert to a VibeLang function")
@@ -590,7 +590,7 @@ try {
 
   await check("hover: a .vibe function shows its inferred contract", async () => {
     const shown = await hover("src/main.vibe", "lookup(id")
-    assert(shown.includes("function lookup(id: number): string!NotFound!"), `got ${JSON.stringify(shown)}`)
+    assert(shown.includes("function lookup(id: number): Effect<string, NotFound>"), `got ${JSON.stringify(shown)}`)
   })
 
   await check("hover: a hatch's callee says its TypeScript is self-contained and lists its inputs", async () => {
@@ -600,12 +600,12 @@ try {
 
   await check("hover: an exported .vibe function shows the contract its callee's failure flows into", async () => {
     const shown = await hover("src/main.vibe", "main()", { offset: 1 })
-    assert(shown.includes("function main(): void!NotFound!"), `got ${JSON.stringify(shown)}`)
+    assert(shown.includes("function main(): Effect<void, NotFound>"), `got ${JSON.stringify(shown)}`)
   })
 
   await check("hover: a call that runs shows the callee's contract and the success value", async () => {
     const shown = await hover("src/main.vibe", "lookup(1)")
-    assert(shown.includes("function lookup(id: number): string!NotFound!"), `got ${JSON.stringify(shown)}`)
+    assert(shown.includes("function lookup(id: number): Effect<string, NotFound>"), `got ${JSON.stringify(shown)}`)
     assert(/Runs here and returns `string`/.test(shown), `no success value in ${JSON.stringify(shown)}`)
   })
 
@@ -818,14 +818,14 @@ try {
     assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)
   })
 
-  await check("diagnostics: declarations.vibe, with an error declaration and a ! contract, checks clean", async () => {
+  await check("diagnostics: declarations.vibe, with an error declaration and an Effect contract, checks clean", async () => {
     const items = await diagnostics("src/declarations.vibe")
     assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)
   })
 
-  await check("hover: a function with a ! contract shows it in the ! form", async () => {
+  await check("hover: a function with a contract shows it as an Effect type", async () => {
     const shown = await hover("src/declarations.vibe", "findUser(id: string)")
-    assert(shown.includes("function findUser(id: string): string!MissingUser!"), `got ${JSON.stringify(shown)}`)
+    assert(shown.includes("function findUser(id: string): Effect<string, MissingUser>"), `got ${JSON.stringify(shown)}`)
   })
 
   await check("hover: an error declaration's name is a class", async () => {
@@ -838,9 +838,9 @@ try {
     assert(shown.includes("id: string"), `got ${JSON.stringify(shown)}`)
   })
 
-  await check("hover: a service member call shows its contract in the ! form", async () => {
+  await check("hover: a service member call shows its contract as an Effect type", async () => {
     const shown = await hover("src/declarations.vibe", "balance(id)")
-    assert(shown.includes("balance(id: string): number!MissingUser!"), `got ${JSON.stringify(shown)}`)
+    assert(shown.includes("balance(id: string): Effect<number, MissingUser>"), `got ${JSON.stringify(shown)}`)
   })
 
   await check("definition: a service member call goes to the member in the service declaration", async () => {
@@ -862,7 +862,7 @@ try {
 
   await check("hover: a provide block removes the services its layer provides", async () => {
     const shown = await hover("src/declarations.vibe", "balanceWith(id: string)")
-    assert(shown.includes("function balanceWith(id: string): number!MissingUser!"), `got ${JSON.stringify(shown)}`)
+    assert(shown.includes("function balanceWith(id: string): Effect<number, MissingUser>"), `got ${JSON.stringify(shown)}`)
   })
 
   await check("hover: a provider's key names the service the provide block receives", async () => {
@@ -883,7 +883,7 @@ try {
 
   await check("hover: a catch expression removes the failures its fallback replaces", async () => {
     const shown = await hover("src/catch-expression.vibe", "userOrGuest(id: string)")
-    assert(shown.includes("function userOrGuest(id: string): string!!"), `got ${JSON.stringify(shown)}`)
+    assert(shown.includes("function userOrGuest(id: string): Effect<string>"), `got ${JSON.stringify(shown)}`)
   })
 
   await check("hover: the catch keyword names the Effect function and the value", async () => {
@@ -908,7 +908,7 @@ try {
 
   await check("hover: a handle statement removes the control it handles", async () => {
     const shown = await hover("src/declarations.vibe", "approved(version: string)")
-    assert(/function approved\(version: string\): [^!\n]+!!/.test(shown), `got ${JSON.stringify(shown)}`)
+    assert(/function approved\(version: string\): Effect<[^,<>\n]+>/.test(shown), `got ${JSON.stringify(shown)}`)
   })
 
   await check("hover: a handle clause's parameter has the operation's parameter type", async () => {
@@ -916,9 +916,9 @@ try {
     assert(shown.includes("request: string"), `got ${JSON.stringify(shown)}`)
   })
 
-  await check("hover: a handle clause's operation shows its contract in the ! form", async () => {
+  await check("hover: a handle clause's operation shows its contract as an Effect type", async () => {
     const shown = await hover("src/declarations.vibe", "approve(request) {")
-    assert(shown.includes("approve(request: string): boolean!!"), `got ${JSON.stringify(shown)}`)
+    assert(shown.includes("approve(request: string): Effect<boolean>"), `got ${JSON.stringify(shown)}`)
   })
 
   await check("definition: a handle clause's operation goes to the member in the control declaration", async () => {
