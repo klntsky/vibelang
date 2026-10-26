@@ -2,7 +2,7 @@
 // A program forked with Effect's forks that handles its own control
 // operations runs: its handler is installed on the child's fiber (chapter 9,
 // "Handlers and concurrency").
-control Ask { ask(): number!! }
+control Ask { ask(): Effect<number> }
 
 function answered(n: number) {
   try {

@@ -10,7 +10,7 @@ function indexed() {
   return join[0]
 }
 
-function count(): number!! {
+function count(): Effect<number> {
   return 3
 }
 

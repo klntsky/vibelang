@@ -3,14 +3,14 @@
 // Layer.succeed (D92, D173): its body runs Effects, and calling it returns
 // an Effect.
 service Names {
-  all(): ReadonlyArray<string>!!
-  count(): number!!
+  all(): Effect<ReadonlyArray<string>>
+  count(): Effect<number>
 }
 
 export function main() {
   provide Names = {
     all() { return ["b"] },
-    count(): number!! {
+    count(): Effect<number> {
       sleep("1 millis")
       return 2
     }

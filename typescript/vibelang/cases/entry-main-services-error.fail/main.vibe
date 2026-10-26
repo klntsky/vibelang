@@ -1,7 +1,7 @@
 // expect: EK3205
 // A project whose exported mains are all programs makes EK3205 an error.
 service Users {
-  find(id: string): string!!
+  find(id: string): Effect<string>
 }
 
 export function main() {

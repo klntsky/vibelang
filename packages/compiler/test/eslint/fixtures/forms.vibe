@@ -109,7 +109,7 @@ export interface User { id: string; name: string; mutable visits: number }
  * @since 0.0.2
  */
 export service Users {
-  find(id: string): User!NotFound
+  find(id: string): Effect<User, NotFound>
   region: string
 }
 
@@ -120,14 +120,14 @@ export service Users {
  * @since 0.0.2
  */
 export control Approval {
-  approve(request: string): boolean!!
+  approve(request: string): Effect<boolean>
 }
 
 /**
  * What a search does. Only the service below names it.
  */
 interface SearchApi {
-  find(query: string): string!!
+  find(query: string): Effect<string>
 }
 
 /**
@@ -235,7 +235,7 @@ import { clean, cleaned } from strings
  * @category models
  * @since 0.0.2
  */
-export type Find = (id: string) => User!NotFound
+export type Find = (id: string) => Effect<User, NotFound>
 
 /**
  * Releases a version.
@@ -243,7 +243,7 @@ export type Find = (id: string) => User!NotFound
  * @category models
  * @since 0.0.2
  */
-export type Release = (version: string) => string!!Approval
+export type Release = (version: string) => Effect<string, never, Approval>
 
 /**
  * A program.
@@ -251,7 +251,7 @@ export type Release = (version: string) => string!!Approval
  * @category models
  * @since 0.0.2
  */
-export type Load = () => string!!
+export type Load = () => Effect<string>
 
 /**
  * Finds a user, failing with NotFound.
@@ -259,7 +259,7 @@ export type Load = () => string!!
  * @category constructors
  * @since 0.0.2
  */
-export function getUser(id: string): User!NotFound!Users {
+export function getUser(id: string): Effect<User, NotFound, Users> {
   sleep("5 millis")
   if (id === "missing") throw new NotFound({ id })
   return { id, name: "Ada", visits: 0 }
@@ -271,7 +271,7 @@ export function getUser(id: string): User!NotFound!Users {
  * @category constructors
  * @since 0.0.2
  */
-export function inferred(id: string): string!infer E {
+export function inferred(id: string): Effect<string, infer E, infer R> {
   return getUser(id).name
 }
 

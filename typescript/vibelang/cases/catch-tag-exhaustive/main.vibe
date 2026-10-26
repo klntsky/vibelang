@@ -9,23 +9,23 @@ export const recovered = (): Effect.Effect<number, never, never> =>
     when { _tag: "ProbeFailure" }: 1;
     default: throw error;
   }
-function dataFail(): never!DataFailure! { throw new DataFailure() }
-function declFail(): never!DeclFailure! { throw new DeclFailure() }
-export function dataRecovered(): number!! {
+function dataFail(): Effect.Effect<never, DataFailure> { throw new DataFailure() }
+function declFail(): Effect.Effect<never, DeclFailure> { throw new DeclFailure() }
+export function dataRecovered(): Effect.Effect<number> {
   try { return dataFail() } catch (e) {
     return match (e) { when { _tag: "DataFailure" }: 2; default: throw e; }
   }
 }
-export function declRecovered(): number!! {
+export function declRecovered(): Effect.Effect<number> {
   try { return declFail() } catch (e) {
     return match (e) { when { _tag: "DeclFailure" }: 3; default: throw e; }
   }
 }
-function both(data: boolean): never!ProbeFailure | DataFailure! {
+function both(data: boolean): Effect.Effect<never, ProbeFailure | DataFailure> {
   if (data) dataFail()
   return failed()
 }
-export function allRecovered(): number!! {
+export function allRecovered(): Effect.Effect<number> {
   try { return both(true) } catch (e) {
     return match (e) {
       when { _tag: "ProbeFailure" }: 0;
@@ -34,7 +34,7 @@ export function allRecovered(): number!! {
     }
   }
 }
-export function partial(data: boolean): number!DataFailure! {
+export function partial(data: boolean): Effect.Effect<number, DataFailure> {
   try { return both(data) } catch (e) {
     return match (e) { when { _tag: "ProbeFailure" }: 0; default: throw e; }
   }

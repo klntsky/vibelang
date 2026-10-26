@@ -3,11 +3,11 @@
 error Busy { message: string }
 
 control Ask {
-  answer(): number!Busy
+  answer(): Effect<number, Busy>
 }
 
 control Once {
-  answer(): boolean!!
+  answer(): Effect<boolean>
 }
 
 const events: string[] = []

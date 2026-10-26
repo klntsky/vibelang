@@ -12,8 +12,8 @@ declare const Needed_base: import("vibelang-runtime").ServiceKey<Needed>;
 declare abstract class Needed extends Needed_base {
 }
 export declare function longForm(): Effect<number, Gone, Needed>;
-export declare function shortForm(): Effect.Effect<number, Gone, Needed>;
-export declare function plain(): Effect.Effect<number, never, never>;
+export declare function shortForm(): Effect<number, Gone, Needed>;
+export declare function plain(): Effect<number>;
 export declare function callerOfLong(): import("effect/Effect").Effect<number, Gone, Needed>;
 export declare function callerOfShort(): import("effect/Effect").Effect<number, Gone, Needed>;
 export declare function callerOfPlain(): import("effect/Effect").Effect<number, never, never>;

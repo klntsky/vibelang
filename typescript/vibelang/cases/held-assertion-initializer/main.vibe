@@ -14,24 +14,24 @@ const make = (state: { mutable calls: number, mutable runs: number }): Effect.Ef
 
 // A factory may hold a program built by a call whose channels an assertion
 // states, and return it unrun.
-export const forwarded = (state: { mutable calls: number, mutable runs: number }): number!! => {
-  const program: number!! = make(state) as any
+export const forwarded = (state: { mutable calls: number, mutable runs: number }): Effect.Effect<number> => {
+  const program: Effect.Effect<number> = make(state) as any
   return program
 }
 
 // At a module's top level the held call builds the program (D262).
 const moduleState = { calls: 0, runs: 0 }
-const atModule: number!! = make(moduleState) satisfies number!!
+const atModule: Effect.Effect<number> = make(moduleState) satisfies Effect.Effect<number>
 
 // expect-result: [[1,1,1,1,1,1,1],[0,0,0,0,0,0,0],[2,2,2,2,2,2,2]]
 export function main() {
   const states = [0, 1, 2, 3, 4, 5].map(() => ({ calls: 0, runs: 0 }))
-  const asAny: number!! = make(states[0]!) as any
-  const asEffect: number!! = make(states[1]!) as Effect.Effect<number, never, never>
-  const satisfied: number!! = make(states[2]!) satisfies number!!
-  const nonNull: number!! = make(states[3]!)!
-  const nested: number!! = ((make(states[4]!) as any)!)
-  const factory: number!! = forwarded(states[5]!)
+  const asAny: Effect.Effect<number> = make(states[0]!) as any
+  const asEffect: Effect.Effect<number> = make(states[1]!) as Effect.Effect<number, never, never>
+  const satisfied: Effect.Effect<number> = make(states[2]!) satisfies Effect.Effect<number>
+  const nonNull: Effect.Effect<number> = make(states[3]!)!
+  const nested: Effect.Effect<number> = ((make(states[4]!) as any)!)
+  const factory: Effect.Effect<number> = forwarded(states[5]!)
   const all = [...states, moduleState]
   const calls = all.map((state) => state.calls)
   const before = all.map((state) => state.runs)

@@ -1,1 +1,1 @@
-make has no contract, so a call to it can fail with any E (D12, D68). If it cannot fail, write its contract: make: () => Boom!!
+make has no contract, so a call to it can fail with any E (D12, D68). If it cannot fail, write its contract: make: () => Effect<Boom>

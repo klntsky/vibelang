@@ -2,11 +2,11 @@
 import { Effect, Data } from "effect"
 class First extends Data.TaggedError("First")<{}> {}
 class Second extends Data.TaggedError("Second")<{}> {}
-function fail(second: boolean): never!First | Second! {
+function fail(second: boolean): Effect.Effect<never, First | Second> {
   if (second) throw new Second()
   throw new First()
 }
-export function incomplete(): number!! {
+export function incomplete(): Effect.Effect<number> {
   try { return fail(true) } catch (e) {
     return match (e) { when { _tag: "First" }: 1; default: throw e; }
   }

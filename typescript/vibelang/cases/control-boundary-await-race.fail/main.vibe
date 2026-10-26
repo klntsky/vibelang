@@ -2,7 +2,7 @@
 // await.race and await.any start each element in its own fiber (D196), which
 // cannot reach a handler on this one (chapter 9, "Handlers and
 // concurrency"). EK4201 reports each element that performs the operation.
-control Ask { ask(): number!! }
+control Ask { ask(): Effect<number> }
 
 export function race() {
   try {

@@ -92,7 +92,7 @@ function hoisted() {
 // A region's closure sees the method's this.
 const counter = {
   count: 0,
-  bump(n: number): number!! {
+  bump(n: number): Effect.Effect<number> {
     try {
       this.count += risky(n)
     } catch (e) {

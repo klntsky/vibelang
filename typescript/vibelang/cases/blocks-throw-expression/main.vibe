@@ -39,7 +39,7 @@ function tooLong() {
 }
 
 function arrow() {
-  const get = (id: string): string!NotFound! => find(id) ?? throw new NotFound({ id })
+  const get = (id: string): Effect<string, NotFound> => find(id) ?? throw new NotFound({ id })
   return get("2")
 }
 

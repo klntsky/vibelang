@@ -3,7 +3,7 @@
 // yields it and provides it as it does a Context.Service class.
 // consumer/main.ts does both; run.mjs compiles and runs it.
 export interface SearchApi {
-  find(query: string): string!!
+  find(query: string): Effect<string>
 }
 
 export service Search: SearchApi {

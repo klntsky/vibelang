@@ -1,6 +1,6 @@
 // expect: TS2339 TS7015 TS2349
-function box(program: () => number!!) { return { value: program() } }
-function array(program: () => number!!) { return [program()] }
+function box(program: () => Effect<number>) { return { value: program() } }
+function array(program: () => Effect<number>) { return [program()] }
 function wrong() {
   const member = box { return 3 }.missing
   const element = array { return 4 }["missing"]

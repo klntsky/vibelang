@@ -1,6 +1,6 @@
 // expect: TS1434 TS1144
 // A module declaration's body is TypeScript (D283): VibeLang's own syntax,
-// such as an error declaration or an Effect contract, is a syntax error there.
+// such as an error declaration or the retired ! form (D308), is a syntax error there.
 module text {
   error Bad { reason: string }
 

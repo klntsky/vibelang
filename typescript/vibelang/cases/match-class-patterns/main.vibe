@@ -106,7 +106,7 @@ function shapeEffect(s: Circle | Square) {
 }
 
 // The program's value, or the message of the defect it dies with.
-function settle<A>(program: A!!) {
+function settle<A>(program: Effect<A>) {
   return match (exit(program)) {
     when Exit.Success(let value): value;
     when Exit.Failure(let cause): (Cause.squash(cause) as Error).message;

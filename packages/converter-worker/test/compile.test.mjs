@@ -19,7 +19,7 @@ test("compiles the hero with no diagnostics", async () => {
 })
 
 test("reports a type error with its position and code", async () => {
-  const result = await compile('export function f(): number!! {\n  return "no"\n}\n', config)
+  const result = await compile('export function f(): Effect<number> {\n  return "no"\n}\n', config)
   assert.notEqual(result.exitCode, 0)
   assert.ok(result.diagnostics[0].line >= 1)
   assert.match(result.diagnostics[0].code, /^(TS|EK)\d+$/)

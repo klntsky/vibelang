@@ -7,7 +7,7 @@ interface Outcome {
 }
 
 interface Store {
-  heartbeat: (runId: string) => Outcome!never
+  heartbeat: (runId: string) => Effect<Outcome>
 }
 
 const layerNoop = (overrides: Partial<Store> = {}): Store => ({

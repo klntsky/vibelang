@@ -7,7 +7,7 @@
 import { NotFound } from "./errors.vibe" // import/no-duplicates
 import { Code } from "./errors.vibe" // import/no-duplicates, consistent-type-imports
 
-export function undocumented(ids: string[]): number!NotFound { // jsdoc/require-jsdoc, array-type
+export function undocumented(ids: string[]): Effect<number, NotFound, infer R> { // jsdoc/require-jsdoc, array-type
   let total = 0 // prefer-const
   const unused = 1 // no-unused-vars
   const label = "héllo 😀"; console.log(label) // no-console, after non-ASCII text

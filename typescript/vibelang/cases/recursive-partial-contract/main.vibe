@@ -4,22 +4,22 @@
 // come from the cycle's fixpoint. These were TS2577, "Return type annotation
 // circularly references itself".
 error Neg { n: number }
-service Audit { note(n: number): void!! }
+service Audit { note(n: number): Effect<void> }
 
-function fact(n: number): number!Neg {
+function fact(n: number): Effect<number, Neg, infer R> {
   if (n < 0) throw new Neg({ n })
   if (n <= 1) return 1
   return n * fact(n - 1)
 }
 
-function factVia(n: number): number!Neg {
+function factVia(n: number): Effect<number, Neg, infer R> {
   if (n < 0) throw new Neg({ n })
   if (n <= 1) return 1
   const rest = factVia(n - 1)
   return n * rest
 }
 
-function audited(n: number): number!Neg {
+function audited(n: number): Effect<number, Neg, infer R> {
   Audit.note(n)
   if (n < 0) throw new Neg({ n })
   if (n <= 1) return 1
@@ -32,7 +32,7 @@ function inferred(n: number): Effect<number, infer E, infer R> {
   return n * inferred(n - 1)
 }
 
-function label(n: number): string!Neg {
+function label(n: number): Effect<string, Neg, infer R> {
   if (n < 0) throw new Neg({ n })
   if (n === 0) return "0"
   if (label(n - 1).length > 3) return "long"
@@ -40,11 +40,11 @@ function label(n: number): string!Neg {
 }
 
 // R reaches isEven through isOdd.
-function isEven(n: number): boolean!never {
+function isEven(n: number): Effect<boolean, never, infer R> {
   return n === 0 ? true : !isOdd(n - 1)
 }
 
-function isOdd(n: number): boolean!never {
+function isOdd(n: number): Effect<boolean, never, infer R> {
   Audit.note(n)
   return n === 0 ? false : !isEven(n - 1)
 }

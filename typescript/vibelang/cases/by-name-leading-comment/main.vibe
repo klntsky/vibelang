@@ -3,7 +3,7 @@
 // before the statement: printed again inside the generated program, between
 // its return and the expression, a line comment would end the return, and
 // the program would return undefined instead of the journal's receipt.
-interface Journal { emit: (input: { value: number }) => number!string }
+interface Journal { emit: (input: { value: number }) => Effect<number, string> }
 const recorded: Array<number> = []
 const journal: Journal = {
   emit: (input) => {
@@ -11,7 +11,7 @@ const journal: Journal = {
     return recorded.length
   }
 }
-const make = (state: { mutable runs: number }): number!! => {
+const make = (state: { mutable runs: number }): Effect<number> => {
   state.runs++
   return state.runs * 10
 }

@@ -1,7 +1,7 @@
 // expect: EK2001 EK2002 TS2322
 import { Effect } from "effect"
 error Gone {}
-service Needed { value(): number!! }
-export function fails(): number!! { return () => { throw new Gone() } }
-export function needs(): number!! { return () => Needed.value() }
-export function wrong(): number!! { return () => "wrong" }
+service Needed { value(): Effect.Effect<number> }
+export function fails(): Effect.Effect<number> { return () => { throw new Gone() } }
+export function needs(): Effect.Effect<number> { return () => Needed.value() }
+export function wrong(): Effect.Effect<number> { return () => "wrong" }

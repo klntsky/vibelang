@@ -20,11 +20,11 @@ export schema error Locked {
   }
 }
 
-function fail(error: NotFound | Locked): never!(NotFound | Locked) {
+function fail(error: NotFound | Locked): Effect<never, NotFound | Locked, infer R> {
   throw error
 }
 
-function route(error: NotFound | Locked): string!! {
+function route(error: NotFound | Locked): Effect<string> {
   return fail(error)
     |> Effect.catchTag(%, "NotFound", (caught) => `not found ${caught.attempts}`)
     |> Effect.catchTag(%, "Locked", (caught) => caught.describe())

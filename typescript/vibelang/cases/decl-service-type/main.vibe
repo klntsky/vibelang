@@ -6,7 +6,7 @@
 error NotFound { query: string }
 
 export interface SearchApi {
-  find(query: string): string!NotFound
+  find(query: string): Effect<string, NotFound>
   readonly index: string
 }
 
@@ -22,7 +22,7 @@ export service Search: SearchApi {
 
 service Prefix: string
 
-service Format: (value: string) => string!!
+service Format: (value: string) => Effect<string>
 
 // Two services with the same shape are different requirements (D93).
 service Primary: string

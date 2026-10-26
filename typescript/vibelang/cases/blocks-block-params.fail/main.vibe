@@ -1,5 +1,5 @@
 // expect: TS2554
-function getName(): string!! {
+function getName(): Effect<string> {
   return "Ada"
 }
 

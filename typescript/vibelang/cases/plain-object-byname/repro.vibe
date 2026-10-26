@@ -3,7 +3,7 @@ error Boom
 type Run = <A>(effect: Effect.Effect<A, Boom>) => Promise<A>
 
 export let attempts = 0
-function work(): number!Boom {
+function work(): Effect<number, Boom, infer R> {
   attempts++
   return 1
 }

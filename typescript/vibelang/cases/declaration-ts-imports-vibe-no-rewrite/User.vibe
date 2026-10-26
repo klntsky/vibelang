@@ -1,6 +1,6 @@
 export error NotFound { id: string }
 
-export function find(id: string): string!NotFound {
+export function find(id: string): Effect<string, NotFound, infer R> {
   if (id === "") throw new NotFound({ id })
   return id
 }

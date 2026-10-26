@@ -2,7 +2,7 @@
 error NotFound { id: string }
 error Boom
 
-function find(id: string): string!NotFound! {
+function find(id: string): Effect<string, NotFound> {
   if (id === "missing") throw new NotFound({ id })
   if (id === "bug") die(new Error("bug"))
   return id

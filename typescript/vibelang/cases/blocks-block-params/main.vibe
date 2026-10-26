@@ -1,5 +1,5 @@
 // expect-result: {"spanned":"ADA","timed":"in time","guarded":"guarded","appended":42,"method":"job:done","bare":"once","nested":"outer:inner"}
-function getName(): string!! {
+function getName(): Effect<string> {
   return "Ada"
 }
 
@@ -26,7 +26,7 @@ function guarded() {
 }
 
 // A function that takes the program as its last argument gets the block there.
-function twice(label: string, program: () => number!!) {
+function twice(label: string, program: () => Effect<number>) {
   return label.length + program() + program()
 }
 
@@ -37,7 +37,7 @@ function appended() {
 }
 
 class Runner {
-  run(name: string, program: () => string!!) {
+  run(name: string, program: () => Effect<string>) {
     return `${name}:${program()}`
   }
 }
@@ -50,7 +50,7 @@ function method() {
 }
 
 // A name followed by a block passes the block as the only argument.
-function once(program: () => string!!) {
+function once(program: () => Effect<string>) {
   return program()
 }
 

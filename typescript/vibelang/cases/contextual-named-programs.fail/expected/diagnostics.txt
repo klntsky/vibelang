@@ -1,9 +1,7 @@
-main.vibe(3,30): warning EK4833
 main.vibe(6,22): error TS2322
 main.vibe(7,22): error TS2322
 main.vibe(8,26): error TS2322
 main.vibe(9,26): error TS2322
 main.vibe(12,7): error TS2322
-main.vibe(12,15): warning EK4833
 main.vibe(15,32): error TS2322
 main.vibe(15,44): error TS2741

@@ -13,7 +13,7 @@ import { run } from bridge
 
 const decode = Schema.decodeUnknownEffect(Schema.Number)
 
-export const same = <A, E>(effect: A!E!): A!E! => effect()
+export const same = <A, E>(effect: Effect<A, E>): Effect<A, E> => effect()
 
 export function main() {
   return run(decode(2))

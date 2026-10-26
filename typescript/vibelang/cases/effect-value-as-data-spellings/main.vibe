@@ -3,10 +3,10 @@
 // the program to run it, or write its type as the success type to keep it.
 export function main() {
   const count = Ref.make(0)
-  const tick: void!! = Ref.update(count, (n) => n + 1)
+  const tick: Effect<void> = Ref.update(count, (n) => n + 1)
   Stream.make(1, 2) |> Stream.run(%, Sink.forEach((_n: number) => tick()))
   const after = Ref.get(count)
-  const kept = Effect.suspend((): (void!!)!! => tick)
+  const kept = Effect.suspend((): Effect<Effect<void>> => tick)
   kept()
   return [after, Effect.isEffect(kept), Ref.get(count)]
 }

@@ -2,7 +2,7 @@
 error UserNotFound { id: string }
 
 export service Users {
-  find(id: string): string!UserNotFound
+  find(id: string): Effect<string, UserNotFound>
   readonly region: string
 
   static readonly layer = Layer.succeed(Users, {
@@ -15,7 +15,7 @@ export service Users {
 }
 
 export control Approval {
-  approve(request: string): boolean!!
+  approve(request: string): Effect<boolean>
 }
 
 function release(version: string) {

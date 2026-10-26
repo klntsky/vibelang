@@ -11,7 +11,7 @@ export const makeRuntime = (options: { n: number }) => {
 export const stored: Effect.Effect<{ n: number }, never, never> = makeRuntime({ n: 11 })
 
 // This body has no other Effect operation to force generator lowering.
-export function useIt(options: { n: number }): number!! {
+export function useIt(options: { n: number }): Effect<number> {
   const service = makeRuntime(options)
   return service.n
 }

@@ -4,10 +4,10 @@
 // an Effect value, is its success.
 import * as Effect from "effect/Effect"
 
-type Hook = (n: number) => void!!
+type Hook = (n: number) => Effect.Effect<void>
 
 let ran = 0
-const work = (): void!! => {
+const work = (): Effect.Effect<void> => {
   ran++
 }
 

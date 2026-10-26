@@ -1,6 +1,6 @@
 // expect: EK2103 EK2103
 export service Users {
-  find(id: string): string!!
+  find(id: string): Effect<string>
   describe(id: string) {
     return `user ${id}`
   }

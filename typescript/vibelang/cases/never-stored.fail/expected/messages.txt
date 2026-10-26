@@ -1,4 +1,4 @@
 followUntil() runs here and never succeeds, so the field follow never holds a value.
-To keep the program, declare the object's type with follow: never!!, or store a function: follow: () => followUntil(). To run it here, write it as a statement.
+To keep the program, declare the object's type with follow: Effect<never>, or store a function: follow: () => followUntil(). To run it here, write it as a statement.
 Effect.fail(…) runs here and never succeeds, so missing never holds a value.
-To keep the program, write its type, const missing: never!Missing! = …, or store a function: () => Effect.fail(…). To run it here, write it as a statement.
+To keep the program, write its type, const missing: Effect<never, Missing> = …, or store a function: () => Effect.fail(…). To run it here, write it as a statement.

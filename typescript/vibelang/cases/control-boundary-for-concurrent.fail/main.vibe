@@ -2,7 +2,7 @@
 // for concurrent runs each item in its own fiber (D169), which cannot reach a
 // handler on this one (chapter 9, "Handlers and concurrency"). With a limit
 // of 1 the items run one at a time on this fiber, and the handler is reached.
-control Ask { ask(): number!! }
+control Ask { ask(): Effect<number> }
 
 export function limited() {
   let total = 0

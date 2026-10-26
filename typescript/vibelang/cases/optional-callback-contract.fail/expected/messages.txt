@@ -1,2 +1,2 @@
-If it cannot fail, write its contract: label?: (seconds: number) => Late!!
-If it cannot fail, write its contract: log?: (n: number) => void!!
+label has no contract, so a call to it can fail with any E (D12, D68). If it cannot fail, write its contract: label?: (seconds: number) => Effect<Late>
+log has no contract, so a call to it can fail with any E (D12, D68). If it cannot fail, write its contract: log?: (n: number) => Effect<void>

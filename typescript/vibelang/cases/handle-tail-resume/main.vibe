@@ -2,11 +2,11 @@
 // A clause that ends with resume, or with return, does not complete normally,
 // so it adds nothing to the function's success type (D132).
 control Approval {
-  approve(request: string): boolean!!
+  approve(request: string): Effect<boolean>
 }
 
 control Notes {
-  note(text: string): void!!
+  note(text: string): Effect<void>
 }
 
 function release(version: string) {

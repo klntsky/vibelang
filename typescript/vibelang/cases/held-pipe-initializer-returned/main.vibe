@@ -2,13 +2,13 @@
 // value is its body's, so the body builds a program and the left side,
 // passed by name to the body's program parameter, runs only when the const
 // is run, each time it is run.
-const make = (state: { mutable runs: number }): number!! => {
+const make = (state: { mutable runs: number }): Effect<number> => {
   state.runs++
   return state.runs
 }
 
-export const forwarded = (state: { mutable runs: number }): number!! => {
-  const program: number!! = make(state) |> Effect.map(%, (n) => n * 10) |> Effect.map(%, (n) => n + 1)
+export const forwarded = (state: { mutable runs: number }): Effect<number> => {
+  const program: Effect<number> = make(state) |> Effect.map(%, (n) => n * 10) |> Effect.map(%, (n) => n + 1)
   return program
 }
 
@@ -16,8 +16,8 @@ export const forwarded = (state: { mutable runs: number }): number!! => {
 export function main() {
   const local = { runs: 0 }
   const viaForward = { runs: 0 }
-  const program: number!! = make(local) |> Effect.map(%, (n) => n * 10) |> Effect.map(%, (n) => n + 1)
-  const factory: number!! = forwarded(viaForward)
+  const program: Effect<number> = make(local) |> Effect.map(%, (n) => n * 10) |> Effect.map(%, (n) => n + 1)
+  const factory: Effect<number> = forwarded(viaForward)
   const before = [local.runs, viaForward.runs]
   const values = [program(), program(), factory(), factory()]
   return [before, values, [local.runs, viaForward.runs]]

@@ -1,10 +1,10 @@
 // The services the entry modules of this case need.
 export service Users {
-  find(id: string): string!!
+  find(id: string): Effect<string>
 }
 
 export service Stamp {
-  now(): number!!
+  now(): Effect<number>
 }
 
 export const UsersLive = Layer.succeed(Users, { find: (id) => `user ${id}` })

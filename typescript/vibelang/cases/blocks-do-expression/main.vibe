@@ -1,15 +1,15 @@
 // expect-result: {"value":"ADA","branch":"big","caught":"recovered","plain":7,"raced":"fast","exit":"Success"}
 error Boom
 
-function getName(): string!! {
+function getName(): Effect<string> {
   return "Ada"
 }
 
-function fail(): number!Boom {
+function fail(): Effect<number, Boom, infer R> {
   throw new Boom()
 }
 
-function slow(): string!! {
+function slow(): Effect<string> {
   sleep("1 second")
   return "slow"
 }

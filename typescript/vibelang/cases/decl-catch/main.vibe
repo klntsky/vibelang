@@ -26,7 +26,7 @@ function describe(kind: string) {
 }
 
 // The default rethrows failures this match does not handle.
-function partial(kind: string): string!Broken! {
+function partial(kind: string): Effect<string, Broken> {
   try {
     return fail(kind)
   } catch (e) {

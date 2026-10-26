@@ -99,7 +99,7 @@ it.effect("reads its dependency") {
   await writeFile(join(root, "dep.vibe"), "export function value(): number {\n  return 7\n}\n")
   let result = await runVitest(root)
   assert.equal(result.code, 0, result.output)
-  await writeFile(join(root, "dep.vibe"), "export function value(): number!! {\n  Console.log(\"value\")\n  return 7\n}\n")
+  await writeFile(join(root, "dep.vibe"), "export function value(): Effect<number> {\n  Console.log(\"value\")\n  return 7\n}\n")
   result = await runVitest(root)
   assert.equal(result.code, 0, result.output)
   assert.match(result.output, /1 passed/)

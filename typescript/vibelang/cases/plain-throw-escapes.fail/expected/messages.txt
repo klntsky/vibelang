@@ -1,3 +1,3 @@
 string is a plain return annotation, but validate can fail with Invalid, and a plain function never fails.
-  Write string!Invalid! to make it an Effect function that fails with Invalid.
-  Or throw inside a hatch, whose TypeScript keeps JavaScript's throw: sync makes the exception a defect (string!!), and try makes it an UnknownError.
+  Write Effect<string, Invalid> to make it an Effect function that fails with Invalid.
+  Or throw inside a hatch, whose TypeScript keeps JavaScript's throw: sync makes the exception a defect (Effect<string>), and try makes it an UnknownError.

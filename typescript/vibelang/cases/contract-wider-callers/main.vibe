@@ -11,17 +11,17 @@ export function longForm(): Effect<number, Gone, Needed> {
   return 1
 }
 
-export function shortForm(): number!Gone!Needed {
+export function shortForm(): Effect<number, Gone, Needed> {
   return 2
 }
 
 // No failures and no requirements: callers see Effect<number, never, never>.
-export function plain(): number!! {
+export function plain(): Effect<number> {
   return 3
 }
 
 const box = {
-  get(): number!Gone!Needed {
+  get(): Effect<number, Gone, Needed> {
     return 4
   }
 }

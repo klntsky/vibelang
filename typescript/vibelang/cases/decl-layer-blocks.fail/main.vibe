@@ -3,7 +3,7 @@
 // whose result is not the contract's success type is TS2345 at the call, and
 // its message chain names the member that does not fit.
 service Users {
-  find(id: string): string!!
+  find(id: string): Effect<string>
 }
 
 export const UsersLive = Layer.effect(Users) {

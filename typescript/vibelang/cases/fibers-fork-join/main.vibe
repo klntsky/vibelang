@@ -1,18 +1,18 @@
 // expect-result: {"pair":["Ada",3],"tuple":["Ada",3],"record":{"user":"Ada","count":3},"block":"done","old":"Ada","deferred":7,"failed":"NotFound","interrupted":true,"detached":"background","scoped":"scoped"}
 error NotFound { id: string }
 
-function getUser(id: string): string!NotFound! {
+function getUser(id: string): Effect<string, NotFound> {
   sleep("5 millis")
   if (id === "missing") throw new NotFound({ id })
   return "Ada"
 }
 
-function count(): number!! {
+function count(): Effect<number> {
   sleep("2 millis")
   return 3
 }
 
-function label(): string!! {
+function label(): Effect<string> {
   return "scoped"
 }
 

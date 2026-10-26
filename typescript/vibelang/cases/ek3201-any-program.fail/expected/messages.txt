@@ -1,2 +1,2 @@
 main has type any, so the services it needs are unknown.
-TypeScript gives a program type any where it cannot type it, as after an error in its declaration: fix that error, or write the program's type, A!E!R.
+TypeScript gives a program type any where it cannot type it, as after an error in its declaration: fix that error, or write the program's type, Effect<A, E, R>.

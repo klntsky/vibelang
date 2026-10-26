@@ -2,8 +2,8 @@
 // The spelling EK4802's quick fix writes for a returned arm: a called Effect
 // value runs, so emit(0) interrupts and emit(1) logs.
 interface Hooks {
-  emit: (n: number) => void!never
-  cached: (n: number | undefined) => void!never
+  emit: (n: number) => Effect<void>
+  cached: (n: number | undefined) => Effect<void>
 }
 
 const hooks: Hooks = {

@@ -8,7 +8,7 @@ class Busy extends Data.TaggedError("Busy")<{ readonly name: string }> {}
 
 const events: string[] = []
 
-// Effect<string, never, Scope>: the caller's Scope owns what it acquires.
+// Effect.Effect<string, never, Scope>: the caller's Scope owns what it acquires.
 function resource(name: string) {
   return Effect.acquireRelease(
     () => {
@@ -32,7 +32,7 @@ function disposable(name: string) {
   }
 }
 
-// Effect<string, never, never>: the block supplies the Scope.
+// Effect.Effect<string, never, never>: the block supplies the Scope.
 function ordered() {
   using a = resource("a")
   using b = resource("b")
@@ -40,7 +40,7 @@ function ordered() {
   return a + b
 }
 
-// Effect<never, Busy, never>: the release runs before the failure leaves.
+// Effect.Effect<never, Busy, never>: the release runs before the failure leaves.
 function failing() {
   using f = resource("f")
   throw new Busy({ name: f })
@@ -144,7 +144,7 @@ function interruptibleAcquire() {
   return i
 }
 
-function deadline(program: () => Effect<string, never, never>) {
+function deadline(program: () => Effect.Effect<string, never, never>) {
   try {
     return Effect.timeout(program, "5 millis")
   } catch (e) {
@@ -182,7 +182,7 @@ class Counter {
   }
 }
 
-const arrow = (name: string): number!! => {
+const arrow = (name: string): Effect.Effect<number> => {
   using r = resource(name)
   return r.length
 }

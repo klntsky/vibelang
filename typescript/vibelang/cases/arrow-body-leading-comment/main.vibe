@@ -3,20 +3,20 @@
 // lowering keeps the expression on the line of its return.
 error Bad { message: string }
 
-const later = (n: number): number!! => {
+const later = (n: number): Effect<number> => {
   sleep("1 millis")
   return n
 }
 
-const both = (): readonly [number, number]!! =>
+const both = (): Effect<readonly [number, number]> =>
   // Both run at once.
   Effect.all([later(1), later(2)], { concurrency: "unbounded" })
 
-const joined = (): string!! =>
+const joined = (): Effect<string> =>
   /* the parts, in order */
   Effect.map(Effect.all([later(1), later(2)]), () => "ab")
 
-const traced = (n: number): number!! =>
+const traced = (n: number): Effect<number> =>
   // first line
   // second line
   later(n)

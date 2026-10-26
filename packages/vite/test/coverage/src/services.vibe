@@ -1,7 +1,7 @@
 error Bad { code: string }
 
 service Users {
-  find(id: string): string!Bad
+  find(id: string): Effect<string, Bad>
 }
 
 export const UsersLive = Layer.succeed(Users, {
@@ -11,16 +11,16 @@ export const UsersLive = Layer.succeed(Users, {
   }
 })
 
-export function nameOf(id: string): string!!Users {
+export function nameOf(id: string): Effect<string, never, Users> {
   return Users.find(id) catch "missing"
 }
 
-export function greet(id: string): string!Bad!Users {
+export function greet(id: string): Effect<string, Bad, Users> {
   const name = Users.find(id)
   return `hi ${name}`
 }
 
-export function neverGreeted(id: string): string!Bad!Users {
+export function neverGreeted(id: string): Effect<string, Bad, Users> {
   const name = Users.find(id)
   return `bye ${name}`
 }

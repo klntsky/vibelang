@@ -8,14 +8,14 @@ abstract class Audit {
   abstract record(entry: string): Effect.Effect<void, never, never>
 }
 
-export const literal: { exists: (path: string) => boolean!! } = {
+export const literal: { exists: (path: string) => Effect<boolean> } = {
   exists: (path) => {
     if (path === "") throw new Gone({ path })
     return true
   }
 }
 
-type Probe = { exists: (path: string) => boolean!! }
+type Probe = { exists: (path: string) => Effect<boolean> }
 
 export const aliased: Probe = {
   exists: (path) => {
@@ -24,7 +24,7 @@ export const aliased: Probe = {
   }
 }
 
-export const audited: { exists: (path: string) => boolean!! } = {
+export const audited: { exists: (path: string) => Effect<boolean> } = {
   exists: (path) => {
     Audit.record(path)
     return true

@@ -3,12 +3,12 @@ import { Cause } from "effect"
 function outer() {
   "use strict"
   const first = nested()
-  function nested(): string!Cause.NoSuchElementError! {
+  function nested(): Effect<string, Cause.NoSuchElementError> {
     return Effect.currentSpan().name
   }
   {
     const second = inBlock()
-    function inBlock(): string!Cause.NoSuchElementError! {
+    function inBlock(): Effect<string, Cause.NoSuchElementError> {
       return Effect.currentSpan().name
     }
     return [first, second]

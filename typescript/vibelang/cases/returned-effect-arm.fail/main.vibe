@@ -3,9 +3,9 @@
 // gets, as a returned Effect value is: the call in the other arm runs, and
 // this one is the success value. EK4802 is an error here (tsconfig.json).
 interface Hooks {
-  emit: (n: number) => void!never
-  sleep: (n: number) => void!never
-  cached: (n: number | undefined) => void!never
+  emit: (n: number) => Effect<void>
+  sleep: (n: number) => Effect<void>
+  cached: (n: number | undefined) => Effect<void>
 }
 
 export const hooks: Hooks = {
@@ -21,7 +21,7 @@ export function unannotated(n: number) {
 }
 
 // Both arms are programs: a factory, which runs the chosen one.
-export const both = (n: number): void!! => n === 0 ? Effect.interrupt : Effect.void
+export const both = (n: number): Effect<void> => n === 0 ? Effect.interrupt : Effect.void
 
 // A called arm runs, as EK4802's quick fix writes it.
-export const called = (n: number): void!! => n === 0 ? Effect.interrupt() : Console.log("emit", n)
+export const called = (n: number): Effect<void> => n === 0 ? Effect.interrupt() : Console.log("emit", n)

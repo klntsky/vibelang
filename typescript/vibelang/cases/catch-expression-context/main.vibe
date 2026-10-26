@@ -5,18 +5,18 @@ type Outcome = { _tag: "Found"; value: number } | { _tag: "Error"; error: Missin
 type Maybe = { _tag: "Some"; value: number } | { _tag: "None" }
 type Mode = "fast" | "slow"
 
-function find(n: number): number!Missing {
+function find(n: number): Effect<number, Missing, infer R> {
   if (n < 0) throw new Missing({ code: "negative" })
   return n
 }
 
 // D293: both sides of a catch expression take the expression's contextual
 // type, as both branches of a conditional do, so literal tags stay literal.
-function select(n: number): Outcome!! {
+function select(n: number): Effect<Outcome> {
   return { _tag: "Found", value: find(n) } catch (error) => ({ _tag: "Error", error })
 }
 
-function fallback(n: number): Maybe!! {
+function fallback(n: number): Effect<Maybe> {
   return { _tag: "Some", value: find(n) } catch ({ _tag: "None" })
 }
 
@@ -29,23 +29,23 @@ function report(outcome: Outcome): string {
   return outcome._tag
 }
 
-function block(n: number): Outcome!! {
+function block(n: number): Effect<Outcome> {
   return { _tag: "Found", value: find(n) } catch (error) => {
     const failed: Missing = error
     return { _tag: "Error", error: failed }
   }
 }
 
-function step(label: "first" | "second", n: number): "first" | "second"!Missing {
+function step(label: "first" | "second", n: number): Effect<"first" | "second", Missing, infer R> {
   if (n < 0) throw new Missing({ code: label })
   return label
 }
 
-function chained(a: number, b: number): "first" | "second" | "last"!! {
+function chained(a: number, b: number): Effect<"first" | "second" | "last"> {
   return step("first", a) catch step("second", b) catch "last"
 }
 
-function mode(n: number): Mode!! {
+function mode(n: number): Effect<Mode> {
   return (find(n) > 10 ? "fast" : "slow") catch "slow"
 }
 

@@ -1,27 +1,27 @@
 // expect-result: {"all":["user 1",3],"record":{"user":"user 2","count":3},"held":["user 3",3],"failFast":"Boom","settled":["Success","Failure"],"race":"fast","raceFailure":"Boom","raceBlocks":"got user 4","any":"fast","deferred":"ready","tie":"a","raceDo":"got user 5","templates":["user 6!",3],"templateRace":"fast!"}
 error Boom { n: number }
 
-function getUser(id: string): string!! {
+function getUser(id: string): Effect<string> {
   sleep("5 millis")
   return `user ${id}`
 }
 
-function count(): number!! {
+function count(): Effect<number> {
   sleep("2 millis")
   return 3
 }
 
-function slow(): string!! {
+function slow(): Effect<string> {
   sleep("1 second")
   return "slow"
 }
 
-function fast(): string!! {
+function fast(): Effect<string> {
   sleep("1 millis")
   return "fast"
 }
 
-function boom(): string!Boom! {
+function boom(): Effect<string, Boom> {
   sleep("1 millis")
   throw new Boom({ n: 1 })
 }

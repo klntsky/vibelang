@@ -70,7 +70,7 @@ const blank = (text) => text.replace(/[^\n\r\u2028\u2029]/g, " ")
 test("a module declaration's body converts as typescript-estree converts its TypeScript", () => {
   const head = "// VibeLang around a module, after non-ASCII text: é😀\nerror Gone { id: string }\n\nmodule text {"
   const body = `\n${readFileSync(fixture, "utf8")}`
-  const tail = "}\n\nimport { answer } from text\n\nexport function main(): number!Gone {\n  return answer |> % + 1\n}\n"
+  const tail = "}\n\nimport { answer } from text\n\nexport function main(): Effect<number, Gone> {\n  return answer |> % + 1\n}\n"
   const code = head + body + tail
   const start = head.length
   const end = start + body.length

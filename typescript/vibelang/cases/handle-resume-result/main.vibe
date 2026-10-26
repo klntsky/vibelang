@@ -3,8 +3,8 @@
 // type covers every value the handle can end with, so reading it is checked.
 
 control Steps {
-  first(): void!!
-  second(): void!!
+  first(): Effect<void>
+  second(): Effect<void>
 }
 
 function work() {
@@ -41,7 +41,7 @@ function after() {
 }
 
 // A written success type covers a return computed from resume's result.
-function written(): number | string!! {
+function written(): Effect<number | string> {
   try {
     return work()
   } handle Steps.first() {

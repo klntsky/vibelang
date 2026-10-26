@@ -34,24 +34,24 @@ export error Gone extends HttpError {
   }
 }
 
-function failWith(error: NotFound | Timeout): never!(NotFound | Timeout) {
+function failWith(error: NotFound | Timeout): Effect<never, NotFound | Timeout, infer R> {
   throw error
 }
 
 // Routing by tag: each subclass's own tag reaches its own handler, and
 // nothing escapes.
-function route(error: NotFound | Timeout): string!! {
+function route(error: NotFound | Timeout): Effect<string> {
   return failWith(error)
     |> Effect.catchTag(%, "NotFound", (caught) => `not found ${caught.path}`)
     |> Effect.catchTag(%, "Timeout", (caught) => `timeout ${caught.code}`)
 }
 
-function failBase(error: AppError): never!AppError {
+function failBase(error: AppError): Effect<never, AppError, infer R> {
   throw error
 }
 
 // catchTag("AppError") matches only an instance of the base itself.
-function routeBase(error: AppError): string!! {
+function routeBase(error: AppError): Effect<string> {
   return failBase(error)
     |> Effect.catchTag(%, "AppError", (caught) => `base ${caught.code}`)
     catch (caught) => `subclass ${caught._tag}`

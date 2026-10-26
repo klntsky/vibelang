@@ -3,11 +3,11 @@
 // declares no dependencies (!!), so each provide block must remove the keys
 // its body needs.
 service Greeting {
-  text(): string!!
+  text(): Effect<string>
 }
 
 service Names {
-  name(): string!!
+  name(): Effect<string>
 }
 
 const NamesLive = Layer.succeed(Names, {
@@ -16,40 +16,40 @@ const NamesLive = Layer.succeed(Names, {
 
 const fixedRandom = { nextIntUnsafe: () => 7, nextDoubleUnsafe: () => 0.25 }
 
-function single(): string!! {
+function single(): Effect<string> {
   provide Greeting = { text: () => "hi" } {
     return Greeting.text()
   }
 }
 
 // Layers and services mix in one list.
-function mixed(): string!! {
+function mixed(): Effect<string> {
   provide NamesLive, Greeting = { text: () => "hi" } {
     return `${Names.name()} ${Greeting.text()}`
   }
 }
 
 // An effect module stands for its key of the same name: Random is Random.Random.
-function module(): number!! {
+function module(): Effect<number> {
   provide Random = fixedRandom {
     return Random.nextInt()
   }
 }
 
-function qualified(): number!! {
+function qualified(): Effect<number> {
   provide Random.Random = fixedRandom {
     return Random.nextInt()
   }
 }
 
-function both(): string!! {
+function both(): Effect<string> {
   provide NamesLive, Random = fixedRandom {
     return `${Names.name()} ${Random.nextInt()}`
   }
 }
 
 // The call shape means the same: provide(...) { ... } is provide ... { ... }.
-function called(): string!! {
+function called(): Effect<string> {
   provide(NamesLive, Greeting = { text: () => "hi" }) {
     return `${Names.name()} ${Greeting.text()}`
   }

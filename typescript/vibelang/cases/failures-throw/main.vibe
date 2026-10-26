@@ -14,7 +14,7 @@ export interface User {
 const guest: User = { id: "0", name: "Guest" }
 const users = new Map<string, User>([["42", { id: "42", name: "Ada" }]])
 
-// A throw is enough to make a function an Effect: Effect<number, InvalidId, never>.
+// A throw is enough to make a function an Effect: Effect.Effect<number, InvalidId, never>.
 export function parseId(raw: string) {
   if (!/^\d+$/.test(raw)) throw new InvalidId({ raw })
   return Number(raw)
@@ -69,7 +69,7 @@ export function describe(raw: string) {
 }
 
 // A lambda that can throw is an Effect function too.
-const doubled = (n: number): number!InvalidId! => {
+const doubled = (n: number): Effect.Effect<number, InvalidId> => {
   if (n < 0) throw new InvalidId({ raw: String(n) })
   return n * 2
 }

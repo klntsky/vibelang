@@ -16,36 +16,36 @@ export const called = (wrap: Wrap | undefined): Effect.Effect<unknown, never, ne
   return Effect.provideService(wrap === undefined ? body() : wrap(body), Tag, 1)
 }
 
-export function orChoice(body: Effect.Effect<number> | undefined, wrap: Wrap): number!! {
+export function orChoice(body: Effect.Effect<number> | undefined, wrap: Wrap): Effect.Effect<number> {
   return Effect.provideService(body || wrap(() => 41 + Tag()), Tag, 1)
 }
 
-export function nullishChoice(body: Effect.Effect<number> | undefined, wrap: Wrap): number!! {
+export function nullishChoice(body: Effect.Effect<number> | undefined, wrap: Wrap): Effect.Effect<number> {
   return Effect.provideService(body ?? wrap(() => 41 + Tag()), Tag, 1)
 }
 
-export function commaChoice(wrap: Wrap): number!! {
+export function commaChoice(wrap: Wrap): Effect.Effect<number> {
   const body: Effect.Effect<number> = () => 41 + Tag()
   return Effect.provideService((Effect.sleep("1 millis"), wrap(body)), Tag, 1)
 }
 
-export function withCondition(wrap: Wrap): number!! {
+export function withCondition(wrap: Wrap): Effect.Effect<number> {
   const body: Effect.Effect<number> = () => 41 + Tag()
   return Effect.provideService(Effect.succeed(true) ? body : wrap(body), Tag, 1)
 }
 
-export function withPipe(wrap: Wrap | undefined): number!! {
+export function withPipe(wrap: Wrap | undefined): Effect.Effect<number> {
   const body: Effect.Effect<number> = () => 41 + Tag()
   return (wrap === undefined ? body : wrap(body)) |> Effect.provideService(%, Tag, 1)
 }
 
 function pureNumber() { return 42 }
 
-export function plainFallback(body: Effect.Effect<number> | undefined): number!! {
+export function plainFallback(body: Effect.Effect<number> | undefined): Effect.Effect<number> {
   return Effect.uninterruptible(body ?? pureNumber())
 }
 
-export function plainConditional(choose: boolean): number!! {
+export function plainConditional(choose: boolean): Effect.Effect<number> {
   const body: Effect.Effect<number> = () => 42
   return Effect.uninterruptible(choose ? body : pureNumber())
 }

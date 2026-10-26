@@ -1,2 +1,1 @@
-main.vibe(5,36): warning EK4833
 main.vibe(6,3): error EK2002

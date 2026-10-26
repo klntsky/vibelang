@@ -2,10 +2,10 @@
 // was built, or look one up when it is called if its contract lists it
 // (Chapter 4, "Requirements that would leak"); the program may build the
 // object in a variable before returning it.
-service Clock2 { now(): number!! }
-service Greeter { greet(name: string): string!! }
-service Stamped { greet(name: string): string!!Clock2 }
-service Builder { greet(name: string): string!! }
+service Clock2 { now(): Effect<number> }
+service Greeter { greet(name: string): Effect<string> }
+service Stamped { greet(name: string): Effect<string, never, Clock2> }
+service Builder { greet(name: string): Effect<string> }
 
 const Clock2Live = Layer.succeed(Clock2, { now() { return 42 } })
 

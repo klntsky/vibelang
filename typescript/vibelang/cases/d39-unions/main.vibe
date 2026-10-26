@@ -9,13 +9,13 @@ function health() {
   return "healthy"
 }
 
-const healthyProgram: string!! = () => health()
+const healthyProgram: Effect<string> = () => health()
 
 // expect-result: {"withParameter":"function: got req","pausing":"program: healthy","plain":"function: static"}
 export function main() {
   return {
-    withParameter: route((request): string!! => `got ${request}`),
+    withParameter: route((request): Effect<string> => `got ${request}`),
     pausing: route(healthyProgram),
-    plain: route((): string!! => "static")
+    plain: route((): Effect<string> => "static")
   }
 }

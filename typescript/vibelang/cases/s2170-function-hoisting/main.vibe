@@ -42,11 +42,11 @@ function inBlock(n: number) {
 
 function mutual(n: number) {
   const result = even(n)
-  function even(x: number): boolean!! {
+  function even(x: number): Effect<boolean> {
     sleep("1 millis")
     return x === 0 ? true : odd(x - 1)
   }
-  function odd(x: number): boolean!! {
+  function odd(x: number): Effect<boolean> {
     sleep("1 millis")
     return x === 0 ? false : even(x - 1)
   }

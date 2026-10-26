@@ -3,7 +3,7 @@
 // takes its position, so the continuation stays last, also when the clause
 // gives that parameter a default.
 control Log {
-  write(message: string, level?: string): string!!
+  write(message: string, level?: string): Effect<string>
 }
 
 function program(level?: string) {

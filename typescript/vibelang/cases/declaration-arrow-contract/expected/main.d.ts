@@ -6,11 +6,11 @@ declare const Empty_base: new <A extends Record<string, any> = {}>(args: import(
 } & Readonly<A>;
 export declare class Empty extends Empty_base<{}> {
 }
-export declare const parse: (input: string) => Effect.Effect<Digest, Empty, never>;
-export declare const parseExpression: (input: string) => Effect.Effect<Digest, Empty, never>;
+export declare const parse: (input: string) => Effect<Digest, Empty>;
+export declare const parseExpression: (input: string) => Effect<Digest, Empty>;
 export declare const codec: {
-    parse(input: string): Effect.Effect<Digest, Empty, never>;
+    parse(input: string): Effect<Digest, Empty>;
 };
-export declare function parseDeclaration(input: string): Effect.Effect<Digest, Empty, never>;
-export declare function main(): Effect.Effect<string, Empty, never>;
+export declare function parseDeclaration(input: string): Effect<Digest, Empty>;
+export declare function main(): Effect<string, Empty>;
 export {};

@@ -13,7 +13,7 @@ export const inferred = () => withRollback(Effect.succeed(1), () => Effect.void)
 
 type InferredServices = Never<Effect.Services<ReturnType<typeof inferred>>>
 
-export const declared = (): number!! => withRollback(Effect.succeed(2), () => Effect.void)
+export const declared = (): Effect<number> => withRollback(Effect.succeed(2), () => Effect.void)
 
 // expect-result: [1,2]
 export function main() {

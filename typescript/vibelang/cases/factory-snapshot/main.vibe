@@ -4,7 +4,7 @@ export const capture = (input: { mutable value: number }): Effect.Effect<number,
   const captured = input.value
   return () => { Effect.succeed(0); return captured }
 }
-export function declared(input: { mutable value: number }): number!! {
+export function declared(input: { mutable value: number }): Effect.Effect<number> {
   const captured = input.value
   return () => captured
 }
@@ -41,7 +41,7 @@ export const parameterGeneric = <A>(input: { mutable value: A }): Effect.Effect<
   return program
 }
 
-export const inferred = (input: { mutable value: number }, reason: string | null): number!infer E!infer R => {
+export const inferred = (input: { mutable value: number }, reason: string | null): Effect.Effect<number, infer E, infer R> => {
   const snapshot = input.value
   return () => { if (reason !== null) throw reason; return snapshot }
 }

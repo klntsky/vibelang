@@ -3,6 +3,6 @@
 // call to it can fail with the E it gains. The note names the contract to write.
 error Boom
 
-export function raise(make: () => Boom): number!Boom {
+export function raise(make: () => Boom): Effect<number, Boom, infer R> {
   throw make()
 }

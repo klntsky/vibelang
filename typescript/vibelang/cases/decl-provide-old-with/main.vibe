@@ -3,7 +3,7 @@
 // with the warning EK1009 at its keyword (D172). The word provide alone stays
 // an ordinary identifier: a call, an element access, and a local name.
 service Names {
-  name(): string!!
+  name(): Effect<string>
 }
 
 const NamesLive = Layer.succeed(Names, {

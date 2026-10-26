@@ -3,8 +3,8 @@ import { Effect } from "effect"
 error Bad { reason: string }
 function wrap(effect: Effect.Effect<number, Bad, never>) { return effect() }
 export function main() {
-  wrap((value: number): number!Bad => { return value })
-  wrap((): string!Bad => "wrong")
-  wrap((): number!Bad => "wrong")
-  wrap((): number!Bad => { throw "wrong" })
+  wrap((value: number): Effect.Effect<number, Bad, infer R> => { return value })
+  wrap((): Effect.Effect<string, Bad, infer R> => "wrong")
+  wrap((): Effect.Effect<number, Bad, infer R> => "wrong")
+  wrap((): Effect.Effect<number, Bad, infer R> => { throw "wrong" })
 }

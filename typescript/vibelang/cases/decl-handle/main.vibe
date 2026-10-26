@@ -2,16 +2,16 @@
 error ReviewBusy { request: string }
 
 control Approval {
-  approve(request: string): boolean!ReviewBusy
-  note(text: string): void!!
+  approve(request: string): Effect<boolean, ReviewBusy>
+  note(text: string): Effect<void>
 }
 
 control Log {
-  write(message: string, level?: string): void!!
+  write(message: string, level?: string): Effect<void>
 }
 
 control Stop {
-  stop(reason: string): never!!
+  stop(reason: string): Effect<never>
 }
 
 function release(version: string) {

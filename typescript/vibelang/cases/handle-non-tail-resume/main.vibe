@@ -4,7 +4,7 @@
 import { Effect } from "effect"
 
 control Approval {
-  approve(request: string): boolean!!
+  approve(request: string): Effect.Effect<boolean>
 }
 
 const log: string[] = []
@@ -33,7 +33,7 @@ function nonTail() {
   }
 }
 
-function depth(n: number): number!! {
+function depth(n: number): Effect.Effect<number> {
   if (n === 0) {
     Effect.sleep("1 millis")
     return 0
