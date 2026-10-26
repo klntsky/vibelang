@@ -3,8 +3,9 @@
 > **Warning:** VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
 The VibeLang compiler and language server. VibeLang is a readable syntax for
-Effect that compiles to TypeScript: `vibelang` checks `.vibe` and `.ts` files
-together and emits JavaScript that runs on Effect 4. Documentation:
+Effect that compiles to JavaScript with TypeScript declarations: `vibelang` checks `.vibe` and `.ts` files
+together and emits JavaScript that runs on Effect 4. Enable `declaration`
+to emit `.d.ts` files. Documentation:
 [vibelang.sh](https://vibelang.sh).
 
 ## Start a project

@@ -1,7 +1,7 @@
 {
   "name": "vibelang",
   "version": "0.0.9",
-  "description": "The VibeLang compiler and language server: a readable syntax for Effect that compiles to TypeScript",
+  "description": "The VibeLang compiler and language server: a readable syntax for Effect that compiles to JavaScript with TypeScript declarations",
   "keywords": ["vibelang", "effect", "typescript", "compiler", "language-server"],
   "homepage": "https://vibelang.sh",
   "repository": {

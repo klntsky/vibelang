@@ -1,7 +1,7 @@
 ---
 title: VibeLang · Effect, as a language
 layout: minimal
-description: VibeLang gives Effect a simple, readable syntax that compiles to TypeScript, with a typed boundary to TypeScript and npm.
+description: VibeLang gives Effect a simple, readable syntax that compiles to JavaScript with TypeScript declarations, with a typed boundary to TypeScript and npm.
 showAskAi: false
 showLogo: true
 showOutline: false
@@ -19,7 +19,7 @@ import { CopyPromptButton } from '../components/CopyPromptButton'
       <div className="vibe-home__eyebrow">Effect, as a language</div>
       <h1><span className="vibe-gradient">Vibe</span>Lang</h1>
       <div className="vibe-home__tagline">
-        VibeLang gives <span>Effect</span> a simple, readable syntax that <span>compiles to TypeScript</span>, with a typed boundary to TypeScript and npm.
+        VibeLang gives <span>Effect</span> a simple, readable syntax that <span>compiles to JavaScript with TypeScript declarations</span>, with a typed boundary to TypeScript and npm.
       </div>
       <div className="vibe-home__actions">
         <CopyPromptButton />
@@ -186,7 +186,7 @@ Both versions compile. The pipe operator `|>` passes `Users.name(id)` to `retry`
 
 ### Hello, VibeLang
 
-Create a project from the starter. You need Node 26 or later and Bun 1.4 or later.
+Create a project from the starter. You need Node 26 or later. Bun is optional. If you use Bun, use Bun 1.4 or later.
 
 ```bash
 npm create vibelang@latest my-app
@@ -243,7 +243,7 @@ Recovered from EmptyName
 
 ### TypeScript stays one step away
 
-VibeLang's compiler is TypeScript's compiler, extended. It checks `.vibe` and `.ts` files together and emits JavaScript and `.d.ts` files, so npm packages, your `.ts` files, and Effect libraries compatible with the supported Effect version work unchanged. TypeScript code calls VibeLang functions as ordinary Effect functions.
+VibeLang's compiler is TypeScript's compiler, extended. It checks `.vibe` and `.ts` files together and emits JavaScript and, with `"declaration": true`, `.d.ts` files, so npm packages, your `.ts` files, and Effect libraries compatible with the supported Effect version work unchanged. TypeScript code calls VibeLang functions as ordinary Effect functions.
 
 When you need plain TypeScript, `sync`, `try`, and `callback` take a plain TypeScript function, and a `.ts` file can sit beside any `.vibe` file.
 
@@ -268,7 +268,7 @@ function todoOrFallback(id: number) {
 
 ## Features
 
-Everything Effect does, VibeLang does, because the output is Effect. The common features have their own syntax:
+Everything Effect does is reachable from VibeLang. Use its APIs directly or call TypeScript adapters for forms that `.vibe` does not accept. The common features have their own syntax:
 
 | Effect feature | VibeLang |
 | --- | --- |

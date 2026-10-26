@@ -97,7 +97,7 @@ Effect.runPromise(main)
 
 `match` is exhaustive: leave a variant of a `data` type out of a match without `default`, and the compiler reports `This match does not handle every case of Delivery: Delivery.Rejected is left.`
 
-The compiler checks `.vibe` and `.ts` files together and emits JavaScript and TypeScript declarations, so TypeScript code can import VibeLang modules.
+The compiler checks `.vibe` and `.ts` files together and emits JavaScript. Set `"declaration": true` in `compilerOptions` to emit `.d.ts` files for TypeScript consumers. The starter leaves declaration output off.
 
 ## Start here
 
@@ -108,7 +108,7 @@ bun run start
 bun run test
 ```
 
-With npm, run `npm create vibelang@latest my-app`. You need Node 26 or later. If you use Bun, use Bun 1.4 or later. `bun run start` prints:
+With npm, run `npm create vibelang@latest my-app`. You need Node 26 or later. If you use Bun, use Bun 1.4 or later. Bun is optional. `bun run start` prints:
 
 ```text
 Hello, VibeLang!
@@ -163,4 +163,4 @@ Report a bug with a minimal reproduction, or propose an idea, in [Issues](https:
 
 [MIT](LICENSE), except the TypeScript fork in [`typescript/`](typescript/) and the compiler packages built from it, `vibelang` and `vibelang-<platform>`, which use the [Apache License 2.0](typescript/LICENSE.txt) and keep its [notices](typescript/NOTICE.txt).
 
-<sub>1,949 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
+<sub>1,969 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>

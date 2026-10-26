@@ -83,7 +83,7 @@
           "type": "hero",
           "title": "VibeLang",
           "tagline": "Reliable TypeScript for the AI era, built on Effect.",
-          "text": "A simple, readable syntax for Effect that compiles to TypeScript, with first-class access to the TypeScript ecosystem.",
+          "text": "A simple, readable syntax for Effect that compiles to JavaScript with TypeScript declarations, with first-class access to the TypeScript ecosystem.",
           "install": "npm create vibelang@latest my-app",
           "actions": [
             {

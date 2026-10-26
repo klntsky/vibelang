@@ -19,8 +19,8 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 | --- | ---: |
 | The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,846 |
 | The skill and the [cheat sheet](115-cheat-sheet.md) | 13,735 |
-| The skill and the user guide (131 pages) | 206,453 |
-| The user guide alone | 201,607 |
+| The skill and the user guide (131 pages) | 206,499 |
+| The user guide alone | 201,653 |
 | The specification (33 chapters) | 105,525 |
 | The decision log, `docs/design/DECISIONS.md` | 64,537 |
 
@@ -87,9 +87,9 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | **Start Here** | **2,226** |
 | [Welcome](../001-onboarding.md) | 1,626 |
 | [Why VibeLang?](../getting-started/002-why-effect.md) | 600 |
-| **Learning Path** | **8,446** |
+| **Learning Path** | **8,500** |
 | [The Effect Type](../getting-started/003-the-effect-type.md) | 1,765 |
-| [Installation](../getting-started/004-installation.md) | 2,035 |
+| [Installation](../getting-started/004-installation.md) | 2,089 |
 | [Creating Effects](../getting-started/005-creating-effects.md) | 2,559 |
 | [Two Types of Errors](../error-management/006-two-error-types.md) | 646 |
 | [Basic Concurrency](../concurrency/007-basic-concurrency.md) | 1,441 |
@@ -99,7 +99,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Sequencing Effects](../getting-started/010-using-generators.md) | 1,184 |
 | [Building Pipelines](../getting-started/011-building-pipelines.md) | 1,807 |
 | [Devtools](../getting-started/012-devtools.md) | 7,779 |
-| **All 12 pages** | **24,040** |
+| **All 12 pages** | **24,094** |
 
 ### Setup
 
@@ -256,10 +256,10 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Control operations and handlers](111-control-operations-and-handlers.md) | 1,923 |
 | [Producers](112-producers.md) | 1,291 |
 | [Building an HTTP API](113-building-an-http-api.md) | 1,392 |
-| [VibeLang for Effect users](114-vibelang-for-effect-users.md) | 3,708 |
+| [VibeLang for Effect users](114-vibelang-for-effect-users.md) | 3,700 |
 | [Cheat sheet](115-cheat-sheet.md) | 8,889 |
 | [Pattern matching with match and is](116-match-and-is.md) | 3,718 |
-| **All 6 pages** | **20,921** |
+| **All 6 pages** | **20,913** |
 
 ### Specification
 

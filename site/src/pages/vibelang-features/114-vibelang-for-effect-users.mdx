@@ -62,7 +62,7 @@ For `src/t5.vibe` and `src/use.ts`, keep these settings in `tsconfig.json`:
 }
 ```
 
-Keep the starter's other compiler options. `include` must cover a standalone `.ts` entry point: a `.ts` file imported by an included file is already part of the project, but an unreferenced `src/use.ts` is otherwise neither built nor typechecked. The 0.0.6 starter includes only `.vibe`; add `"src/**/*.ts"` there. New starters include both. `rewriteRelativeImportExtensions` rewrites `"./t5.vibe"` to `"./t5.js"` in emitted JavaScript. Build, then run the emitted caller:
+Keep the starter's other compiler options. `include` must cover a standalone `.ts` entry point: a `.ts` file imported by an included file is already part of the project, but an unreferenced `src/use.ts` is otherwise neither built nor typechecked. The current starter includes both `.vibe` and `.ts` files under `src/`. `rewriteRelativeImportExtensions` rewrites `"./t5.vibe"` to `"./t5.js"` in emitted JavaScript. Build, then run the emitted caller:
 
 ```sh
 bun run build

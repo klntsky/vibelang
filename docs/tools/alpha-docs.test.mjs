@@ -33,3 +33,20 @@ test("2: first-screen compatibility covers exact peers, checker and editor costs
   assert.match(read("packages/compiler/README.md"), /exact.*fiber internals/s)
   assert.match(read("site/src/pages/index.mdx"), /libraries compatible with the supported Effect version/)
 })
+
+test("3: prerequisites, output and starter descriptions agree", () => {
+  const homepage = read("site/src/pages/index.mdx")
+  assert.match(homepage, /Bun is optional/)
+  assert.doesNotMatch(homepage, /Everything Effect does, VibeLang does|compiles to TypeScript/)
+  assert.match(homepage, /Everything Effect does is reachable from VibeLang/)
+  const install = read("docs/user/src/getting-started/004-installation.md")
+  assert.match(install, /macOS on Apple silicon[^\n]*\| Yes \|/)
+  assert.match(install, /macOS on Intel[^\n]*\| No \|/)
+  for (const path of ["README.md", "docs/user/src/getting-started/004-installation.md"]) {
+    assert.match(read(path), /Bun is optional/)
+    assert.match(read(path), /"declaration": true/)
+    assert.match(read(path), /starter.*(?:leaves|does not|omits)/i)
+  }
+  assert.doesNotMatch(read("docs/user/src/vibelang-features/114-vibelang-for-effect-users.md"), /0\.0\.6 starter/)
+  for (const path of ["packages/compiler/README.md", "packages/compiler/package.json"]) assert.doesNotMatch(read(path), /compiles to TypeScript/)
+})

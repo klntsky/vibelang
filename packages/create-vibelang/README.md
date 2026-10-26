@@ -3,7 +3,7 @@
 > **Warning:** VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
 Create a [VibeLang](https://vibelang.sh) application. VibeLang is a readable
-syntax for Effect that compiles to TypeScript.
+syntax for Effect that compiles to JavaScript with TypeScript declarations.
 
 ```sh
 bun create vibelang@latest my-app

@@ -138,7 +138,7 @@ export function buildMarkdown(site: string, facts: Record<string, string>) {
   const llms = [
     "# VibeLang",
     "",
-    "> VibeLang is a language for building reliable TypeScript in the AI era, built on Effect. It gives Effect a simple, readable syntax that compiles to TypeScript, with a typed boundary to TypeScript and npm.",
+    "> VibeLang is a language for building reliable TypeScript in the AI era, built on Effect. It gives Effect a simple, readable syntax that compiles to JavaScript with TypeScript declarations, with a typed boundary to TypeScript and npm.",
     "",
     essentials,
     "",
