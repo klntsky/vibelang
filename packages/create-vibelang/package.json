@@ -16,6 +16,6 @@
   "type": "module",
   "bin": { "create-vibelang": "bin/create-vibelang.mjs" },
   "files": ["bin", "template", "README.md", "LICENSE"],
-  "scripts": { "test": "node --test test/" },
+  "scripts": { "test": "node --test test/*.test.mjs" },
   "engines": { "node": ">=26" }
 }

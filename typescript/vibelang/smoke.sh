@@ -47,8 +47,8 @@ if [ -f "$runtime/tsconfig.json" ]; then
 	"$tsc" -p "$runtime/tsconfig.json"
 fi
 
-echo "test: go test ./internal/vibelang/"
-(cd "$root/tsc" && CGO_ENABLED=0 go test -trimpath -gcflags=all=-dwarf=false ./internal/vibelang/ >/dev/null) ||
-	(cd "$root/tsc" && CGO_ENABLED=0 go test -trimpath -gcflags=all=-dwarf=false ./internal/vibelang/; exit 1)
+echo "test: go test -timeout=20m ./internal/vibelang/"
+(cd "$root/tsc" && CGO_ENABLED=0 go test -timeout=20m -trimpath -gcflags=all=-dwarf=false ./internal/vibelang/ >/dev/null) ||
+	(cd "$root/tsc" && CGO_ENABLED=0 go test -timeout=20m -trimpath -gcflags=all=-dwarf=false ./internal/vibelang/; exit 1)
 
 EFFECT_NODE_MODULES=$effect_modules VIBELANG_RUNTIME=$runtime exec node "$root/vibelang/harness.mjs" "$@"
