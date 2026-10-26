@@ -2,6 +2,15 @@
 
 Install VibeLang's packages in a project with a `package.json` and check that the compiler runs; then set up the build.
 
+Call your own `.ts` functions and npm packages through `try`, `trusted`, or `"trustedPackages"` ([TypeScript boundaries](../vibelang-features/114-vibelang-for-effect-users.md#keep-platform-work-in-effect)). For example, import your parser and pass its input through a hatch:
+
+```vibe
+import { parseSettings } from "./settings.ts"
+function settings(text: string) { return try((text) => parseSettings(text), text) }
+```
+
+Use Effect services for platform, clock and randomness APIs, such as `Console`, `Clock` and `Random`. The compiler reports unwrapped foreign calls as `EK4401`, platform calls as `EK4402`, and uncontrolled time or randomness reads as `EK4403` ([diagnostics](../getting-started/012-devtools.md#diagnostics-completions-and-refactors)).
+
 ## 1. Check package.json
 
 `package.json` must have `"type": "module"`. If not, ask the user before adding it: it changes how Node loads the project's `.js` files.

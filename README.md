@@ -14,6 +14,15 @@ Write [Effect](https://effect.website) programs in TypeScript syntax, with typed
 
 Effect gives you typed failures, dependency injection, concurrency and resource management. VibeLang gives those programs direct syntax: a call returns its value, and its errors and required services stay in its type.
 
+Call your own `.ts` functions and npm packages through `try`, `trusted`, or `"trustedPackages"` ([TypeScript boundaries](https://vibelang.sh/vibelang-features/114-vibelang-for-effect-users#keep-platform-work-in-effect)). For example, import your parser and pass its input through a hatch:
+
+```vibe
+import { parseSettings } from "./settings.ts"
+function settings(text: string) { return try((text) => parseSettings(text), text) }
+```
+
+Use Effect services for platform, clock and randomness APIs, such as `Console`, `Clock` and `Random`. The compiler reports unwrapped foreign calls as `EK4401`, platform calls as `EK4402`, and uncontrolled time or randomness reads as `EK4403` ([diagnostics](https://vibelang.sh/getting-started/012-devtools#diagnostics-completions-and-refactors)).
+
 Here is one program in both languages: a typed failure, an injected service, two concurrent lookups and a fallback.
 
 **VibeLang**
@@ -142,4 +151,4 @@ Report a bug with a minimal reproduction, or propose an idea, in [Issues](https:
 
 [MIT](LICENSE), except the TypeScript fork in [`typescript/`](typescript/) and the compiler packages built from it, `vibelang` and `vibelang-<platform>`, which use the [Apache License 2.0](typescript/LICENSE.txt) and keep its [notices](typescript/NOTICE.txt).
 
-<sub>1,583 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
+<sub>1,771 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
