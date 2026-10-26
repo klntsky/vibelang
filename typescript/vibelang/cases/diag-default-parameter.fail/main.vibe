@@ -1,0 +1,9 @@
+// expect: EK1001 TS2365 TS2345
+function value() { sleep("1 millis"); return 7 }
+export function f(x = value()) { return x + 1 }
+export function test() { return [f(), f(10)] }
+
+// Keeping a default as a program is valid; calling it explicitly runs it.
+export function inferred(program = value()) { return program() }
+export function explicit(program: number!! = value()) { return program() }
+export function wrongProgramArgument() { return inferred(10) }

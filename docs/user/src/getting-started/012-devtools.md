@@ -357,3 +357,4 @@ Library debugging concepts still apply; VibeLang's call execution, service decla
 | EK4503 | Read service values with `Users().region`. Extract an implementation method with `Users().find`; call it directly with `Users.find(id)`. |
 | TS2540 | Object-type and interface members in `.vibe` are readonly by default. For a member you assign, declare `{ mutable n: number }`. Class fields and TypeScript declarations keep their own readonly rules. |
 | EK2112 | Typed catch clauses are retired in statements and expressions. Write `catch (e) => match (e) { when NotFound: fallback; default: throw e; }`; `--fix` rewrites a handler whose annotation names error classes. |
+| EK1001 | Parameter defaults are plain JavaScript. If an inferred default is an Effect where you need a value, make the parameter optional and compute `x ?? load()` in the body. An explicitly Effect-typed default can hold a program. |
