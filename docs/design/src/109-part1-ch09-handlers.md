@@ -17,7 +17,7 @@ Declare a control operation like a service, with `control`, short for an abstrac
 
 ```ts es
 control Approval {
-  approve(request: string): boolean!ReviewBusy
+  approve(request: string): Effect<boolean, ReviewBusy>
 }
 
 function checkout(cartId: string) {
@@ -26,7 +26,7 @@ function checkout(cartId: string) {
   if (!ok) throw new Declined({ cartId })
   return Payments.charge(cartId)
 }
-// Receipt!ReviewBusy | Declined | PaymentError!Approval | Inventory | Payments
+// Effect<Receipt, ReviewBusy | Declined | PaymentError, Approval | Inventory | Payments>
 ```
 
 To the code that performs it, `Approval.approve` is an ordinary call. Like a service, `Approval` stays in R until something handles it, and the service rules apply: its members are abstract with full contracts, its key derives from its module, and it cannot be extended or instantiated.
@@ -44,7 +44,7 @@ function reviewedCheckout(cartId: string) {
     resume(decision)                              // checkout continues from its call
   }
 }
-// Receipt!ReviewBusy | Declined | PaymentError!Inventory | Payments | Reviewers
+// Effect<Receipt, ReviewBusy | Declined | PaymentError, Inventory | Payments | Reviewers>
 ```
 
 While the reviewer decides, the cart's hold stays reserved and `checkout` waits at its call, as during any slow service call. A clause that ends by resuming, like this one, costs no stack: the compiler ends the clause before it continues the program (Chapter 26), so a handler that resumes a million times runs in constant space.
@@ -71,7 +71,7 @@ A handler that returns without calling `resume` ends the handled program with th
 
 ```ts es
 control Found {
-  found(cell: Cell): never!!
+  found(cell: Cell): Effect<never>
 }
 
 function locate(grid: Grid, target: number) {
@@ -85,7 +85,7 @@ function locate(grid: Grid, target: number) {
     return cell      // stop: the open cursor is released before locate returns
   }
 }
-// Cell | undefined!!
+// Effect<Cell | undefined>
 ```
 
 `found`'s result type is `never`, so the type says its handler cannot continue the search.

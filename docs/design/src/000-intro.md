@@ -20,7 +20,7 @@ function welcome(id: string) {
   Mailer.send(user.email, `Welcome, ${user.name}!`)
   return user.name
 }
-// string!UserNotFound | MailError!Users | Mailer
+// Effect<string, UserNotFound | MailError, Users | Mailer>
 ```
 
 You don't write the comment under the VibeLang version: it is the inferred contract, which your editor shows when you hover over `welcome`.
@@ -53,7 +53,7 @@ To learn VibeLang by task, not by rule, start with the [user guide](../../user/s
 | `class E extends Data.TaggedError("E")<{ ... }> {}` | `error E { ... }` | [3](#3-errors-the-e-channel) |
 | `Effect.catchTag("E", h)` | `try { … } catch (e) { … }` | [3](#3-errors-the-e-channel) |
 | `Effect.ensuring(cleanup)` | `finally { … }` | [3](#3-errors-the-e-channel) |
-| `class S extends Context.Service<…>()("key") {}` | `service S { method(): A!E }` | [4](#4-dependency-injection-the-r-channel) |
+| `class S extends Context.Service<…>()("key") {}` | `service S { method(): Effect<A, E> }` | [4](#4-dependency-injection-the-r-channel) |
 | `const s = yield* S` then `yield* s.method()` | `S.method()` | [4](#4-dependency-injection-the-r-channel) |
 | `Layer.effect(S, Effect.gen(…))` | `Layer.effect(S) { … }` | [4](#4-dependency-injection-the-r-channel) |
 | `program.pipe(Effect.provide(layer))` | `provide layer { program() }` | [4](#4-dependency-injection-the-r-channel) |

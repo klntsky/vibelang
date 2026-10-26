@@ -28,7 +28,7 @@ import { findUser } from "./users-repo.ts"
 export function title(id: string) {
   return findUser(id).name.toUpperCase()
 }
-// string!UserNotFound | DbError!Database
+// Effect<string, UserNotFound | DbError, Database>
 ```
 
 Generic, overloaded, and aliased TypeScript functions keep their signatures. TypeScript services, `Context.Service` classes or values, are used exactly like abstract service classes: `Database.query(…)` works on either. The one exception is a TypeScript function whose R contains a control operation (EK4202, Chapter 9).
@@ -99,7 +99,7 @@ function publish(draft: Draft) {
   const words = draft.body.split(/\s+/).length
   return Articles.save({ slug, words, ...meta })
 }
-// Article!SyntaxError | InvalidSlug | SaveError!Articles
+// Effect<Article, SyntaxError | InvalidSlug | SaveError, Articles>
 ```
 
 | Callee | Rule | Diagnostic |
@@ -134,7 +134,7 @@ An explicit boundary, one of the hatches `sync`, `try`, and `callback` (D148), s
 function parseLegacy(text: string) {
   return try((text) => legacyParse(text), (cause) => new LegacyFormatError({ cause }), text)   // plain TypeScript inside
 }
-// LegacyDoc!LegacyFormatError!
+// Effect<LegacyDoc, LegacyFormatError>
 ```
 
 `try` turns an exception or a rejection into a typed error: `UnknownError`, or what its second argument makes of it. `sync` makes them defects. `callback` adapts a callback API (Chapter 6). Each takes either a function, `try(() => { … })` or `try(async (signal) => …)`, or a single expression evaluated when the Effect runs, `sync(crypto.randomUUID())`. A hatch's first argument is plain TypeScript, not VibeLang: calls there do not run, so calling a `.vibe` function gives an inert Effect value for `runPromise` or `runFork`; `throw`, `async`, and `await` keep their JavaScript meaning; platform APIs and clock reads are allowed (no EK4401, EK4402, or EK4403); and `return` returns from the hatch's function. Effect's `{ try, catch }` options object is EK4404: the hatch takes the code and the error mapping as two arguments.
@@ -161,7 +161,7 @@ import { createCharge } from "./payments-sdk.ts"   // (amount: number, signal: A
 function charge(cartId: string, amount: number) {
   return try((amount, signal) => createCharge(amount, signal), (cause) => new ChargeFailed({ cartId, cause }), amount)
 }
-// Charge!ChargeFailed!
+// Effect<Charge, ChargeFailed>
 ```
 
 HTTP itself goes through Effect's `HttpClient`, not `fetch` (Chapter 11).

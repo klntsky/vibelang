@@ -8,7 +8,7 @@ title: "27. Compiler architecture"
 
 ```ts [Generated declaration]
 import type { Effect } from "vibelang-runtime"
-export declare function double(n: number): number!!
+export declare function double(n: number): Effect<number>
 ```
 
 The compiler writes ordinary TypeScript declarations with Effect contracts.
@@ -126,7 +126,7 @@ shape as an interface plus a class whose base has type `ServiceKey<Users>`
 
 ```ts [Generated declaration]
 export interface Users {
-  find(id: string): User!UserNotFound!
+  find(id: string): Effect<User, UserNotFound>
   readonly "~vibelang/service"?: "@acme/app/src/users#Users"
 }
 declare const Users_base: import("vibelang-runtime").ServiceKey<Users>

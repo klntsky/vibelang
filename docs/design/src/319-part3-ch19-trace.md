@@ -3,12 +3,12 @@
 This chapter follows one program through the machine before Chapter 20 defines it: the checkout from Chapter 9, simplified, plus a request-scoped audit log so the trace shows which Context each piece of code sees. Kernel test T1 runs exactly this program, lowered by hand.
 
 ```ts es
-service AuditLog { info(message: string): void!! }
-service Inventory { reserve(cartId: string): Hold!!Scope }
-service Reviewers { decide(request: string): boolean!! }
+service AuditLog { info(message: string): Effect<void> }
+service Inventory { reserve(cartId: string): Effect<Hold, never, Scope> }
+service Reviewers { decide(request: string): Effect<boolean> }
 
 control Approval {
-  approve(request: string): boolean!!
+  approve(request: string): Effect<boolean>
 }
 
 function checkout(cartId: string) {

@@ -21,10 +21,10 @@ function readReport(path: string) {
   using file = Files.open(path)
   return parseReport(file.readAll())
 }
-// Report!IOError | ParseError!Files
+// Effect<Report, IOError | ParseError, Files>
 ```
 
-`Files.open` returns a scoped resource: `FileHandle!IOError!Scope`. The block that declares `using` supplies the `Scope`, so `Scope` is not in `readReport`'s requirements. Several `using` declarations release in reverse order.
+`Files.open` returns a scoped resource: `Effect<FileHandle, IOError, Scope>`. The block that declares `using` supplies the `Scope`, so `Scope` is not in `readReport`'s requirements. Several `using` declarations release in reverse order.
 
 A call that runs an Effect is an acquisition even when its result has no `Symbol.dispose`; it receives the block Scope. Other initializers must be Disposable, `null`, or `undefined`. A Disposable result also runs `[Symbol.dispose]()` at block exit. If its Effect release already disposes it, this disposes it twice (D94). An AsyncDisposable result without `Symbol.dispose` gets an awaited `[Symbol.asyncDispose]()` at block exit, unless its acquisition registered a release of its own.
 
@@ -41,7 +41,7 @@ function openAndLog(url: string) {
   log.write(`connected to ${url}`)
   return connection                             // still open when it reaches the caller
 }
-// Connection!ConnectError | IOError!Database | Logs | Scope
+// Effect<Connection, ConnectError | IOError, Database | Logs | Scope>
 ```
 
 `log` closes when `openAndLog` returns. `connection` stays open, and `Scope` in the contract says the caller supplies the scope that will close it:
@@ -50,14 +50,14 @@ function openAndLog(url: string) {
 function openLog(day: string) {
   return Files.open(`/var/log/app-${day}.log`)    // no `using`: the caller owns the file
 }
-// FileHandle!IOError!Files | Scope
+// Effect<FileHandle, IOError, Files | Scope>
 
 function compareLogs(a: string, b: string) {
   using left = openLog(a)
   using right = openLog(b)
   return diffLines(left.readAll(), right.readAll())
 }
-// Diff!IOError!Files; both files close when compareLogs returns
+// Effect<Diff, IOError, Files>; both files close when compareLogs returns
 ```
 
 #### Defining a resource
@@ -71,7 +71,7 @@ function lease(name: string) {
     (lock) => Locks.release(lock)     // release: always runs, exactly once
   )
 }
-// Lock!LockError!Locks | Scope
+// Effect<Lock, LockError, Locks | Scope>
 ```
 
 The release is registered before anything else can happen, so a cancelled request never leaks a lock. By default the acquire step is also masked: an interruption that arrives while it runs waits for it to finish, then the release runs. That suits a quick step such as taking a lock or opening a file. An acquisition that waits on the outside world, such as a connection that may never complete, passes `{ interruptible: true }` so cancellation reaches the wait, as the adapter below does.
@@ -138,7 +138,7 @@ function ready() {
     onceReady((sdk) => resume(sdk))
   })
 }
-// Sdk!!
+// Effect<Sdk>
 ```
 
 Only `suspend` reports a lost race, so an adapter for a value that needs releasing stays in TypeScript, as above.

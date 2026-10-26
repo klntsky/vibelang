@@ -16,7 +16,7 @@ Every section of Effect 4's documentation, the Effect 3 pages version 4 dropped,
 | --- | --- | --- |
 | The `Effect<A, E, R>` type | Changed | Inferred for every function; written as a return annotation to have it checked (Chapter 2) |
 | Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged | Apply them to the TypeScript type of a VibeLang function |
-| Annotate one channel, infer the rest | Changed (D57) | In a return annotation with a body, write `Effect<A, infer E, infer R>`; all three slots are required |
+| Annotate one channel, infer the rest | Changed (D57) | In a return annotation with a body, write `Effect<A, infer E, infer R>`; a slot left out is `never` (D308) |
 | Installation | Changed | `effect@4.0.5`, `vibelang-runtime`, and `vibelang` (Chapter 28) |
 | Importing Effect | Changed | `effect`'s root modules need no import (D146); import subpath packages such as `effect/http` |
 | `Effect.succeed` | Changed | `return 42` |
@@ -70,7 +70,7 @@ On a cause mixing an expected failure and a defect, the Effect operators below k
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `Context.Service` class | Changed | `service Users { find(id: string): User!UserNotFound }` (D1, D128) |
+| `Context.Service` class | Changed | `service Users { find(id: string): Effect<User, UserNotFound> }` (D1, D128) |
 | Service keys | Changed | Derived from package, path, and class name; duplicates are EK3001 |
 | `yield* Users`, then a method | Changed | `Users.find(id)`; `Users()` gives the implementation |
 | `Users.use`, `useSync` | Changed | Call the member: `Users.find(id)` |

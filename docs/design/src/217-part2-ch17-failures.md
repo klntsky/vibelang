@@ -70,7 +70,7 @@ In any function that compiles to frames, `try`, `catch`, `finally`, and `using` 
 ```ts es
 error Unavailable
 
-function fetchSnapshot(): string!Unavailable {
+function fetchSnapshot(): Effect<string, Unavailable> {
   sleep("1 millis")
   return "snapshot"
 }
