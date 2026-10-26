@@ -1,0 +1,111 @@
+// for (using x of values) over an iterator, a producer, or a Stream: each
+// element is disposed when its iteration ends, and then, when the loop exits
+// early by any path, the iterator, producer, or Stream is closed, as
+// JavaScript disposes the element before it calls the iterator's return()
+// (D95). A failure or an interruption in the body closes it too.
+error Bad {}
+
+module iterators {
+  export function* elements(events: string[]): Generator<Disposable> {
+    try {
+      yield { [Symbol.dispose](): void { events.push("dispose g1") } }
+      yield { [Symbol.dispose](): void { events.push("dispose g2") } }
+    } finally {
+      events.push("iterator closed")
+    }
+  }
+}
+import { elements } from iterators
+
+function disposable(events: string[], name: string) {
+  return { [Symbol.dispose](): void { events.push(`dispose ${name}`) } }
+}
+
+function iterator(fail: boolean) {
+  const events: string[] = []
+  const outcome = exit(() => {
+    for (using x of sync((e: string[]) => elements(e), events)) {
+      events.push("body")
+      sleep("1 millis")
+      if (fail) throw new Bad()
+    }
+  })
+  return [Exit.isFailure(outcome), events]
+}
+
+function iteratorInterrupted() {
+  const events: string[] = []
+  const started = Deferred.make<void>()
+  function child() {
+    for (using x of sync((e: string[]) => elements(e), events)) {
+      events.push("body")
+      Deferred.succeed(started, undefined)
+      sleep("10 seconds")
+    }
+  }
+  const fiber = Effect.forkChild(child())
+  Deferred.await(started)
+  Fiber.interrupt(fiber)
+  return events
+}
+
+function* produce(events: string[]) {
+  try {
+    yield disposable(events, "p1")
+    yield disposable(events, "p2")
+  } finally {
+    events.push("producer done")
+  }
+}
+
+function producer(fail: boolean) {
+  const events: string[] = []
+  const outcome = exit(() => {
+    for (using x of produce(events)) {
+      events.push("body")
+      sleep("1 millis")
+      if (fail) throw new Bad()
+    }
+  })
+  return [Exit.isFailure(outcome), events]
+}
+
+function stream(fail: boolean) {
+  const events: string[] = []
+  const values = Stream.fromIterable([disposable(events, "s1"), disposable(events, "s2")])
+  const outcome = exit(() => {
+    for (using x of values) {
+      events.push("body")
+      sleep("1 millis")
+      if (fail) throw new Bad()
+    }
+  })
+  return [Exit.isFailure(outcome), events]
+}
+
+function labeled() {
+  const events: string[] = []
+  outer: for (const i of [1, 2]) {
+    for (using x of sync((e: string[]) => elements(e), events)) {
+      events.push(`body ${i}`)
+      sleep("1 millis")
+      if (i === 1) continue outer
+      break outer
+    }
+  }
+  return events
+}
+
+// expect-result: {"iterator":[false,["body","dispose g1","body","dispose g2","iterator closed"]],"iteratorFails":[true,["body","dispose g1","iterator closed"]],"iteratorInterrupted":["body","dispose g1","iterator closed"],"producer":[false,["body","dispose p1","body","dispose p2","producer done"]],"producerFails":[true,["body","dispose p1","producer done"]],"stream":[false,["body","dispose s1","body","dispose s2"]],"streamFails":[true,["body","dispose s1"]],"labeled":["body 1","dispose g1","iterator closed","body 2","dispose g1","iterator closed"]}
+export function main() {
+  return {
+    iterator: iterator(false),
+    iteratorFails: iterator(true),
+    iteratorInterrupted: iteratorInterrupted(),
+    producer: producer(false),
+    producerFails: producer(true),
+    stream: stream(false),
+    streamFails: stream(true),
+    labeled: labeled(),
+  }
+}

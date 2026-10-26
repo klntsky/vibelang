@@ -291,8 +291,8 @@ func isClosingLoop(c *checker.Checker, statement *ast.Node) bool {
 	if loop.AwaitModifier != nil || !inLowerableBody(statement) || isStreamLoop(c, statement) {
 		return false
 	}
-	if initializer := loop.Initializer; ast.IsVariableDeclarationList(initializer) && (initializer.Flags&ast.NodeFlagsUsing != 0 || len(initializer.AsVariableDeclarationList().Declarations.Nodes) == 0) {
-		return false // for (using r of rs) is a Scope region's (scopes_lower.go)
+	if initializer := loop.Initializer; ast.IsVariableDeclarationList(initializer) && len(initializer.AsVariableDeclarationList().Declarations.Nodes) == 0 {
+		return false // for (using of rs): a syntax error the parser reported
 	}
 	t := c.GetTypeAtLocation(loop.Expression)
 	if t == nil || t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsStringLike) != 0 || c.IsArrayLikeType(t) {
@@ -397,6 +397,17 @@ func (tx *lowering) visitStreamLoop(node *ast.Node) *ast.Node {
 	r := &region{}
 	var binding *ast.Node  // the declaration the closure takes the element as
 	var prologue *ast.Node // the assignment of the element to an existing target
+	if isUsingForOf(node) {
+		// for (using x of s): each element's iteration is a Scope region
+		// (scopes_lower.go), and the closure returns its completion record.
+		value := f.NewUniqueName("value")
+		binding = f.NewVariableDeclaration(value, nil /*exclamationToken*/, nil /*typeNode*/, nil /*initializer*/)
+		iteration := &region{}
+		run := f.NewYieldExpression(f.NewToken(ast.KindAsteriskToken), tx.usingIteration(iteration, node, value))
+		body := tx.regionFunction(r, "for", binding, loop.Statement, []*ast.Node{f.NewReturnStatement(run)})
+		r.jumps = iteration.jumps
+		return tx.runForOf(node, iterable, body, label, r)
+	}
 	if ast.IsVariableDeclarationList(initializer) && initializer.Flags&ast.NodeFlagsBlockScoped != 0 {
 		binding = initializer.AsVariableDeclarationList().Declarations.Nodes[0]
 	} else {
@@ -422,6 +433,14 @@ func (tx *lowering) visitStreamLoop(node *ast.Node) *ast.Node {
 		statements = append([]*ast.Node{prologue}, statements...)
 	}
 	body := tx.regionFunction(r, "for", binding, loop.Statement, statements)
+	return tx.runForOf(node, iterable, body, label, r)
+}
+
+// runForOf makes the statements that run `runtime.$forOf(iterable, body,
+// label)` for node, a loop whose body closure belongs to region r, and
+// dispatch the jumps that leave the loop.
+func (tx *lowering) runForOf(node *ast.Node, iterable *ast.Node, body *ast.Node, label string, r *region) *ast.Node {
+	f := tx.Factory()
 	arguments := []*ast.Node{iterable, body}
 	if label != "" {
 		arguments = append(arguments, f.NewStringLiteral(label, ast.TokenFlagsNone))

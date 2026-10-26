@@ -251,21 +251,40 @@ func (tx *lowering) visitFork(node *ast.Node) *ast.Node {
 //
 // The using declarations and forks of a block body join the same region.
 func (tx *lowering) visitUsingForOf(node *ast.Node) *ast.Node {
+	if tx.plan.streamLoops[node] {
+		return tx.visitStreamLoop(node) // $forOf closes the iterator or Stream on every exit (producers.go)
+	}
 	f := tx.Factory()
 	loop := node.AsForInOrOfStatement()
 	if len(loop.Initializer.AsVariableDeclarationList().Declarations.Nodes) == 0 {
 		return tx.Visitor().VisitEachChild(node) // for (using of s): a syntax error the parser reported
 	}
-	declaration := loop.Initializer.AsVariableDeclarationList().Declarations.Nodes[0]
 	expression := tx.Visitor().VisitNode(loop.Expression)
 	value := f.NewUniqueName("value")
-	body := loop.Statement
-	scope := tx.scopeName(body)
 
 	// The loop is the target of the jumps its region dispatches, as
 	// visitJumpTarget makes it for any other loop.
 	tx.frame.targets = append(tx.frame.targets, target{loop: true})
 	r := &region{}
+	dispatched := statementsOf(tx.runRegion(loop.Statement, tx.usingIteration(r, node, value), r))
+	tx.frame.targets = tx.frame.targets[:len(tx.frame.targets)-1]
+
+	initializer := f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{
+		f.NewVariableDeclaration(value, nil /*exclamationToken*/, nil /*typeNode*/, nil /*initializer*/),
+	}), ast.NodeFlagsConst)
+	return f.UpdateForInOrOfStatement(loop, nil /*awaitModifier*/, initializer, expression, f.NewBlock(f.NewNodeList(dispatched), true /*multiLine*/))
+}
+
+// usingIteration makes the Scope region of one iteration of node, `for
+// (using x of values) body`, whose closure belongs to region r: it takes
+// value, the iteration's element, with using, then runs the body. A jump out
+// of the body returns its completion record from the closure.
+func (tx *lowering) usingIteration(r *region, node *ast.Node, value *ast.Node) *ast.Node {
+	f := tx.Factory()
+	loop := node.AsForInOrOfStatement()
+	declaration := loop.Initializer.AsVariableDeclarationList().Declarations.Nodes[0]
+	body := loop.Statement
+	scope := tx.scopeName(body)
 	saved := tx.frame
 	tx.frame = &frame{name: saved.name, region: r, handleClause: saved.handleClause}
 	using := f.NewYieldExpression(f.NewToken(ast.KindAsteriskToken), tx.runtimeCall("$using", scope, tx.succeed(value)))
@@ -278,13 +297,7 @@ func (tx *lowering) visitUsingForOf(node *ast.Node) *ast.Node {
 		statements = append(statements, statementsOf(tx.Visitor().VisitNode(body))...)
 	}
 	tx.frame = saved
-	dispatched := statementsOf(tx.runRegion(body, tx.scopeRegion(r, scope, body, statements), r))
-	tx.frame.targets = tx.frame.targets[:len(tx.frame.targets)-1]
-
-	initializer := f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{
-		f.NewVariableDeclaration(value, nil /*exclamationToken*/, nil /*typeNode*/, nil /*initializer*/),
-	}), ast.NodeFlagsConst)
-	return f.UpdateForInOrOfStatement(loop, nil /*awaitModifier*/, initializer, expression, f.NewBlock(f.NewNodeList(dispatched), true /*multiLine*/))
+	return tx.scopeRegion(r, scope, body, statements)
 }
 
 // visitUsingFor lowers `for (using x = value; test; step) body` in an Effect

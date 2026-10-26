@@ -37,7 +37,9 @@ import (
 // using adds no masking of its own: an acquisition is masked or interruptible
 // as its Effect.acquireRelease says (D25). for (using x of values) takes each
 // value with using in a Scope region around that iteration's body, so the
-// value is released when the iteration ends, by any path. for (using x =
+// value is released when the iteration ends, by any path; over an iterator,
+// a producer, or a Stream, $forOf runs those iterations and closes what it
+// iterates when the loop exits early, after the value. for (using x =
 // value; test; step) takes its values once, as JavaScript does, in a Scope
 // region around the whole loop, so they are released when the loop exits.
 
