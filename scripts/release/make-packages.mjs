@@ -110,7 +110,7 @@ const notice = `VibeLang
 Copyright (c) 2026 the VibeLang authors
 
 The VibeLang compiler is a modified version of the TypeScript compiler
-(typescript-go), Copyright (c) Microsoft Corporation, licensed under the
+(microsoft/TypeScript), Copyright (c) Microsoft Corporation, licensed under the
 Apache License 2.0. VibeLang's changes are licensed under the same license.
 The TypeScript notices follow.
 

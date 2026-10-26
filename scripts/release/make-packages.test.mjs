@@ -107,7 +107,12 @@ test("assembles every package in publish order with pinned versions, platform bi
   assert.equal(app.devDependencies["vibelang-vite"], manifest.version)
   assert.ok(archive(root, "create-vibelang", "template/gitignore").length)
   assert.ok(archive(root, "create-vibelang", "template/gitattributes").length)
-  assert.match(archive(root, "vibelang", "NOTICE").toString(), /Microsoft/)
+  for (const name of ["vibelang", ...platforms.map(p => `vibelang-${p}`)]) {
+    const notice = archive(root, name, "NOTICE").toString()
+    const own = notice.slice(0, notice.indexOf("NOTICES AND INFORMATION"))
+    assert.match(own, /microsoft\/TypeScript/, name + ": name the repository that owns the upstream commit")
+    assert.doesNotMatch(own, /typescript-go/, name + ": the upstream commit is from the unified TypeScript repository")
+  }
   for (const name of ["vibelang-runtime", "vibelang-vite", "vibelang-unplugin", "create-vibelang"]) {
     const license = archive(root, name, "LICENSE").toString()
     assert.equal(license.split("\n")[0], "MIT License", name + ": LICENSE must start at the MIT heading")

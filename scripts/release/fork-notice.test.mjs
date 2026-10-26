@@ -13,6 +13,7 @@ test("the fork notice names the upstream commit and VibeLang's modifications bef
   const own = notice.slice(0, microsoft)
   assert.match(own, /files under typescript\/ are a modified version of TypeScript/)
   assert.ok(own.includes(upstream))
+  assert.match(own, /of microsoft\/TypeScript,/ )
   assert.match(own, /changed by the VibeLang authors/)
   assert.match(notice.slice(microsoft), /Microsoft Corporation/)
   assert.equal(createHash("sha256").update(notice.slice(microsoft)).digest("hex"), "317cd4d9d8a4de4971222bd232bc45c010424bf0dae61be830e49532e62e4d33", "preserve the Microsoft notice byte for byte")
