@@ -125,7 +125,7 @@ func (tx *lowering) visitJump(node *ast.Node) *ast.Node {
 	j := jump{kind: node.Kind}
 	if node.Kind != ast.KindReturnStatement {
 		if label := node.Label(); label != nil {
-			j.label = label.Text()
+			j.label = tx.closingLoopLabel(node, label.Text())
 		}
 	}
 	if tx.frame.lands(j) || tx.frame.region == nil {

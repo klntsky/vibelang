@@ -1,0 +1,116 @@
+// Labels on the same closing loop are aliases for one iteration target.
+// Keep continues inside $forOf rather than emitting a continue to its block.
+function disposable(events: string[]) {
+  return { [Symbol.dispose](): void { events.push("dispose") } }
+}
+module iterators {
+  export function* elements(events: string[]): Generator<Disposable> {
+    try {
+      yield { [Symbol.dispose](): void { events.push("dispose") } }
+      yield { [Symbol.dispose](): void { events.push("dispose") } }
+    } finally { events.push("closed") }
+  }
+}
+import { elements } from iterators
+function* produce(events: string[]) {
+  try {
+    yield disposable(events)
+    yield disposable(events)
+  } finally { events.push("closed") }
+}
+
+function array(reverse: boolean) {
+  const events: string[] = []
+  outer: inner: for (using x of [disposable(events), disposable(events)]) {
+    events.push("body")
+    yieldNow()
+    if (events.length < 2) {
+      if (reverse) continue inner
+      continue outer
+    }
+    if (reverse) break outer
+    break inner
+  }
+  return events
+}
+
+function iterator(reverse: boolean) {
+  const events: string[] = []
+  outer: inner: for (using x of sync((e: string[]) => elements(e), events)) {
+    events.push("body")
+    yieldNow()
+    if (events.length < 2) {
+      if (reverse) continue inner
+      continue outer
+    }
+    if (reverse) break outer
+    break inner
+  }
+  return events
+}
+
+function producer(reverse: boolean) {
+  const events: string[] = []
+  outer: inner: for (using x of produce(events)) {
+    events.push("body")
+    yieldNow()
+    if (events.length < 2) {
+      if (reverse) continue inner
+      continue outer
+    }
+    if (reverse) break outer
+    break inner
+  }
+  return events
+}
+
+function stream(reverse: boolean) {
+  const events: string[] = []
+  outer: inner: for (using x of Stream.ensuring(Stream.fromIterable([disposable(events), disposable(events)]), () => { events.push("closed") })) {
+    events.push("body")
+    yieldNow()
+    if (events.length < 2) {
+      if (reverse) continue inner
+      continue outer
+    }
+    if (reverse) break outer
+    break inner
+  }
+  return events
+}
+
+function cStyle() {
+  const events: string[] = []
+  outer: inner: for (using h = disposable(events); ;) {
+    events.push("body")
+    yieldNow()
+    if (events.length < 2) continue outer
+    break inner
+  }
+  return events
+}
+function nested() {
+  const events: string[] = []
+  let i = 0
+  outer: alias: for (using x of sync((e: string[]) => elements(e), events)) {
+    i++
+    inner: innerAlias: for (using y of sync((e: string[]) => elements(e), events)) {
+      events.push("body")
+      yieldNow()
+      if (i === 1) continue outer
+      break alias
+    }
+  }
+  return events
+}
+
+// expect-result: {"array":["body","dispose","body","dispose"],"arrayReverse":["body","dispose","body","dispose"],"iterator":["body","dispose","body","dispose","closed"],"iteratorReverse":["body","dispose","body","dispose","closed"],"producer":["body","dispose","body","dispose","closed"],"producerReverse":["body","dispose","body","dispose","closed"],"stream":["body","dispose","body","dispose","closed"],"streamReverse":["body","dispose","body","dispose","closed"],"cStyle":["body","body","dispose"],"nested":["body","dispose","closed","dispose","body","dispose","closed","dispose","closed"]}
+export function main() {
+  return {
+    array: array(false), arrayReverse: array(true),
+    iterator: iterator(false), iteratorReverse: iterator(true),
+    producer: producer(false), producerReverse: producer(true),
+    stream: stream(false), streamReverse: stream(true),
+    cStyle: cStyle(), nested: nested(),
+  }
+}

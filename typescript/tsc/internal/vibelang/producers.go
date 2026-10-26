@@ -436,6 +436,27 @@ func (tx *lowering) visitStreamLoop(node *ast.Node) *ast.Node {
 	return tx.runForOf(node, iterable, body, label, r)
 }
 
+// closingLoopLabel maps labels on the same closing loop to the one $forOf
+// receives. All those labels name the same iteration target in JavaScript.
+// Only the innermost label is passed to $forOf; an outer alias must not escape
+// as a continue to the block the lowering puts in place of that loop.
+func (tx *lowering) closingLoopLabel(node *ast.Node, label string) string {
+	for parent := node.Parent; parent != nil; parent = parent.Parent {
+		if ast.IsFunctionLike(parent) {
+			break
+		}
+		if parent.Kind != ast.KindLabeledStatement || parent.AsLabeledStatement().Label.Text() != label {
+			continue
+		}
+		loop := labeledLoop(parent)
+		if tx.plan.streamLoops[loop] {
+			return loop.Parent.AsLabeledStatement().Label.Text()
+		}
+		break
+	}
+	return label
+}
+
 // runForOf makes the statements that run `runtime.$forOf(iterable, body,
 // label)` for node, a loop whose body closure belongs to region r, and
 // dispatch the jumps that leave the loop.
