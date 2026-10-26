@@ -2,6 +2,8 @@ package vibelangmapper
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -100,19 +102,42 @@ func initialize(params json.Value) (any, error) {
 	}, nil
 }
 
+// buildIdentity fingerprints the running mapper executable. TypeScript knows
+// a mapper's code only by its package name and version, and
+// vibelang-ts-mapper@0.0.1 names every VibeLang build, so openProject folds
+// this into configIdentity: a new projector then invalidates what tsc
+// --build and --incremental kept from the old one.
+var buildIdentity = sync.OnceValue(func() string {
+	executable, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	file, err := os.Open(executable)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(hash.Sum(nil)[:16])
+})
+
 // openProject reports the package.json files whose names enter the
 // project's module keys as watched files (the manifest declares
-// dynamicConfig), with an identity of their names, so a renamed package
-// invalidates every projection of the project. It also reports EK9004 when
-// the project installs another version of effect or of an @effect package
-// than the forms table was generated from (versionMismatch).
+// dynamicConfig), with an identity of their names and of this build
+// (buildIdentity), so a renamed package or a new mapper build invalidates
+// every projection of the project. It also reports EK9004 when the project
+// installs another version of effect or of an @effect package than the
+// forms table was generated from (versionMismatch).
 func (h *Handler) openProject(params json.Value) (any, error) {
 	var p contentmapper.OpenProjectParams
 	if err := json.Unmarshal(params, &p); err != nil {
 		return nil, err
 	}
 	files, identity := projectPackageFiles(p.ConfigFileName)
-	result := contentmapper.OpenProjectResult{ConfigIdentity: identity, WatchedFiles: files}
+	result := contentmapper.OpenProjectResult{ConfigIdentity: buildIdentity() + ":" + identity, WatchedFiles: files}
 	var options Options
 	if len(p.Options) > 0 && json.Unmarshal(p.Options, &options) != nil {
 		result.OptionDiagnostics = append(result.OptionDiagnostics, contentmapper.OptionDiagnosticResult{
