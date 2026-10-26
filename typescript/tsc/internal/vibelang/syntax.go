@@ -14,7 +14,10 @@ import (
 // there has no block to release it in: EK1004 (Chapter 6). D271 exempts
 // explicit JavaScript iterator generators and their own body syntax.
 
+var EK1015 = message(1015, errorCategory, "Calls run in VibeLang; remove yield*.")
+
 func init() {
+	registry[EK1015.Code] = EK1015
 	fileChecks = append(fileChecks, checkSyntax, checkThrowExpressionPrecedence)
 }
 
@@ -41,6 +44,12 @@ func checkSyntax(c *checker.Checker, file *ast.SourceFile) {
 						note(report(c, modifier, EK1003, "async"), "Remove async.")
 					}
 				}
+			}
+		case ast.KindYieldExpression:
+			fn := ast.GetContainingFunction(node)
+			if node.AsYieldExpression().AsteriskToken != nil && (fn == nil || ast.GetFunctionFlags(fn)&ast.FunctionFlagsGenerator == 0) {
+				report(c, node, EK1015)
+				cover(c, node)
 			}
 		case ast.KindAwaitExpression:
 			// TypeScript's own errors, such as await outside an async function,

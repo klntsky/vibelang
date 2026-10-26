@@ -4285,7 +4285,9 @@ func (p *Parser) parseAssignmentExpressionOrHigherWorker(allowReturnTypeInArrowF
 	// Note: for ease of implementation we treat productions '2' and '3' as the same thing.
 	// (i.e. they're both BinaryExpressions with an assignment operator in it).
 	// First, do the simple check if we have a YieldExpression (production '6').
-	if p.isYieldExpression() {
+	if p.isYieldExpression() || p.isVibeLangFile() && p.token == ast.KindYieldKeyword && p.lookAhead(func(p *Parser) bool {
+		return p.nextToken() == ast.KindAsteriskToken && !p.hasPrecedingLineBreak()
+	}) {
 		return p.parseYieldExpression()
 	}
 	// Then, check if we have an arrow function (production '4' and '5') that starts with a parenthesized
@@ -4339,7 +4341,7 @@ func (p *Parser) parseAssignmentExpressionOrHigherWorker(allowReturnTypeInArrowF
 		return p.makeBinaryExpression(expr, p.parseTokenNode(), p.parseAssignmentExpressionOrHigherWorker(allowReturnTypeInArrowFunction), pos)
 	}
 	// It wasn't an assignment or a lambda.  This is a conditional expression:
-	expr = p.parseVibeLangCatchRest(expr, pos) // x catch fallback, x catch (e) => handler (vibelang_catch.go)
+	expr = p.parseVibeLangCatchRest(expr, pos)                                                               // x catch fallback, x catch (e) => handler (vibelang_catch.go)
 	return p.parsePipeRest(p.parseConditionalExpressionRest(expr, pos, allowReturnTypeInArrowFunction), pos) // x |> body (vibelang_pipes.go)
 }
 
@@ -5714,7 +5716,7 @@ func (p *Parser) parseCallExpressionRest(pos int, expression *ast.Expression) *a
 		}
 		if p.isStartOfVibeLangBlockParam(expression) {
 			expression = p.parseVibeLangBlockParam(pos, expression) // f(args) { block } (vibelang_blocks.go)
-			continue // its result takes the same postfix operations as any call
+			continue                                                // its result takes the same postfix operations as any call
 		}
 		break
 	}

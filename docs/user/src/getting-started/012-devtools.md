@@ -347,3 +347,9 @@ Compiled functions and producers keep their source names; clauses use the operat
 Library debugging concepts still apply; VibeLang's call execution, service declarations, and source mapping need language-aware tooling beyond the upstream TypeScript plugin.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/devtools)
+
+## First calls from Effect TypeScript
+
+| Code | Meaning and fix |
+| --- | --- |
+| EK1015 | Calls already run in VibeLang. Remove `yield*` from `const value = yield* load()`. Generators keep their own yield syntax. |
