@@ -1,5 +1,5 @@
 export control Approval {
-  approve(request: string): Effect<boolean>
+  approve(request: string): boolean!!
 }
 
 // The business program knows neither the reviewer nor the approval policy.

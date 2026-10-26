@@ -14,7 +14,7 @@ function unitPrice(total: number, quantity: number) {
   if (quantity <= 0) throw new InvalidQuantity({ quantity })
   return total / quantity
 }
-// Effect<number, InvalidQuantity>
+// number!InvalidQuantity!
 
 const quote = () => unitPrice(72, 6)
 // Output: 12
@@ -27,14 +27,14 @@ const quote = () => unitPrice(72, 6)
 ```vibe
 // run: Console.log(preview())
 service Prices {
-  total(sku: string): Effect<number, InvalidQuantity>
+  total(sku: string): number!InvalidQuantity
 }
 
 function receipt(sku: string) {
   const amount = Prices.total(sku)
   return `Total: ${amount}`
 }
-// Effect<string, InvalidQuantity, Prices>
+// string!InvalidQuantity!Prices
 
 const PricesTest = Layer.succeed(Prices, {
   total(_sku) { return 18 }

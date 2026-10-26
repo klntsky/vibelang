@@ -15,7 +15,7 @@ function sample() {
   sleep("5 millis")
   return "sample"
 }
-// Effect<string>
+// string!!
 // Output: sample
 ```
 
@@ -44,7 +44,7 @@ function accepted(value: number) {
   if (value < 0) throw new Rejected()
   return value + 1
 }
-// Effect<number, Rejected>
+// number!Rejected!
 // Output: 3
 ```
 
@@ -57,7 +57,7 @@ Hover over a function to see its inferred `Effect<A, E, R>`, and over a call to 
 ```vibe
 // expect-error: EK2001
 // Rejected escapes a contract promising no failures.
-function promised(value: number): Effect<number> {
+function promised(value: number): number!! {
   return accepted(value)
 }
 ```
@@ -73,13 +73,13 @@ The server exposes TypeScript completions through the VibeLang checker, service 
 ## Configure compiler checks
 
 ```vibe
-function checked(value: number): Effect<number, Rejected> {
+function checked(value: number): number!Rejected! {
   return accepted(value)
 }
 // Output: 3
 ```
 
-A contract gives the compiler a promise to check. To infer selected channels, write `infer Name` in those slots: `Effect<number, Rejected, infer R>` checks success and failure and infers requirements. A type argument left out is `never`, as in TypeScript, and checked. Configure the compiler with a `vibelang` object at the top level of `tsconfig.json`:
+A contract gives the compiler a promise to check. To infer selected channels, write `infer Name` in those slots: `Effect<number, Rejected, infer R>` checks success and failure and infers requirements. A type argument left out of `Effect<…>` is `never`, as in TypeScript, so `Effect<number>` is `number!!`. Configure the compiler with a `vibelang` object at the top level of `tsconfig.json`:
 
 ```json
 {
@@ -110,9 +110,9 @@ Effect declarations and combinator calls written in TypeScript's style compile i
 | Code | TypeScript style | VibeLang form | Quick fix |
 | --- | --- | --- | --- |
 | EK4830 | `class NotFound extends Data.TaggedError("NotFound")<{ readonly id: string }> {}` | `error NotFound { id: string }` | When the tag is the class name and the base is a TaggedError; a different tag or `Data.Error` keeps the warning without one |
-| EK4831 | `class Users extends Context.Service<Users, { find(id: string): Effect.Effect<User> }>()("app/Users") {}` | `service Users { find(id: string): Effect<User> }` | When the members are written in the type argument; the key becomes the one the compiler derives |
+| EK4831 | `class Users extends Context.Service<Users, { find(id: string): Effect.Effect<User> }>()("app/Users") {}` | `service Users { find(id: string): User!! }` | When the members are written in the type argument; the key becomes the one the compiler derives |
 | EK4832 | `const User = Schema.Struct({ id: Schema.String })` | `schema User { id: string }` | When every field has a declaration form; `Schema.optionalKey` or a check keeps the constant, without a warning |
-| EK4833 | `Effect.Effect<User, NotFound, Db>` | `Effect<User, NotFound, Db>` | Where the prelude's `Effect` names the same type; the arguments stay as written |
+| EK4833 | `Effect.Effect<User, NotFound, Db>` | `User!NotFound!Db` | Except for `infer` in a slot other than a function's dependencies; the prelude's `Effect<User, NotFound, Db>` draws no warning |
 | EK4834 | `return Effect.succeed(user)`, `return Effect.fail(error)`, where the call runs | `return user`, `throw error` | When the function stays an Effect function |
 | EK4835 | `Effect.catchTag(find(id), "NotFound", (e) => …)` | `find(id) catch (e) => match (e) { when NotFound: …; default: throw e; }` | When each handler is an arrow function with one value |
 | EK4836 | `Effect.withSpan(load(), "load")`, `Effect.provide(main(), AppLive)` | `withSpan("load") { return load() }`, `provide AppLive { return main() }` | Where a block can stand |
@@ -124,7 +124,7 @@ Apply every fix in a project, then compile as the rest of the command says:
 npx vibelang -p tsconfig.json --fix --noEmit
 ```
 
-`--fix` also applies the quick fixes of the retired spellings: EK1009, EK2112, EK2113, EK2120, EK2121, and EK1014, which rewrites the retired `!` form of an Effect type, such as `User!NotFound!Db`, as `Effect<User, NotFound, Db>`. It prints each file it changes, with its fixes by code, and writes the files only after it checks the fixed program: a fix that would add an error is listed as not fixed, and the file keeps its other fixes. Interrupted, it writes nothing. It fixes only what the project reports, so the `diagnostics` setting and the comments below choose what it touches; `// @vibelang-diagnostics-next-line EK4833:off` keeps one line as written. It rewrites only the project's own files: a workspace dependency's `.vibe` source that the project imports through its package keeps its text, and the compilation still reports its diagnostics. A second run finds nothing to fix. `--fix` cannot be combined with `--build` or `--watch`.
+`--fix` also applies the quick fixes of the retired spellings: EK1009, EK2112, EK2113, EK2120, and EK2121. It prints each file it changes, with its fixes by code, and writes the files only after it checks the fixed program: a fix that would add an error is listed as not fixed, and the file keeps its other fixes. Interrupted, it writes nothing. It fixes only what the project reports, so the `diagnostics` setting and the comments below choose what it touches; `// @vibelang-diagnostics-next-line EK4833:off` keeps one line as written. It rewrites only the project's own files: a workspace dependency's `.vibe` source that the project imports through its package keeps its text, and the compilation still reports its diagnostics. A second run finds nothing to fix. `--fix` cannot be combined with `--build` or `--watch`.
 
 ## Effect language service rules
 
@@ -146,13 +146,13 @@ function discard(program: Effect.Effect<number>) {
 | Group | Effect's rule or feature | In VibeLang | Example |
 | --- | --- | --- | --- |
 | Correctness | `anyUnknownInErrorContext` | EK4811, off by default | `throw cause` where `cause: unknown` |
-| Correctness | `classSelfMismatch` | Not needed: a `service` has no `Self` parameter | `service Users { find(id: string): Effect<User, NotFound> }` |
+| Correctness | `classSelfMismatch` | Not needed: a `service` has no `Self` parameter | `service Users { find(id: string): User!NotFound }` |
 | Correctness | `duplicatePackage` | EK4803, warning | two versions of `effect` in one program |
 | Correctness | `effectFnImplicitAny` | Not needed: parameters are TypeScript's, so `strict` reports TS7006 | `function load(id) { … }` |
 | Correctness | `floatingEffect` | EK4801, error, with a quick fix | `program` alone on a line; the fix writes `program()` |
 | Correctness | `genericEffectServices` | Covered: EK3005 | `service Repo<T> { … }` |
-| Correctness | `missingEffectContext` | Covered: EK2002 at a contract, EK3201 at a runner | `function f(): Effect<User, NotFound> { return Users.find(id) }` is EK2002 |
-| Correctness | `missingEffectError` | Covered: EK2001 | `function f(): Effect<User> { return Users.find(id) }` |
+| Correctness | `missingEffectContext` | Covered: EK2002 at a contract, EK3201 at a runner | `function f(): User!NotFound! { return Users.find(id) }` is EK2002 |
+| Correctness | `missingEffectError` | Covered: EK2001 | `function f(): User!! { return Users.find(id) }` |
 | Correctness | `missingLayerContext` | Covered: EK2002 and EK3201; `wire` places providers | `provide UsersLive { … }` without the database layer is EK3201 at the runner |
 | Correctness | `missingReturnYieldStar` | Not needed in `.vibe`: `throw` ends the function | `throw new NotFound({ id })` |
 | Correctness | `missingStarInYieldEffectGen` | Not needed in `.vibe`: a call runs, and `Effect.gen` with `function*` is EK1002 | `const user = Users.find(id)` |
@@ -165,12 +165,12 @@ function discard(program: Effect.Effect<number>) {
 | Anti-pattern | `effectFnIife` | Not needed: no `Effect.fn`; an immediately called function is a call | `(() => load())()` |
 | Anti-pattern | `effectGenUsesAdapter` | Not needed: no `Effect.gen` | None |
 | Anti-pattern | `effectInFailure` | EK4815, warning | `throw program`; run it: `program()` |
-| Anti-pattern | `effectInVoidSuccess` | EK4802, warning, with a quick fix; TS2322 under a `Effect<void>` contract | `return program` from a function that runs Effects |
+| Anti-pattern | `effectInVoidSuccess` | EK4802, warning, with a quick fix; TS2322 under a `void!!` contract | `return program` from a function that runs Effects |
 | Anti-pattern | `globalErrorInEffectCatch` | EK4804, warning | `try(code, (cause) => new Error(String(cause)))` |
 | Anti-pattern | `globalErrorInEffectFailure` | EK4804, warning | `throw new Error("boom")`; declare `error Boom { }` |
 | Anti-pattern | `layerMergeAllWithDependencies` | EK4807, warning, with a quick fix | `Layer.mergeAll(DbLive, UsersLive)`; the fix writes `wire` |
 | Anti-pattern | `lazyPromiseInEffectSync` | Not needed: `sync(() => promise)` already compiles to `Effect.promise` | `sync(async () => fetch(url))` |
-| Anti-pattern | `leakingRequirements` | EK4809, warning; `@vibelang leakable` exempts a service | `service Users { find(): Effect<User, never, Db>; all(): Effect<User[], never, Db> }` |
+| Anti-pattern | `leakingRequirements` | EK4809, warning; `@vibelang leakable` exempts a service | `service Users { find(): User!!Db; all(): User[]!!Db }` |
 | Anti-pattern | `multipleEffectProvide` | EK4808, warning, with a quick fix | `provide A { provide B { … } }`; the fix writes `provide A, B { … }` or `provide wire(A, B) { … }` |
 | Anti-pattern | `returnEffectInGen` | EK4802, warning, with a quick fix | `return program`; the fix writes `return program()` |
 | Anti-pattern | `runEffectInsideEffect` | Covered: EK1005 | `Effect.runPromise(load())` inside a function |
@@ -222,7 +222,7 @@ function discard(program: Effect.Effect<number>) {
 | Style | `unnecessaryFailYieldableError` | Not needed: `throw new NotFound({ id })` | `throw new NotFound({ id })` |
 | Style | `unnecessaryPipe` | EK4824, off by default, with a quick fix | `pipe(x)` |
 | Style | `unnecessaryPipeChain` | EK4825, off by default, with a quick fix | `x.pipe(f).pipe(g)` |
-| Hover | Extended Effect type | Covered: a function's hover shows its contract, `Effect<A, E, R>` | `Effect<string, UserNotFound, Users>` |
+| Hover | Extended Effect type | Covered: a function's hover shows its contract, `A!E!R` | `string!UserNotFound!Users` |
 | Hover | `yield*` hover | Not needed: a running call's hover shows its success value | Runs here and returns `User` |
 | Hover | Layer service involvement | Hover: a layer lists what it provides, needs, and fails with | Hover on `UsersLive` |
 | Hover | Layer graph | Hover: `wire` lists the order it builds its layers in, and what each uses | Hover on `wire(UsersLive, DbLive)` |
@@ -242,14 +242,14 @@ function discard(program: Effect.Effect<number>) {
 | Refactor | Implement service accessors | Not needed: `Users.find(id)` | None |
 | Refactor | Function calls to pipe | Refactor: "Convert to a pipe" | `f(g(x))` becomes `x \|> g(%) \|> f(%)` |
 | Refactor | Pipe to data-first | Refactor: "Convert the pipe to calls" | `x \|> g(%) \|> f(%)` becomes `f(g(x))` |
-| Refactor | Toggle return type signature | Refactor: "Write the inferred contract" and "Remove the contract" | `function load(id: string): Effect<User, NotFound, Users>` |
+| Refactor | Toggle return type signature | Refactor: "Write the inferred contract" and "Remove the contract" | `function load(id: string): User!NotFound!Users` |
 | Refactor | Remove an unnecessary `Effect.gen` | Not needed: no `Effect.gen` | None |
 | Refactor | Wrap with `Effect.gen` | Not needed: every function is one | None |
 | Refactor | Toggle pipe styles | Refactor: "Write pipe(x, …)" and "Write x.pipe(…)" | `x.pipe(f, g)` and `pipe(x, f, g)` |
 | Refactor | Layer Magic | Not needed: `wire` composes layers in dependency order | `wire(AppLive, UsersLive, DbLive)` |
 | Refactor | Structural type to Schema | Refactor: "Convert to a schema declaration" | `interface User { name: string }` becomes `schema User { name: string }` |
 | Refactor | `Effect.Service` to `Context.Tag` | Not needed: `service` declarations | None |
-| Codegen | `annotate` | Refactor: "Write the inferred contract" | `function load(id: string): Effect<User, NotFound, Users>` |
+| Codegen | `annotate` | Refactor: "Write the inferred contract" | `function load(id: string): User!NotFound!Users` |
 | Codegen | `accessors` | Not needed: `Users.find(id)` | None |
 | Codegen | `typeToSchema` | Refactor: "Convert to a schema declaration" | `schema User { name: string }` |
 | Other | Renaming a tagged class renames its tag | Not needed: an `error` declaration's tag is its name, so a rename renames both | `error NotFound { }` renamed to `Missing` |
@@ -293,7 +293,8 @@ Forms whose TypeScript long form would mislead a rule have their own node types,
 
 | Form | ESTree node |
 | --- | --- |
-| `Effect<A, infer E>`, outside a conditional type | `VibeInferType` with `name` |
+| `A!E!R` | `VibeEffectType` with `success`, `failure`, and `requirements` |
+| `A!infer E`, outside a conditional type | `VibeInferType` with `name` |
 | `x \|> f(%)` | `VibePipeExpression` with `left` and `right`; `%` is `TopicReference` |
 | `x catch fallback`, `x catch (e) => recover(e)` | `VibeCatchExpression` with `expression` and `handler` |
 | `provide AppLive, Random = seeded { ... }` | `VibeProvideStatement` with `providers` and `body`; `Random = seeded` is `VibeServiceProvider` |

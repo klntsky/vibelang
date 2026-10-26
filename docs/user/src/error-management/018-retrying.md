@@ -40,7 +40,7 @@ error RequestRejected {
   transient: boolean
 }
 
-function sendRequest(): Effect<string, RequestRejected> {
+function sendRequest(): string!RequestRejected! {
   throw new RequestRejected({ transient: false })
 }
 

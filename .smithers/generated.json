@@ -2,7 +2,7 @@
   "version": 2,
   "flow": "docs",
   "source": ".smithers/flows/docs/flow.ts",
-  "digest": "d3b8300fd53393440e77284c8299db88dd85899f95e6ea6cb4315a5239087fc9",
+  "digest": "2c21d1f8ee4b2c6cf340d57489a536953fab4c8ef9c32fa7e80606a2b9dc9983",
   "inputs": [
     {
       "path": ".smithers/flows/docs/project.ts",
@@ -30,20 +30,20 @@
     },
     {
       "path": "README.md",
-      "sha256": "cb10e1500e9968be102d27f9df6c5597f6b083224f1d3f58516e18bea5076205"
+      "sha256": "5be6d198539316ce826c173db1ad6a8d0961934f0891d963ae04fd40a3f95360"
     },
     {
       "path": "docs/user/llms-essentials.md",
-      "sha256": "858c89eb51e6f73ccec961355726a53f65db6e9907d546bba8c4858e5d44b2d8"
+      "sha256": "56db6c78e552d776b4f8c2d5e2069b42d7d1203c30f34c3a95c401be44085ae0"
     },
     {
       "path": "packages/compiler/skills/vibelang/SKILL.md",
-      "sha256": "7a335f4e3fd1ea92f3bb8cbb02feaef5d3beee5cabc3e4bacca2f971cc250f26"
+      "sha256": "492c8621a6a1ccc7bcfaf6a8aaeac7e3d131212797190bb167552df25d1f5059"
     }
   ],
   "outputs": {
     "README.md": {
-      "sha256": "04575b5b62497d8428286bd47b1de175ed6be0196bbacbbbe98f90fcefa9f75e"
+      "sha256": "fc41c150449b585a4a012fef37b981e65925aac03f0e2763a392f2290a118eae"
     },
     "CONTRIBUTING.md": {
       "sha256": "656eec317e61dbcbc4ea3b02b7c0f3bdcaee90e7f3a1fe636276b79a20b85f30"
@@ -52,10 +52,10 @@
       "sha256": "1407d65d1b99dae026eb78058df5ababe0f2184b4ae205f9d537edca2a657ff8"
     },
     "AGENTS.md": {
-      "sha256": "96c66f22ba93fd52144adaf50539e89a8145393e7b5d115dc54795ee1aa08991"
+      "sha256": "a779c3c95c9bac78fdb886472881ae8b0f29e98b34544becba4feb97b7ac0ae1"
     },
     "templates/app/AGENTS.md": {
-      "sha256": "921d726d00b417181629852cba77eb24ef842fa6154df18b58cce8b07c9f3a98"
+      "sha256": "c734fb9d2195c3b516c4656bee7fd91a16d4c9a954b9c54f99a2e659886e28c6"
     }
   }
 }

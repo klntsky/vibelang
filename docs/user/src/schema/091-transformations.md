@@ -83,7 +83,7 @@ error UnknownRoute {
 }
 
 service Routes {
-  check(code: string): Effect<void, UnknownRoute>
+  check(code: string): void!UnknownRoute
 }
 
 const RouteCode = Schema.String.pipe(
@@ -103,7 +103,7 @@ const RouteCode = Schema.String.pipe(
 function readRoute(input: unknown) {
   return Schema.decodeUnknownEffect(RouteCode)(input)
 }
-// Effect<string, Schema.SchemaError, Routes>
+// string!Schema.SchemaError!Routes
 
 const TestRoutes = Layer.succeed(Routes, {
   check(_code) {}
@@ -150,7 +150,7 @@ A lossy conversion has no meaningful inverse. `forbidden` reports a schema issue
 // run: Console.log(JSON.stringify(readNumbers())); Console.log(Schema.decodeEffect(DeferredLabel)("crate")); try { Schema.decodeEffect(DeferredLabel)("x") } catch (error) { Console.log(error.message) }
 const SemicolonNumbers = Schema.String.pipe(
   Schema.decodeTo(Schema.Array(Schema.String), SchemaTransformation.transform({
-    decode: (text): Effect<ReadonlyArray<string>> => text.split(";"),
+    decode: (text): ReadonlyArray<string>!! => text.split(";"),
     encode: (items) => items.join(";")
   })),
   Schema.decodeTo(Schema.Array(Schema.FiniteFromString))

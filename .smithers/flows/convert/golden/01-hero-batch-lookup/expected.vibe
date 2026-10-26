@@ -1,7 +1,7 @@
 error ApiError { status: number }
 
 service Users {
-  name(id: string): Effect<string, ApiError>
+  name(id: string): string!ApiError
 }
 
 function nameOf(id: string) {

@@ -40,7 +40,7 @@ function sampleOutcomes() {
 function constantSuccess() {
   return Exit.succeed(12)
 }
-// Effect<Exit.Exit<number>>
+// Exit.Exit<number>!!
 ```
 
 ```output
@@ -77,7 +77,7 @@ function asResult<A, E>(outcome: Exit.Exit<A, E>) {
   if (outcome.isSuccess()) return Result.succeed(outcome.value)
   return Result.fail(outcome.cause)
 }
-// Effect<Result.Result<A, Cause.Cause<E>>>
+// Result.Result<A, Cause.Cause<E>>!!
 ```
 
 ```output
@@ -94,7 +94,7 @@ An exit carries roughly the information of `Result<A, Cause<E>>`; a `Result<A, E
 function replay<A, E>(outcome: Exit.Exit<A, E>) {
   return outcome()
 }
-// Effect<A, E>
+// A!E!
 ```
 
 ```output

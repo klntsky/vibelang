@@ -25,7 +25,7 @@ A function value is a description until called or handed to a runner. A VibeLang
 ```vibe
 // run: Console.log(result)
 service Labels {
-  format(value: string): Effect<string>
+  format(value: string): string!!
 }
 
 const context = Context.make(Labels, {
@@ -73,7 +73,7 @@ For another format, supply a logger such as `Logger.consoleJson` through `Logger
 // run: Console.log(roll())
 const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
 
-function roll(): Effect<number> {
+function roll(): number!! {
   provide Random = seeded {
     return Random.nextInt()
   }
@@ -89,7 +89,7 @@ function roll(): Effect<number> {
 // run: provide Notifications.layer { notify("direct event") }
 // notifications.vibe
 export service Notifications {
-  send(message: string): Effect<void>
+  send(message: string): void!!
 
   static readonly layer = Layer.succeed(Notifications, {
     send: (message) => Console.log(message)

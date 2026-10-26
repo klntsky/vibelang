@@ -16,7 +16,7 @@ function startupMessage() {
   const sample = Random.next()
   Console.log(`Started at ${started}; sample=${sample}`)
 }
-// Effect<void>
+// void!!
 // Output: Started at 1000; sample=0.25
 ```
 
@@ -30,7 +30,7 @@ const Port = Config.withDefault(Config.Port("PORT"), 3000)
 function configuredPort() {
   return Port()
 }
-// Effect<number, Config.ConfigError>
+// number!Config.ConfigError!
 // Output: 3000
 ```
 
@@ -61,7 +61,7 @@ service DisplaySettings {
 function defaultLabel(id: number) {
   return `${DisplaySettings().prefix} ${id}`
 }
-// Effect<string>
+// string!!
 // Output: Ticket 17
 // Output: Order 17
 ```

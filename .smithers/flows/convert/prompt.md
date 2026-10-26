@@ -17,8 +17,8 @@ Each row is one Effect form and the VibeLang that replaces it.
 | Effect 4 TypeScript | VibeLang |
 | --- | --- |
 | `class NotFound extends Data.TaggedError("NotFound")<{ readonly id: string }> {}` | `error NotFound { id: string }` |
-| `class Users extends Context.Service<Users, { find(id: string): Effect.Effect<User, NotFound> }>()("app/Users") {}` | `service Users { find(id: string): Effect<User, NotFound> }` |
-| `Effect.Effect<User, NotFound, Users>` | `Effect<User, NotFound, Users>` (a type argument left out is `never`) |
+| `class Users extends Context.Service<Users, { find(id: string): Effect.Effect<User, NotFound> }>()("app/Users") {}` | `service Users { find(id: string): User!NotFound }` |
+| `Effect.Effect<User, NotFound, Users>` | `User!NotFound!Users` (empty slot: never) |
 | `yield* Effect.fail(new NotFound({ id }))` | `throw new NotFound({ id })` |
 | `const user = yield* users.find(id)` | `const user = Users.find(id)` |
 | `x.pipe(Effect.orElseSucceed(() => "guest"))` | `x catch "guest"` |
@@ -36,7 +36,7 @@ interface User { id: string; name: string }
 error NotFound { id: string }
 
 service Users {
-  find(id: string): Effect<User, NotFound>
+  find(id: string): User!NotFound
 }
 
 const UsersLive = Layer.succeed(Users, {
@@ -90,7 +90,7 @@ Output:
 ```ts
 error MissingParcel { tracking: string }
 
-function destination(tracking: string): Effect<string, MissingParcel, infer R> {
+function destination(tracking: string): string!MissingParcel {
   if (tracking !== "PK-9") throw new MissingParcel({ tracking })
   return "Oslo"
 }
@@ -131,14 +131,14 @@ Output:
 
 ```ts
 service Stock {
-  count(sku: string): Effect<number>
+  count(sku: string): number!!
 }
 
 const StockLive = Layer.succeed(Stock, {
   count(sku) { return sku.length * 6 }
 })
 
-export function available(sku: string): Effect<boolean, never, Stock> {
+export function available(sku: string): boolean!!Stock {
   return Stock.count(sku) >= 12
 }
 
@@ -171,7 +171,7 @@ Output:
 
 ```ts
 service Banner {
-  text(topic: string): Effect<string>
+  text(topic: string): string!!
 }
 
 export const BannerLive = Layer.effect(Banner) {
@@ -208,7 +208,7 @@ Output:
 ```ts
 error QueueBusy { queue: string }
 
-declare function enqueue(job: string): Effect<string, QueueBusy>
+declare function enqueue(job: string): string!QueueBusy
 
 export function submit(job: string) {
   return enqueue(job)

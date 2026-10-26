@@ -10,7 +10,7 @@ function dimensions() {
   const terminal = Effect.service(Terminal.Terminal)
   return { columns: terminal.columns(), rows: terminal.rows() }
 }
-// Effect<{ columns: number; rows: number }, never, Terminal.Terminal>
+// { columns: number; rows: number }!!Terminal.Terminal
 // Output: {"columns":80,"rows":24}
 ```
 
@@ -42,7 +42,7 @@ function askName() {
   const name = terminal.readLine()
   terminal.display(`Hello, ${name.trim() || "visitor"}.\n`)
 }
-// Effect<void, Terminal.QuitError | PlatformError.PlatformError, Terminal.Terminal>
+// void!Terminal.QuitError | PlatformError.PlatformError!Terminal.Terminal
 // Output: Your name:
 // Output: Hello, Ada.
 ```
@@ -105,7 +105,7 @@ function game() {
   }
   terminal.display(`The answer was ${secret}.\n`)
 }
-// Effect<void, Terminal.QuitError | PlatformError.PlatformError, Terminal.Terminal>
+// void!Terminal.QuitError | PlatformError.PlatformError!Terminal.Terminal
 
 export function main() {
   try {

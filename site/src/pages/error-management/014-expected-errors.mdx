@@ -23,7 +23,7 @@ function normalizeCode(input: string) {
   if (code.length === 0) throw new InvalidCode({ input })
   return code.toUpperCase()
 }
-// Effect<string, InvalidCode>
+// string!InvalidCode!
 ```
 
 ```text
@@ -66,8 +66,8 @@ function quantity(text: string): number {
 
 ```text
 error EK2003: number is a plain return annotation, but quantity can fail with InvalidQuantity, and a plain function never fails.
-  Write Effect<number, InvalidQuantity> to make it an Effect function that fails with InvalidQuantity.
-  Or throw inside a hatch, whose TypeScript keeps JavaScript's throw: sync makes the exception a defect (Effect<number>), and try makes it an UnknownError.
+  Write number!InvalidQuantity! to make it an Effect function that fails with InvalidQuantity.
+  Or throw inside a hatch, whose TypeScript keeps JavaScript's throw: sync makes the exception a defect (number!!), and try makes it an UnknownError.
 ```
 
 The same holds for a throw expression and for a `match` arm or `do` block that throws. A plain function calls TypeScript code directly. A call whose contract lists a failure, such as `JSON.parse`, is a typed failure only inside a `try` whose `catch` belongs to the function, which receives it with its type; elsewhere its exception propagates unchanged. Other TypeScript code's exceptions pass through the `catch` unchanged and become defects where they reach an effectful caller; to catch one, use the `try` hatch in an Effect function. Running an Effect inside a plain-annotated function is EK2003 too.
@@ -93,7 +93,7 @@ import { trusted } from "vibelang-runtime"
 import { InvalidQuantity, parseQuantity } from "./quantity.ts"
 
 const quantity = trusted(parseQuantity, [InvalidQuantity])
-// (text: string) => Effect<number, InvalidQuantity>
+// (text: string) => number!InvalidQuantity!
 ```
 
 ```text
@@ -111,7 +111,7 @@ error MissingPort
 function port(env: Map<string, string>) {
   return env.get("PORT") ?? throw new MissingPort()
 }
-// Effect<string, MissingPort>
+// string!MissingPort!
 ```
 
 ```text
@@ -129,7 +129,7 @@ function findItem(input: string) {
   if (code !== "PEN") throw new ItemMissing({ code })
   return { code, label: "Fountain pen" }
 }
-// Effect<{ code: string; label: string }, InvalidCode | ItemMissing>
+// { code: string; label: string }!InvalidCode | ItemMissing!
 ```
 
 ```text
@@ -177,7 +177,7 @@ function itemLabel(input: string) {
     return `Unavailable (${error._tag})`
   }
 }
-// Effect<string>
+// string!!
 ```
 
 ```text
@@ -192,7 +192,7 @@ The catch receives `InvalidCode | ItemMissing` and handles both, but only in cau
 function itemLabelInline(input: string) {
   return findItem(input).label catch (error) => `Unavailable (${error._tag})`
 }
-// Effect<string>
+// string!!
 ```
 
 ```text
@@ -218,7 +218,7 @@ function labelOrMissing(input: string) {
     }
   }
 }
-// Effect<string, InvalidCode>
+// string!InvalidCode!
 
 function labelByTag(input: string) {
   return Effect.catchTag(
@@ -236,7 +236,7 @@ Out of catalog
 InvalidCode
 ```
 
-Catch, then `match` on the failure: an arm such as `when ItemMissing:` handles that error class, and `default: throw error` passes the others on with their types (`Effect<string, InvalidCode>`). The expression form takes the same `match`: `findItem(input).label catch (error) => match (error) { when ItemMissing: "Out of catalog"; default: throw error; }`. A `match` without `default` must handle every failure the `try` block can raise (compile error EK4701), so a complete match needs no rethrow. `error is ItemMissing` tests one class in an `if`. `Effect.catchTag` removes the selected tagged case, and accepts a nonempty array of tags for one handler; `Effect.catchTags` takes a table of separate handlers.
+Catch, then `match` on the failure: an arm such as `when ItemMissing:` handles that error class, and `default: throw error` passes the others on with their types (`string!InvalidCode!`). The expression form takes the same `match`: `findItem(input).label catch (error) => match (error) { when ItemMissing: "Out of catalog"; default: throw error; }`. A `match` without `default` must handle every failure the `try` block can raise (compile error EK4701), so a complete match needs no rethrow. `error is ItemMissing` tests one class in an `if`. `Effect.catchTag` removes the selected tagged case, and accepts a nonempty array of tags for one handler; `Effect.catchTags` takes a table of separate handlers.
 
 ```vibe
 function withTagTable(input: string) {
@@ -282,7 +282,7 @@ error CatalogError {
   reason: Busy | Rejected
 }
 
-function remoteLabel(): Effect<string, CatalogError> {
+function remoteLabel(): string!CatalogError! {
   throw new CatalogError({ reason: new Busy({ seconds: 4 }) })
 }
 
@@ -303,7 +303,7 @@ function explainReasons() {
 function exposeReasons() {
   return Effect.unwrapReason(() => remoteLabel(), "CatalogError")
 }
-// Effect<string, Busy | Rejected>
+// string!Busy | Rejected!
 ```
 
 ```text
@@ -325,7 +325,7 @@ error AppError {
 error Missing extends AppError { path: string }
 error Expired extends AppError
 
-function raise(error: Missing | Expired): Effect<never, Missing | Expired> {
+function raise(error: Missing | Expired): never!(Missing | Expired) {
   throw error
 }
 
@@ -335,7 +335,7 @@ function describeFailure(error: Missing | Expired) {
     Expired: (expired) => `expired ${expired.code}`
   })
 }
-// Effect<string>
+// string!!
 
 error Normalized {
   code: string

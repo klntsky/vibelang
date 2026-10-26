@@ -11,13 +11,13 @@ error MissingRate {
 }
 
 service Rates {
-  lookup(currency: string): Effect<number, MissingRate>
+  lookup(currency: string): number!MissingRate
 }
 
 function convert(amount: number, currency: string) {
   return amount * Rates.lookup(currency)
 }
-// Effect<number, MissingRate, Rates>
+// number!MissingRate!Rates
 // Output: 60
 ```
 
@@ -29,30 +29,30 @@ function convert(amount: number, currency: string) {
 | `E` | `never` has no expected failure; defects and interruption remain possible. |
 | `R` | `never` needs no additional services or control operations. |
 
-Errors and services from several calls accumulate as unions. Catching a failure removes it from `E`; providing a service removes it from `R`. Write a full annotation, such as `Effect<number, never, Rates>`, to have the compiler check a promise.
+Errors and services from several calls accumulate as unions. Catching a failure removes it from `E`; providing a service removes it from `R`. Write a full annotation, such as `number!!Rates`, to have the compiler check a promise. `Effect<number, never, Rates>` is accepted too, and means the same.
 
 ## Write a contract
 
 ```vibe
 // run: Console.log(Effect.provide(safeRate("EUR"), Layer.succeed(Rates, { lookup: (_currency) => 2 })))
-function rateOf(currency: string): Effect<number, MissingRate, Rates> {
+function rateOf(currency: string): number!MissingRate!Rates {
   return Rates.lookup(currency)
 }
 
-function safeRate(currency: string): Effect<number, never, Rates> {
+function safeRate(currency: string): number!!Rates {
   return Effect.orDie(() => Rates.lookup(currency))
 }
 
-function anyRate(currency: string): Effect<number, MissingRate, infer R> {
+function anyRate(currency: string): number!MissingRate {
   return Rates.lookup(currency)
 }
-// Dependencies inferred: Effect<number, MissingRate, Rates>
+// Dependencies inferred: number!MissingRate!Rates
 // Output: 2
 ```
 
-A contract means what the same `Effect` type means in TypeScript. A type argument left out is `never`: `Effect<number, MissingRate>` cannot need a service, and `Effect<number>` neither fails nor needs one. `infer R`, as in `anyRate`, infers the dependencies from the body. A union is one argument: `Effect<string, MissingRate | Offline, Rates>` fails with either error.
+`.vibe` code writes `Effect<A, E, R>` as `Result!Error!Dependencies`. An empty slot is `never`: `number!MissingRate!` cannot need a service, and `number!!` neither fails nor needs one. Dependencies left out entirely, as in `anyRate`, are inferred from the body on a function with a body, and are `never` on a declaration without one, such as a service member. A union belongs to its slot: `string!MissingRate | Offline!Rates` fails with either error. Parenthesize a function type, a conditional type, or an object type after a `!`; an object type's `{` would start the function's body.
 
-Hovers show contracts this way, leaving out a trailing `never`, and declaration files give TypeScript callers the same Effect types. Earlier versions wrote contracts as `number!MissingRate!Rates`; that shorthand is retired, and `vibelang -p tsconfig.json --fix` rewrites it ([release notes](../setup/release-notes.md)).
+Hovers show contracts this way, and declaration files keep `Effect.Effect<A, E, R>` for TypeScript callers. `Effect<A, E, R>` is accepted anywhere a type is.
 
 ## Check selected channels
 
@@ -82,11 +82,11 @@ function checkedConversion(amount: number, currency: string): Effect<number, inf
 
 In a return annotation on a function with a body, `infer` followed by any name infers that channel from the body; the other slots are promises the compiler checks. The name is documentation only, not in scope in the body or other slots. `infer _` is allowed, as in `Effect<infer _, infer _, infer _>`, which infers all three channels.
 
-A slot left out is checked as `never`, never inferred: `Effect<number>` promises that the function cannot fail and needs nothing, and reports EK2001 or EK2002 when the body does. Write `Effect<number, infer E, infer R>` to check only the success type. A plain return annotation such as `: number` is EK2003 on a function whose body runs an Effect or throws past its own `catch`; a function that compiles to plain JavaScript keeps it (D282).
+A type argument left out of `Effect<…>` is `never`, as in TypeScript, and the compiler checks it: `Effect<number>` is `number!!`, a promise that the function cannot fail and needs nothing. The `!` form leaves only the dependencies to the body: `number!MissingRate` checks the error and infers `R`. A plain return annotation such as `: number` is EK2003 on a function whose body runs an Effect or throws past its own `catch`; a function that compiles to plain JavaScript keeps it (D282).
 
-A function that compiles to plain JavaScript also recurses as JavaScript does. `function sumTo(n: number): Effect<number> { return n === 0 ? 0 : n + sumTo(n - 1) }` calls itself directly, so a deep enough recursion overflows the stack, after roughly 10,000 calls on Node depending on the platform, and fails with a `RangeError` defect. A function whose body runs an Effect recurses through Effect's runtime instead, which keeps the JavaScript stack flat: the same function with a `sleep("0 millis")` in its body runs 200,000 calls deep.
+A function that compiles to plain JavaScript also recurses as JavaScript does. `function sumTo(n: number): number!! { return n === 0 ? 0 : n + sumTo(n - 1) }` calls itself directly, so a deep enough recursion overflows the stack, after roughly 10,000 calls on Node depending on the platform, and fails with a `RangeError` defect. A function whose body runs an Effect recurses through Effect's runtime instead, which keeps the JavaScript stack flat: the same function with a `sleep("0 millis")` in its body runs 200,000 calls deep.
 
-`infer` applies only to return annotations of `.vibe` functions with bodies. In parameter types, aliases, abstract members, and `.ts` files, a channel cannot be inferred, and `Effect<number>` is `Effect<number, never, never>` there as everywhere. A callback parameter without an Effect contract, such as `(n: number) => string`, still accepts any contract.
+Inference applies only to return annotations of `.vibe` functions with bodies. In parameter types, aliases, abstract members, and `.ts` files, `number!MissingRate` and `Effect<number, MissingRate>` both need nothing, and `infer` is unsupported. A callback parameter without an Effect contract, such as `(n: number) => string`, still accepts any contract.
 
 ## Description and execution
 
@@ -115,7 +115,7 @@ A call runs its result automatically only when the result type is `Effect` itsel
 export function double(amount: number) {
   return amount * 2
 }
-// Effect<number>
+// number!!
 // Output: 60
 ```
 
@@ -135,6 +135,6 @@ TypeScript consumers see exported VibeLang functions as returning ordinary Effec
 
 ## Coming from Effect
 
-`Effect<A, E, R>` is global in `.vibe` files. Written through the module, as `Effect.Effect<A, E, R>`, it draws EK4833, whose quick fix writes `Effect<A, E, R>` ([TypeScript-style Effect code](012-devtools.md#typescript-style-effect-code)). A local call gives `A`; keep a program as a function value to compose or store it.
+`Effect<A, E, R>` is global in `.vibe` files. Written with its type arguments, as `Effect.Effect<A, E, R>`, it draws EK4833, whose quick fix writes `A!E!R` ([TypeScript-style Effect code](012-devtools.md#typescript-style-effect-code)). A local call gives `A`; keep a program as a function value to compose or store it.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/the-effect-type)

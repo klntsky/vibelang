@@ -8,18 +8,18 @@ error NotFound { id: string }
 
 interface User { id: string; name: string }
 
-function getUser(id: string): Effect<User, NotFound> {
+function getUser(id: string): User!NotFound {
   sleep("5 millis")
   if (id === "missing") throw new NotFound({ id })
   return { id, name: "Ada" }
 }
 
-function getOrders(id: string): Effect<number> {
+function getOrders(id: string): number!! {
   return id.length
 }
 
 control Approval {
-  approve(request: string): Effect<boolean>
+  approve(request: string): boolean!!
 }
 
 function release(version: string) {
@@ -30,7 +30,7 @@ function release(version: string) {
 
 ## Types
 
-**Effect types** (D308). The prelude's `Effect` is effect's `Effect.Effect`. A type argument left out is `never`, as in TypeScript; `infer R` in a return annotation infers the dependencies from the body.
+**Effect types** (D127, D309). An empty slot is `never`. Omitted dependencies are inferred from a function's body, and are `never` elsewhere. `Effect<A, E, R>` is accepted too.
 
 ```ts effect
 type Find = (id: string) => Effect.Effect<User, NotFound>
@@ -42,10 +42,10 @@ const hello = (id: string): Effect.Effect<string, NotFound> =>
 
 ```vibe es
 // run: Console.log(hello("1"))
-type Find = (id: string) => Effect<User, NotFound>
-type Release = (version: string) => Effect<string, never, Approval>
-type Load = () => Effect<string>
-function hello(id: string): Effect<string, NotFound> {
+type Find = (id: string) => User!NotFound
+type Release = (version: string) => string!!Approval
+type Load = () => string!!
+function hello(id: string): string!NotFound {
   return `Hello, ${getUser(id).name}`
 }
 // Output: Hello, Ada
@@ -119,7 +119,7 @@ class Users extends Context.Service<Users, {
 
 ```vibe es
 service Users {
-  find(id: string): Effect<User, NotFound>
+  find(id: string): User!NotFound
   region: string
 }
 ```
@@ -136,7 +136,7 @@ class Prefix extends Context.Service<Prefix, string>()("app/Prefix") {}
 
 ```vibe es
 interface SearchApi {
-  find(query: string): Effect<string>
+  find(query: string): string!!
 }
 service Search: SearchApi
 service Prefix: string
@@ -152,7 +152,7 @@ abstract class Review extends Control {
 
 ```vibe es
 control Review {
-  approve(request: string): Effect<boolean>
+  approve(request: string): boolean!!
 }
 ```
 
@@ -318,7 +318,7 @@ const roll = Random.nextInt.pipe(
 // run: Console.log(roll())
 const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
 
-function roll(): Effect<number> {
+function roll(): number!! {
   provide Logger.layer([]), Random = seeded {
     return Random.nextInt()
   }

@@ -1,5 +1,5 @@
 service Greeter {
-  greet(name: string): Effect<string>
+  greet(name: string): string!!
 }
 
 export const GreeterLive = Layer.effect(Greeter) {

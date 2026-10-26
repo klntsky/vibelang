@@ -9,7 +9,7 @@ A `Stream` produces values on demand. Use it for large inputs, ongoing events, a
 error FeedUnavailable
 
 service Feed {
-  next(): Effect<string, FeedUnavailable>
+  next(): string!FeedUnavailable
 }
 
 const messages = Stream.fromEffectRepeat(() => Feed.next())
@@ -18,7 +18,7 @@ const messages = Stream.fromEffectRepeat(() => Feed.next())
 function preview() {
   return messages.take(4).runCollect()
 }
-// Effect<Array<string>, FeedUnavailable, Feed>
+// Array<string>!FeedUnavailable!Feed
 // Output: ["message","message","message","message"]
 ```
 
@@ -47,7 +47,7 @@ The source never ends; the consumer takes only five elements. Log tails, paginat
 function oneResult() {
   return [12, 24, 36]
 }
-// Effect<Array<number>>
+// Array<number>!!
 
 const noReadings = Stream.empty
 const oneReading = Stream.succeed(12)

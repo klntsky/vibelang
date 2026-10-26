@@ -17,12 +17,12 @@ function registeredWork() {
   })
   return "Prepared"
 }
-// Effect<string, never, Scope>
+// string!!Scope
 
 function runRegisteredWork() {
   return Effect.scoped(() => registeredWork())
 }
-// Effect<string>
+// string!!
 // Output: Work scope closed with Success
 // Output: Prepared
 ```
@@ -67,14 +67,14 @@ function openBuffer(label: string) {
     (buffer) => Console.log(`Closed ${buffer.label}`)
   )
 }
-// Effect<{ label: string }, never, Scope>
+// { label: string }!!Scope
 
 function copyLabels() {
   using source = openBuffer("source")
   using destination = openBuffer("destination")
   return `${source.label} -> ${destination.label}`
 }
-// Effect<string>
+// string!!
 // Output: Opened source
 // Output: Opened destination
 // Output: Closed destination
@@ -151,7 +151,7 @@ function mixedOwnership() {
   using local = openBuffer("local")
   Console.log(`${callerOwned.label}/${local.label}`)
 }
-// Effect<void, never, Scope>
+// void!!Scope
 
 function observeOwnership() {
   Effect.scoped {
@@ -187,9 +187,9 @@ error SetupFailed {
 }
 
 service ProjectSteps {
-  create(stage: string): Effect<string, SetupFailed>
-  remove(id: string): Effect<void>
-  finish(storage: string, index: string): Effect<string, SetupFailed>
+  create(stage: string): string!SetupFailed
+  remove(id: string): void!!
+  finish(storage: string, index: string): string!SetupFailed
 }
 
 function reserveStep(stage: string) {
@@ -201,7 +201,7 @@ function reserveStep(stage: string) {
     }
   )
 }
-// Effect<string, SetupFailed, ProjectSteps | Scope>
+// string!SetupFailed!ProjectSteps | Scope
 
 function setupProject() {
   return Effect.scoped {
@@ -210,7 +210,7 @@ function setupProject() {
     return ProjectSteps.finish(storage, index)
   }
 }
-// Effect<string, SetupFailed, ProjectSteps>
+// string!SetupFailed!ProjectSteps
 // Output: create storage
 // Output: create index
 // Output: ready

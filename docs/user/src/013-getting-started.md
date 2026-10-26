@@ -37,7 +37,7 @@ function main() {
   log(label)
   return label.length
 }
-// Effect<number>
+// number!!
 // Output: first program
 // Output: 13
 ```

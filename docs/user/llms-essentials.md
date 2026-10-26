@@ -1,19 +1,19 @@
 ## Essentials
 
-Functions are Effects; calls run in order, without `yield*`. Contracts are inferred; `Effect<A>` means `Effect<A, never, never>`.
+Functions are Effects; calls run in order, without `yield*`. `A!E` is a result and failures; `A!!` cannot fail. Omitted parts are inferred.
 
 ```vibe
 error NotFound { id: string }
 
 service Users {
-  name(id: string): Effect<string, NotFound>
+  name(id: string): string!NotFound
 }
 
-function nameOf(id: string): Effect<string, never, Users> {
+function nameOf(id: string): string!!Users {
   return Users.name(id)
-    |> timeout(%, "1 second")
+    |> timeout(%, "1 second") // each attempt
     |> retry(%, { times: 3, schedule: Schedule.exponential("100 millis") })
-    catch "unknown"
+    catch (e) => "unknown"
 }
 
 export function names(ids: ReadonlyArray<string>) {

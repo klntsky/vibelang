@@ -1,6 +1,6 @@
 error QueueBusy { queue: string }
 
-declare function enqueue(job: string): Effect<string, QueueBusy>
+declare function enqueue(job: string): string!QueueBusy
 
 export function submit(job: string) {
   return enqueue(job)

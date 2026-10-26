@@ -1,5 +1,5 @@
 service Banner {
-  text(topic: string): Effect<string>
+  text(topic: string): string!!
 }
 
 export const BannerLive = Layer.effect(Banner) {

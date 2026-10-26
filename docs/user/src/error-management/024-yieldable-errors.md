@@ -16,7 +16,7 @@ function requireText(documentId: string, text: string) {
   if (text.trim() === "") throw new EmptyDocument({ documentId })
   return text
 }
-// Effect<string, EmptyDocument>
+// string!EmptyDocument!
 ```
 
 ```output
@@ -36,7 +36,7 @@ function rejectDocument(documentId: string) {
   const error = emptyDocumentError(documentId) // data, not a failure
   return error()                             // calling the error fails with it
 }
-// Effect<never, EmptyDocument>
+// never!EmptyDocument!
 ```
 
 ```output
@@ -60,7 +60,7 @@ function title(text: string) {
   if (text.length > 80) throw new TitleTooLong({ length: text.length })
   return text
 }
-// Effect<string, EmptyTitle | TitleTooLong>
+// string!EmptyTitle | TitleTooLong!
 ```
 
 ```output
@@ -80,7 +80,7 @@ Give distinct error cases distinct tags. Tag-based matching compares strings, so
 function displayTitle(text: string) {
   return Effect.catchTag(title(text), "EmptyTitle", () => "Untitled")
 }
-// Effect<string, TitleTooLong>
+// string!TitleTooLong!
 
 function editableTitle(text: string) {
   try {
@@ -90,7 +90,7 @@ function editableTitle(text: string) {
     throw error
   }
 }
-// Effect<string, TitleTooLong>
+// string!TitleTooLong!
 ```
 
 ```output

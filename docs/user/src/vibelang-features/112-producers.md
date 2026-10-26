@@ -22,7 +22,7 @@ function firstAlert() {
   }
   return undefined
 }
-// Effect<number | undefined>
+// number | undefined!!
 // Output: sensor closed
 // Output: 25
 ```

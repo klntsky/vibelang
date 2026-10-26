@@ -6,11 +6,11 @@ export interface User {
 export error UserNotFound { id: string }
 
 export service Directory {
-  lookup(id: string): Effect<User | undefined>
+  lookup(id: string): User | undefined!!
 }
 
 export service Users {
-  find(id: string): Effect<User, UserNotFound>
+  find(id: string): User!UserNotFound
 }
 
 export const DirectoryLive = Layer.succeed(Directory, {

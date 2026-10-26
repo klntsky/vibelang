@@ -14,7 +14,7 @@ function reserve(item: string, available: boolean) {
   if (!available) throw new Unavailable({ item })
   return { item, reserved: true }
 }
-// Effect<{ item: string; reserved: boolean }, Unavailable>
+// { item: string; reserved: boolean }!Unavailable!
 // Output: notebook
 ```
 
@@ -29,7 +29,7 @@ function attemptReservation(item: string, available: boolean) {
   if (outcome.isFailure()) return outcome.failure.item
   return outcome.success.item
 }
-// Effect<string>
+// string!!
 // Output: notebook
 ```
 
@@ -47,7 +47,7 @@ function randomBytes(size: number) {
   return try((size) => crypto.getRandomValues(new Uint8Array(size)),
     (cause) => new RandomBytesFailed({ cause }), size)
 }
-// Effect<Uint8Array, RandomBytesFailed>
+// Uint8Array!RandomBytesFailed!
 // Output: 16
 ```
 
@@ -89,7 +89,7 @@ function digest(text: string) {
     return await crypto.subtle.digest("SHA-256", bytes)
   }, (cause) => new DigestFailed({ cause }), text)
 }
-// Effect<ArrayBuffer, DigestFailed>
+// ArrayBuffer!DigestFailed!
 // Output: 32
 ```
 
@@ -143,7 +143,7 @@ function requestId() {
 // Output: true
 ```
 
-`module platform { … }` declares a module whose body is TypeScript, checked and compiled as a `.ts` file would be (D283). There `throw`, `try` and `catch`, `async` and `await`, and platform APIs keep their TypeScript meaning, and VibeLang's own syntax, such as `x catch fallback` or an `error` declaration, is a syntax error. The file reaches the module's exports only through an import whose specifier is the module's name, `import { randomId } from platform`, so a hatch uses them as it uses any import, and a call outside a hatch is a plain foreign call, as for an import from a `.ts` file. `export { randomId } from platform` re-exports one, and `import platform` runs a module for its effects. The body imports what it needs itself, its relative specifiers resolve from the `.vibe` file's directory, and it cannot read the `.vibe` file's bindings, so inputs reach the imported function as hatch arguments.
+`module platform { … }` declares a module whose body is TypeScript, checked and compiled as a `.ts` file would be (D283). There `throw`, `try` and `catch`, `async` and `await`, and platform APIs keep their TypeScript meaning, and VibeLang's own syntax, such as `A!E` or an `error` declaration, is a syntax error. The file reaches the module's exports only through an import whose specifier is the module's name, `import { randomId } from platform`, so a hatch uses them as it uses any import, and a call outside a hatch is a plain foreign call, as for an import from a `.ts` file. `export { randomId } from platform` re-exports one, and `import platform` runs a module for its effects. The body imports what it needs itself, its relative specifiers resolve from the `.vibe` file's directory, and it cannot read the `.vibe` file's bindings, so inputs reach the imported function as hatch arguments.
 
 Declare modules at a file's top level. In a `.vibe` file `module` never declares a namespace: write `namespace` for one. The emitted JavaScript holds each module the file imports inline, run once before the file's own code, and each module's declarations are a declaration file of their own, `main.vibe.platform.d.ts` beside `main.d.ts` (D303). A module the file imports only types from emits nothing. Move an adapter to its own `.ts` file when other files need it.
 
@@ -163,7 +163,7 @@ function counters() {
   const next = nextCounter()
   return [next(), next()]
 }
-// Effect<number[]>; returns [1, 2]
+// number[]!!; returns [1, 2]
 // Output: [1,2]
 ```
 
@@ -171,7 +171,7 @@ The returned function delays its body until each call. For retry to create new s
 
 ```vibe
 // run: Console.log(countdown(3))
-function countdown(n: number): Effect<number> {
+function countdown(n: number): number!! {
   if (n <= 0) return 0
   sleep("1 millis")
   return 1 + countdown(n - 1)
@@ -181,7 +181,7 @@ function checkedQuantity(n: number) {
   if (n < 0) throw new Unavailable({ item: "quantity" })
   return n
 }
-// Effect<number, Unavailable>
+// number!Unavailable!
 // Output: 3
 ```
 

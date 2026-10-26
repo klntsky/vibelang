@@ -3,7 +3,7 @@
 A recursive function snapshots regular files, then a producer yields their paths.
 `for...of` consumes the producer; `Effect.forEach` reads files with concurrency 4.
 The recursion accumulates into an array and returns void. Because it is recursive,
-it writes out its contract, `Effect<void, PlatformError, FileSystem | Path>`.
+it writes out its contract, `void!PlatformError!FileSystem | Path`.
 `FileSystem` and `Path` come from Effect, backed by `NodeServices.layer`.
 Canonical directory paths prevent revisiting a directory through symbolic links.
 

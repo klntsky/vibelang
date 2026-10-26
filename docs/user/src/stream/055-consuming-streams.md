@@ -9,7 +9,7 @@ A consumer runs a Stream and returns one result; in a VibeLang function, calls s
 function collectLabels() {
   return Stream.make("north", "south", "west").runCollect()
 }
-// Effect<Array<"north" | "south" | "west">>
+// Array<"north" | "south" | "west">!!
 // Output: ["north","south","west"]
 ```
 
@@ -25,7 +25,7 @@ function announce() {
     sleep("20 millis")
   })
 }
-// Effect<void>
+// void!!
 // Output: starting build
 // Output: starting test
 // Output: starting package

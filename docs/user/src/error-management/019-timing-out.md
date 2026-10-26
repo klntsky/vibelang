@@ -17,7 +17,7 @@ function buildPreview() {
 function previewWithDeadline() {
   return timeout(buildPreview(), "500 millis")
 }
-// Effect<string, Cause.TimeoutError>
+// string!Cause.TimeoutError!
 ```
 
 ```output
@@ -85,7 +85,7 @@ function requiredPreview(documentId: string) {
     orElse: () => { throw new PreviewDeadline({ documentId }) }
   })
 }
-// Effect<string, PreviewDeadline>
+// string!PreviewDeadline!
 ```
 
 ```output

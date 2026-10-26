@@ -9,7 +9,7 @@ A semaphore limits access to a shared resource with a pool of permits. One permi
 function makeUploadLimit() {
   return Semaphore.make(3)
 }
-// Effect<Semaphore.Semaphore>
+// Semaphore.Semaphore!!
 // Output: three permits acquired
 ```
 

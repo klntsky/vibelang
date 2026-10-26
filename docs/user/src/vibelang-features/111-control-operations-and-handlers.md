@@ -10,7 +10,7 @@ A control operation lets a handler decide how the caller continues. Use one when
 export error ReviewBusy { request: string }
 
 export control Approval {
-  approve(request: string): Effect<boolean, ReviewBusy>
+  approve(request: string): boolean!ReviewBusy
 }
 
 export function release(version: string) {
@@ -18,11 +18,11 @@ export function release(version: string) {
   if (!Approval.approve(`deploy ${version} to production`)) return "production declined"
   return `released ${version}`
 }
-// Effect<string, ReviewBusy, Approval>
+// string!ReviewBusy!Approval
 // Output: released v1
 ```
 
-`Approval.approve` returns a boolean at the call, and `Approval` stays in the program's requirements until a handler answers it. Each abstract operation declares all three contract channels.
+`Approval.approve` returns a boolean at the call, and `Approval` stays in the program's requirements until a handler answers it. Each abstract operation writes its contract, as a service member does.
 
 `Control`, `handle`, `resume`, `resumeWith`, and `abandon` are globals in `.vibe` files.
 

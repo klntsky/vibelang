@@ -3,7 +3,7 @@ export schema Product { sku: string; name: string; cents: number; stock: number 
 export error OutOfStock { sku: string; available: number }
 
 export service Inventory {
-  reserve(sku: string, quantity: number): Effect<Product, OutOfStock>
+  reserve(sku: string, quantity: number): Product!OutOfStock
 }
 
 const catalog: ReadonlyArray<Product> = [

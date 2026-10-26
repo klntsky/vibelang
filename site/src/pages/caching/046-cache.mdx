@@ -15,7 +15,7 @@ error MissingProduct {
 }
 
 service Products {
-  price(sku: string): Effect<number, MissingProduct>
+  price(sku: string): number!MissingProduct
 }
 
 function makePrices() {
@@ -25,7 +25,7 @@ function makePrices() {
     lookup: (sku: string) => Products.price(sku)
   })
 }
-// Effect<Cache.Cache<string, number, MissingProduct>, never, Products>
+// Cache.Cache<string, number, MissingProduct>!!Products
 // Output: 42
 ```
 

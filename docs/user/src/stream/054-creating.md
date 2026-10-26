@@ -50,7 +50,7 @@ const fromBatches = Stream.fromArrays([11, 22], [33])
 const fromSet = Stream.fromIterable(new Set(["east", "west"]))
 
 service Catalog {
-  codes(): Effect<ReadonlyArray<string>>
+  codes(): ReadonlyArray<string>!!
 }
 
 const codes = Stream.fromIterableEffect(() => Catalog.codes())

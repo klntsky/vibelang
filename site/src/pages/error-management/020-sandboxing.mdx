@@ -22,7 +22,7 @@ function readRow() {
 function sandboxedRow() {
   return Effect.sandbox(() => readRow())
 }
-// Effect<void, Cause.Cause<InvalidRow>>
+// void!Cause.Cause<InvalidRow>!
 ```
 
 ```text
@@ -30,7 +30,7 @@ function sandboxedRow() {
 ["Fail"]
 ```
 
-`Cause` is in scope in `.vibe` files. `sandbox` changes `Effect<A, E, R>` into `Effect<A, Cause.Cause<E>, R>`: a defect in the original computation becomes a `Die` reason inside a typed cause value, not a defect at the outer level.
+`Cause` is in scope in `.vibe` files. `sandbox` changes `A!E!R` into `A!Cause.Cause<E>!R`: a defect in the original computation becomes a `Die` reason inside a typed cause value, not a defect at the outer level.
 
 ## Inspecting individual reasons
 
@@ -86,7 +86,7 @@ function readWithInspection() {
     return Effect.failCause(cause)
   }
 }
-// Effect<void, InvalidRow>
+// void!InvalidRow!
 ```
 
 ```text

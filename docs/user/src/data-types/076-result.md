@@ -12,7 +12,7 @@ function parseCount(text: string) {
     ? Result.succeed(count)
     : Result.fail("Expected a nonnegative integer")
 }
-// Effect<Result.Result<number, string>>
+// Result.Result<number, string>!!
 ```
 
 ```output
@@ -85,7 +85,7 @@ function requireCount(input: string) {
     : Result.fail(new InvalidCount({ input }))
   return Effect.fromResult(result)
 }
-// Effect<number, InvalidCount>
+// number!InvalidCount!
 
 function validatePair() {
   return all([

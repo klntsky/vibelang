@@ -18,7 +18,7 @@ function buildDashboard() {
   Console.log("preparing dashboard frame")
   return join chart
 }
-// Effect<string>
+// string!!
 // Output: preparing dashboard frame
 // Output: chart
 ```
@@ -114,7 +114,7 @@ function combine() {
   const [name, count] = await.all [title(), rowCount()]
   return `${name}: ${count}`
 }
-// Effect<string>
+// string!!
 // Output: Inventory: 18
 ```
 
@@ -142,7 +142,7 @@ function nextEvent(jobs: Queue.Queue<string>, shutdown: Deferred.Deferred<void>)
     }
   ]
 }
-// Effect<string>
+// string!!
 // Output: job: build
 // Output: shutdown
 // Output: idle

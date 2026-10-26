@@ -10,7 +10,7 @@ A fallback runs another computation after an expected failure; a catch expressio
 // run: Console.log(title())
 error SourceOffline
 
-function latestTitle(): Effect<string, SourceOffline> {
+function latestTitle(): string!SourceOffline! {
   throw new SourceOffline()
 }
 
@@ -26,7 +26,7 @@ function title() {
     return cachedTitle()
   }
 }
-// Effect<string>
+// string!!
 ```
 
 ```output
@@ -41,7 +41,7 @@ The cache is read only if the primary computation fails. The fallback's errors b
 function titleInline() {
   return latestTitle() catch cachedTitle()
 }
-// Effect<string>
+// string!!
 ```
 
 ```output
@@ -60,7 +60,7 @@ Saved issue
 function titleOrPlaceholder() {
   return latestTitle() catch "No title available"
 }
-// Effect<string>
+// string!!
 ```
 
 ```output
@@ -75,7 +75,7 @@ No title available
 // run: Console.log(JSON.stringify(lookup()))
 type Lookup = { _tag: "Found"; title: string } | { _tag: "Offline" }
 
-function lookup(): Effect<Lookup> {
+function lookup(): Lookup!! {
   return { _tag: "Found", title: latestTitle() } catch { _tag: "Offline" }
 }
 ```

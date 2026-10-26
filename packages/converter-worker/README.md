@@ -139,7 +139,7 @@ const good = await post(hero)
 assert.equal(good.exitCode, 0)
 assert.equal(good.timedOut, false)
 assert.deepEqual(good.diagnostics, [])
-const bad = await post('export function f(): Effect<number> { return "no" }')
+const bad = await post('export function f(): number!! { return "no" }')
 assert.notEqual(bad.exitCode, 0)
 assert.ok(bad.diagnostics.length > 0)
 console.log({ heroExitCode: good.exitCode, typeErrorDiagnostics: bad.diagnostics.length,

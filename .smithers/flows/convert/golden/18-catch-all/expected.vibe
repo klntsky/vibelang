@@ -1,7 +1,7 @@
 error Timeout
 error Refused { code: number }
 
-declare function call(): Effect<string, Timeout | Refused>
+declare function call(): string!Timeout | Refused
 
 export function safe() {
   return call() catch (e) => match (e) {

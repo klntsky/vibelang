@@ -15,7 +15,7 @@ class Package extends Schema.Class<Package>("Package")({
 function readPackage(input: unknown) {
   return Schema.decodeUnknownEffect(Package)(input)
 }
-// Effect<Package, Schema.SchemaError>
+// Package!Schema.SchemaError!
 ```
 
 ```output
@@ -203,7 +203,7 @@ class InsuredPackage extends Package.extend<InsuredPackage>("InsuredPackage")({
 function reportMissing(reference: string) {
   throw MissingPackage.makeEffect({ reference })
 }
-// Effect<void, MissingPackage | SchemaIssue.Issue>
+// void!MissingPackage | SchemaIssue.Issue!
 ```
 
 ```output
