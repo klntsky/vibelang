@@ -2135,7 +2135,6 @@ typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:24:25 lambda effectFn ta
 typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:24:38 lambda dual fallback
 typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:24:86 lambda dual fallback
 typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:28:10 lambda effectFn table
-typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:28:100 lambda dual fallback
 typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:28:25 lambda effectFn table
 typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:28:38 lambda dual fallback
 typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:32:10 lambda effectFn table
@@ -2147,13 +2146,11 @@ typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:36:26 lambda effectFn ta
 typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:36:39 lambda dual fallback
 typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:36:74 lambda dual fallback
 typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:36:92 lambda effectFn table
-typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:38:14 lambda dual fallback
-typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:48:13 lambda effectFn table
-typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:48:28 lambda effectFn table
-typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:48:41 lambda dual fallback
-typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:48:91 lambda dual fallback
-typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:49:12 lambda effectFn table
-typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:49:27 lambda effectFn table
+typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:47:13 lambda effectFn table
+typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:47:28 lambda effectFn table
+typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:47:41 lambda dual fallback
+typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:48:12 lambda effectFn table
+typescript/vibelang/cases/tsforms-catch-fixed/main.vibe:48:27 lambda effectFn table
 typescript/vibelang/cases/tsforms-catch/main.vibe:24:26 byname program table
 typescript/vibelang/cases/tsforms-catch/main.vibe:24:47 lambda effectFn table
 typescript/vibelang/cases/tsforms-catch/main.vibe:28:27 byname program table

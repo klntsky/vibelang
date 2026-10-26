@@ -19,7 +19,7 @@ import (
 //	find(id) catch (e) => describe(e)
 //
 // Effect.catchTag(self, "Tag", handler) and Effect.catchTags(self, { Tag:
-// handler, … }) become one arm per tag and a default that rethrows. An arm
+// handler, … }) become one arm per tag and rethrow only unhandled failures. An arm
 // tests the failure's _tag with an object pattern, { _tag: "Tag" }, which is
 // what catchTag tests; when the failures of that tag are the instances of one
 // error class the file names, whose declaration fixes the tag (an error
@@ -226,7 +226,15 @@ func catchCombinatorRewrite(c *checker.Checker, file *ast.SourceFile, call *ast.
 			}
 			arms = append(arms, "when "+pattern+": "+values[i]+";")
 		}
-		arms = append(arms, "default: throw "+variable+";")
+		unhandled := slices.ContainsFunc(failures, func(failure *checker.Type) bool {
+			literal := c.GetTypeOfPropertyOfType(failure, "_tag")
+			return literal == nil || !literal.IsStringLiteral() || !slices.ContainsFunc(tags, func(tag string) bool {
+				return literal.AsLiteralType().Value() == tag
+			})
+		})
+		if unhandled {
+			arms = append(arms, "default: throw "+variable+";")
+		}
 		text = left + " catch (" + variable + ") => match (" + variable + ") { " + strings.Join(arms, " ") + " }"
 		if len(text) > 100 || strings.ContainsAny(expressionText(file, call), "\r\n") {
 			// One arm per line, as a match is written when it does not fit one.

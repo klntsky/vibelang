@@ -25,7 +25,7 @@ function describe(id: number) {
 }
 
 function both(id: number) {
-  return find(id) catch (e) => match (e) { when Missing: "missing"; when Timeout: "slow"; default: throw e; }
+  return find(id) catch (e) => match (e) { when Missing: "missing"; when Timeout: "slow"; }
 }
 
 function any(id: number) {
@@ -35,7 +35,6 @@ function any(id: number) {
 function nested(id: number) {
   return (find(id) catch (e) => match (e) { when Missing: "nf"; default: throw e; }) catch (e) => match (e) {
     when Timeout: "to";
-    default: throw e;
   }
 }
 
@@ -45,7 +44,7 @@ export function main() {
     both: [both(0), both(-1)],
     any: any(-1),
     nested: nested(-1),
-    tagged: tagged() catch (e) => match (e) { when { _tag: "Tagged" }: "by tag"; default: throw e; },
+    tagged: tagged() catch (e) => match (e) { when { _tag: "Tagged" }: "by tag"; },
     plain: find(-1) catch "plain"
   }
 }
