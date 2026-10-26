@@ -348,7 +348,7 @@ func (e *encoder) form(form parser.VibeSyntax) error {
 // is a class too, given an empty body when it has none: error Timeout
 // extends AppError.
 func (e *encoder) declaration(form parser.VibeSyntax) error {
-	head := e.text(form.Head)
+	head := declarationKeywordSpacing(e.text(form.Head))
 	if form.Class {
 		name := e.hold(placeholderClassHead, head, form.Head.Pos(), firstLineWidth(head)-len("class "))
 		e.add(edit{pos: form.Head.Pos(), end: form.Head.End(), text: "class " + name, opaque: true})
@@ -388,7 +388,7 @@ func (e *encoder) declaration(form parser.VibeSyntax) error {
 	case "service", "control":
 		// The head of service Prefix: string runs through the shape (D281),
 		// which the placeholder keeps as written, with one space after the colon.
-		head = e.shapeHead(form, head)
+		head = declarationKeywordSpacing(e.shapeHead(form, head))
 		name := e.hold(placeholderClassHead, head, form.Head.Pos(), firstLineWidth(head)-len("class "))
 		e.add(edit{pos: form.Head.Pos(), end: form.Head.End(), text: "class " + name, opaque: true})
 		if form.Open.Pos() == form.Open.End() {
@@ -397,9 +397,40 @@ func (e *encoder) declaration(form parser.VibeSyntax) error {
 			e.insert(form.Range.End(), " {}", 0)
 		}
 	default:
-		e.opaque(placeholderText, form.Range, "", "", firstLineWidth(e.text(form.Range)))
+		text := declarationKeywordSpacing(e.text(form.Range))
+		name := e.hold(placeholderText, text, form.Range.Pos(), firstLineWidth(text))
+		e.add(edit{pos: form.Range.Pos(), end: form.Range.End(), text: name, opaque: true})
 	}
 	return nil
+}
+
+// declarationKeywordSpacing normalizes the gaps after declaration keywords.
+// Headers are opaque to the TypeScript formatter; comments and line breaks
+// must stay in place, as must whitespace inside a service's shape.
+func declarationKeywordSpacing(head string) string {
+	var out strings.Builder
+	for {
+		end := strings.IndexAny(head, " \t\r\n")
+		if end < 0 {
+			return out.String() + head
+		}
+		word := head[:end]
+		switch word {
+		case "error", "schema", "service", "class", "control", "data", "layer":
+		default:
+			return out.String() + head
+		}
+		next := end
+		for next < len(head) && (head[next] == ' ' || head[next] == '\t') {
+			next++
+		}
+		if next == end || next == len(head) || head[next] == '/' || head[next] == '\n' || head[next] == '\r' {
+			return out.String() + head
+		}
+		out.WriteString(word)
+		out.WriteByte(' ')
+		head = head[next:]
+	}
 }
 
 // shapeHead returns head, the head of a service declaration, with the
