@@ -462,12 +462,7 @@ func (w *Watcher) doBuild() error {
 			}
 			w.configModified = false
 
-			errorCount := len(result.Diagnostics)
-			if errorCount == 1 {
-				w.reportWatchStatus(ast.NewCompilerDiagnostic(diagnostics.Found_1_error_Watching_for_file_changes))
-			} else {
-				w.reportWatchStatus(ast.NewCompilerDiagnostic(diagnostics.Found_0_errors_Watching_for_file_changes, errorCount))
-			}
+			w.reportWatchStatus(tsc.WatchStatus(result.Diagnostics))
 			if w.testing != nil {
 				w.testing.OnProgram(w.program)
 			}
@@ -542,12 +537,7 @@ func (w *Watcher) doBuild() error {
 		return true
 	})
 
-	errorCount := len(result.Diagnostics)
-	if errorCount == 1 {
-		w.reportWatchStatus(ast.NewCompilerDiagnostic(diagnostics.Found_1_error_Watching_for_file_changes))
-	} else {
-		w.reportWatchStatus(ast.NewCompilerDiagnostic(diagnostics.Found_0_errors_Watching_for_file_changes, errorCount))
-	}
+	w.reportWatchStatus(tsc.WatchStatus(result.Diagnostics))
 
 	if w.testing != nil {
 		w.testing.OnProgram(w.program)
@@ -710,12 +700,7 @@ func (w *Watcher) parseConfigFile() *tsoptions.ParsedCommandLine {
 			w.reportDiagnostic(e)
 		}
 		w.configHasErrors = true
-		errorCount := len(errors)
-		if errorCount == 1 {
-			w.reportWatchStatus(ast.NewCompilerDiagnostic(diagnostics.Found_1_error_Watching_for_file_changes))
-		} else {
-			w.reportWatchStatus(ast.NewCompilerDiagnostic(diagnostics.Found_0_errors_Watching_for_file_changes, errorCount))
-		}
+		w.reportWatchStatus(tsc.WatchStatus(errors))
 		return nil
 	}
 	w.extendedConfigCache = extendedConfigCache
