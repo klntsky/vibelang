@@ -17,6 +17,8 @@ func TestEditorQuickFixGoldens(t *testing.T) {
 		name, source, title, want string
 		code                      int32
 	}{
+		{"typed catch expression", "error NotFound\nfunction load(): string!NotFound { throw new NotFound() }\nexport function main() { return load() catch (e: NotFound) => \"missing\" }", "Test the failure with match", "error NotFound\nfunction load(): string!NotFound { throw new NotFound() }\nexport function main() { return load() catch (e) => match (e) { when NotFound: \"missing\"; default: throw e; } }", 2112},
+		{"typed catch block", "error NotFound\nfunction load(): string!NotFound { throw new NotFound() }\nexport function main() { return load() catch (e: NotFound) => { return \"missing\" } }", "Test the failure with is", "error NotFound\nfunction load(): string!NotFound { throw new NotFound() }\nexport function main() { return load() catch (e) => { if (e is NotFound) { return \"missing\" } else { throw e } } }", 2112},
 		{"run value", "function main(job: Effect.Effect<number>) { job }", "Call it to run it", "function main(job: Effect.Effect<number>) { job() }", 4801},
 		{"run conditional", "function main(flag: boolean, a: Effect.Effect<number>, b: Effect.Effect<number>) { flag ? a : b }", "Call it to run it", "function main(flag: boolean, a: Effect.Effect<number>, b: Effect.Effect<number>) { (flag ? a : b)() }", 4801},
 		{"return value", "function main(job: Effect.Effect<number>) { Effect.succeed(0); return job }", "Call it to run it", "function main(job: Effect.Effect<number>) { Effect.succeed(0); return job() }", 4802},

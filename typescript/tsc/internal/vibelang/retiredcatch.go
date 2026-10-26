@@ -201,6 +201,15 @@ func checkRetiredCatches(c *checker.Checker, file *ast.SourceFile) {
 	text := file.Text()
 	var visit func(n *ast.Node) bool
 	visit = func(n *ast.Node) bool {
+		if expression := catchExpressionOf(n); expression != nil {
+			handler := expression.Arguments()[1]
+			if len(handler.Parameters()) == 1 {
+				parameter := handler.Parameters()[0]
+				if parameter.Type() != nil && ast.IsIdentifier(parameter.Name()) {
+					report(c, parameter.Type(), EK2112, parameter.Name().Text())
+				}
+			}
+		}
 		if n.Kind == ast.KindTryStatement {
 			if chain := retiredCatchOf(file, n); chain != nil {
 				for _, clause := range chain.clauses {
@@ -232,7 +241,7 @@ var retiredCatchFix = &ls.CodeFixProvider{
 		}
 		chain := retiredCatchAt(fix.SourceFile, fix.Span)
 		if chain == nil {
-			return nil, nil
+			return retiredCatchExpressionActions(ctx, fix)
 		}
 		c, done := fix.Program.GetTypeCheckerForFile(ctx, fix.SourceFile)
 		defer done()
