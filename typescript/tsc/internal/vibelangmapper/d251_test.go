@@ -16,7 +16,7 @@ func TestD251StaticDataBoundary(t *testing.T) {
 	root, err := filepath.Abs("../../../..")
 	assert.NilError(t, err)
 	scope := mapperTestScope(t, root)
-	stock := filepath.Join(root, "packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261010.1/node_modules/.bin/tsc")
+	stock := stockTypeScriptPath(t, root)
 	requireStockTypeScript(t, stock)
 	dir := t.TempDir()
 	assert.NilError(t, os.Symlink(filepath.Join(scope, "node_modules"), filepath.Join(dir, "node_modules")))

@@ -22,5 +22,8 @@
   "peerDependencies": {
     "effect": "4.0.5",
     "vibelang-runtime": "0.0.1"
+  },
+  "devDependencies": {
+    "typescript": "7.1.0-dev.20261010.1"
   }
 }

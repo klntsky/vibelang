@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -152,7 +153,9 @@ func mapperEffectModules(root string) string {
 func requireStockTypeScript(t *testing.T, stock string) {
 	t.Helper()
 	if _, err := os.Stat(stock); os.IsNotExist(err) {
-		t.Skipf("missing pinned stock TypeScript compiler %s; from the repository root run npm install --prefix packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261010.1 --no-audit --no-fund typescript@7.1.0-dev.20261010.1", stock)
+		cache := filepath.Dir(filepath.Dir(filepath.Dir(stock)))
+		version := strings.TrimPrefix(filepath.Base(cache), "typescript-")
+		t.Skipf("missing pinned stock TypeScript compiler %s; run npm install --prefix %s --no-audit --no-fund typescript@%s", stock, cache, version)
 	} else if err != nil {
 		t.Fatalf("cannot inspect stock TypeScript compiler %s: %v", stock, err)
 	}

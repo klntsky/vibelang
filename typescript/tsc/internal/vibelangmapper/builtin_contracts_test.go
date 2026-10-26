@@ -56,7 +56,7 @@ func stockBuiltinProject(t *testing.T) (string, string) {
 			t.Fatal(err)
 		}
 	}
-	return dir, filepath.Join(root, "packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261010.1/node_modules/.bin/tsc")
+	return dir, stockTypeScriptPath(t, root)
 }
 
 // TestD251PlainCast proves that contextual typing of a plain cast does not

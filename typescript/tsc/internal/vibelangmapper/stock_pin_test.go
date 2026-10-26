@@ -1,0 +1,105 @@
+package vibelangmapper
+
+import (
+	"encoding/json"
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"testing"
+)
+
+// stockTypeScriptVersion returns the stock TypeScript version the mapper is
+// tested against: devDependencies.typescript in packages/ts-mapper/package.json.
+func stockTypeScriptVersion(root string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(root, "packages/ts-mapper/package.json"))
+	if err != nil {
+		return "", err
+	}
+	var manifest struct {
+		DevDependencies map[string]string `json:"devDependencies"`
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return "", fmt.Errorf("packages/ts-mapper/package.json: %w", err)
+	}
+	if manifest.DevDependencies["typescript"] == "" {
+		return "", fmt.Errorf("packages/ts-mapper/package.json pins no typescript in devDependencies")
+	}
+	return manifest.DevDependencies["typescript"], nil
+}
+
+// stockTypeScriptPath returns the pinned stock tsc, installed where e2e.sh and
+// CONTRIBUTING install it: packages/ts-mapper/test/.cache/typescript-<version>.
+func stockTypeScriptPath(t *testing.T, root string) string {
+	t.Helper()
+	version, err := stockTypeScriptVersion(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return filepath.Join(root, "packages/ts-mapper/test/.cache", "typescript-"+version, "node_modules/.bin/tsc")
+}
+
+// hardcodedStockPin matches a stock TypeScript version written after
+// "typescript-" (a cache path), after "typescript@" (an npm install), or as
+// a TS7_VERSION default in a shell script.
+var hardcodedStockPin = regexp.MustCompile(`typescript[@-]7\.\d+\.\d+|TS7_VERSION:-7\.`)
+
+// TestStockTypeScriptPinHasOneSource keeps the stock compiler the mapper is
+// tested against in one place, devDependencies.typescript in
+// packages/ts-mapper/package.json. The Go tests, e2e.sh, the parity harness
+// and CONTRIBUTING read it from there, so moving the pin is one edit and no
+// suite is left testing another compiler.
+func TestStockTypeScriptPinHasOneSource(t *testing.T) {
+	root, err := filepath.Abs("../../../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version, err := stockTypeScriptVersion(root); err != nil {
+		t.Error(err)
+	} else if !regexp.MustCompile(`^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$`).MatchString(version) {
+		t.Errorf("packages/ts-mapper/package.json pins typescript %q; pin an exact version", version)
+	}
+	var found []string
+	scan := func(path string) {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, line := range strings.Split(string(data), "\n") {
+			if hardcodedStockPin.MatchString(line) {
+				rel, _ := filepath.Rel(root, path)
+				found = append(found, rel+":"+strconv.Itoa(i+1))
+			}
+		}
+	}
+	for _, dir := range []string{"typescript/tsc/internal/vibelangmapper", "packages/ts-mapper/test"} {
+		err := filepath.WalkDir(filepath.Join(root, dir), func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				switch entry.Name() {
+				case ".cache", "out", "node_modules", "testdata":
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			switch filepath.Ext(path) {
+			case ".go", ".sh", ".ts", ".mjs", ".md":
+				scan(path)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	scan(filepath.Join(root, ".smithers/flows/docs/project.ts"))
+	scan(filepath.Join(root, "CONTRIBUTING.md"))
+	if len(found) > 0 {
+		t.Fatalf("stock TypeScript versions written outside packages/ts-mapper/package.json; read devDependencies.typescript instead:\n%s", strings.Join(found, "\n"))
+	}
+}

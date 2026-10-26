@@ -27,7 +27,8 @@
 #      expect-result, under out/work/runtime.
 #
 # Environment:
-#   TS7_VERSION          stock TypeScript version (default 7.1.0-dev.20261010.1, as e2e.sh)
+#   TS7_VERSION          stock TypeScript version (default: devDependencies.typescript in
+#                        packages/ts-mapper/package.json, as e2e.sh)
 #   TS7_DIR              a directory whose node_modules/.bin/tsc is that version, instead of the cache
 #   EFFECT_NODE_MODULES  a node_modules that holds effect 4.0.5 (default ../experiments/node_modules,
 #                        else ~/effectscript/experiments/node_modules, as smoke.sh)
@@ -38,7 +39,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 package="$(cd "$here/../.." && pwd)"
 root="$(cd "$package/../.." && pwd)"
 out="$here/out"
-ts7_version="${TS7_VERSION:-7.1.0-dev.20261010.1}"
+ts7_version="${TS7_VERSION:-$(node -e 'process.stdout.write(require(process.argv[1]).devDependencies.typescript)' "$package/package.json")}"
 
 free_kib=$(df -k "$root" | awk 'NR==2 {print $4}')
 if [ "$free_kib" -lt $((3 * 1024 * 1024)) ]; then

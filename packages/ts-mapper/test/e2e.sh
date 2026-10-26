@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # End-to-end check of VibeLang's TypeScript 7 content mapper with stock tools:
-# stock TypeScript 7 (npm typescript@next, not the VibeLang fork) checks a
+# stock TypeScript 7 (the typescript version package.json pins in
+# devDependencies, not the VibeLang fork) checks a
 # project in which main.ts imports ./greet.vibe through vibelang-ts-mapper.
 #
 #   packages/ts-mapper/test/e2e.sh
@@ -10,7 +11,7 @@
 #      generated L1 forms table matches a fresh generation
 #      (scripts/check-forms-table.sh; never hand-edit the table).
 #   2. Build bin/vibelang-mapper.
-#   3. Install typescript@next and effect 4.0.5 into test/.cache, then
+#   3. Install that typescript and effect 4.0.5 into test/.cache, then
 #      assemble the fixture in a temporary directory whose node_modules hold
 #      a copy of this package, effect, and vibelang-runtime built from
 #      packages/runtime.
@@ -25,7 +26,8 @@
 #      file's first line must report TS1360 at line 1, naming the fix.
 #
 # Environment:
-#   TS7_VERSION  typescript version to test (default 7.1.0-dev.20261010.1)
+#   TS7_VERSION  typescript version to test (default: devDependencies.typescript
+#                in package.json)
 #   EFFECT_DIR   an installed effect 4.0.5 to use instead of the cached one
 #   KEEP=1       keep the temporary project and print its path
 set -euo pipefail
@@ -33,7 +35,7 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 package="$(cd "$here/.." && pwd)"
 root="$(cd "$package/../.." && pwd)"
-ts7_version="${TS7_VERSION:-7.1.0-dev.20261010.1}"
+ts7_version="${TS7_VERSION:-$(node -e 'process.stdout.write(require(process.argv[1]).devDependencies.typescript)' "$package/package.json")}"
 
 step() { printf '\n== %s\n' "$*"; }
 
