@@ -18,7 +18,7 @@ import (
 // source children, outside the nodes the walk can reach by position.
 const vibelangForms = `error Gone { id: string }
 schema Ticket { id: string }
-service Seats { take(id: string): Effect<string, Gone> }
+service Seats { take(id: string): string!Gone }
 export function seat(ids: ReadonlyArray<string>) {
   const fiber = fork Seats.take("a")
   const one = join fiber

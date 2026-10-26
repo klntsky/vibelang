@@ -13,13 +13,13 @@ import (
 // separate type:
 //
 //	class Users extends Context.Service<Users, { find(id: string): Effect.Effect<User, NotFound> }>()("app/Users") {}
-//	service Users { find(id: string): Effect<User, NotFound> }
+//	service Users { find(id: string): User!NotFound }
 //
 // The fix applies when the shape is an object type written in place whose
 // members a service declares: properties, which become value members, and
 // methods whose return type is an Effect type, which become operations with
-// that type, written Effect<…> as EK4833's fix writes it (D308), since a
-// member without a body must write its contract (EK2101). The class must be named, exported or not, without
+// the ! form of that type (D127), since a member without a body must write
+// its contract (EK2101). The class must be named, exported or not, without
 // type parameters, an implements clause, members of its own, or the make
 // option. The declaration's key is derived from the package, the module,
 // and the name (D93), so the written key string is gone: lookups through the
@@ -172,11 +172,14 @@ func serviceBodyText(c *checker.Checker, file *ast.SourceFile, literal *ast.Node
 			if returnType == nil {
 				return "", name.Text() + " has no return type"
 			}
-			if !isEffectType(c, c.GetTypeFromTypeNode(returnType)) {
-				return "", name.Text() + " returns " + expressionText(file, returnType) + ", but an operation of a service returns an Effect type"
-			}
-			if contract := effectTypeRewrite(c, file, returnType); ast.IsTypeReferenceNode(returnType) && contract.fixable() {
+			if ast.IsTypeReferenceNode(returnType) && isEffectTypeName(c, returnType) {
+				contract := effectTypeRewrite(c, file, returnType)
+				if !contract.fixable() {
+					return "", name.Text() + "'s return type has no ! form"
+				}
 				edits = append(edits, contract.edits...)
+			} else if !isBangType(returnType) {
+				return "", name.Text() + " returns " + expressionText(file, returnType) + ", but an operation of a service returns an Effect type"
 			}
 		default:
 			return "", "a service declares properties and methods only"
@@ -197,4 +200,10 @@ func serviceBodyText(c *checker.Checker, file *ast.SourceFile, literal *ast.Node
 		out = out[:e.start-start] + e.text + out[e.end-start:]
 	}
 	return out, ""
+}
+
+// isBangType reports whether node is an Effect type written in the ! form,
+// which the parser expands to a reference whose name it synthesized.
+func isBangType(node *ast.Node) bool {
+	return ast.IsTypeReferenceNode(node) && node.AsTypeReferenceNode().TypeName.Flags&ast.NodeFlagsReparsed != 0
 }

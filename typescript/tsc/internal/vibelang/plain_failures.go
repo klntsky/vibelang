@@ -19,7 +19,7 @@ import (
 //	  return value
 //	}
 //
-// The fixes are an Effect contract, `Effect<string, Invalid>`, or a hatch, whose
+// The fixes are an Effect contract, `string!Invalid!`, or a hatch, whose
 // TypeScript keeps JavaScript's throw. An exception that TypeScript code the
 // function calls throws is not a typed failure: it propagates unchanged and
 // becomes a defect where it reaches an effectful caller.
@@ -60,14 +60,13 @@ func (a *analyzer) reportFailingPlainContract(fn *ast.Node) bool {
 	written := scanner.GetTextOfNode(annotation)
 	errors := c.TypeToString(failures)
 	d := report(c, annotation, plainContractFailure, written, functionDisplayName(fn), errors)
-	name := effectTypeName(c, annotation)
-	note(d, "Write {0} to make it an Effect function that fails with {1}.", namedEffectText(name, written, errors), errors)
-	note(d, "Or throw inside a hatch, whose TypeScript keeps JavaScript's throw: sync makes the exception a defect ({0}), and try makes it an UnknownError.", namedEffectText(name, written))
+	note(d, "Write {0} to make it an Effect function that fails with {1}.", bangText(written, errors), errors)
+	note(d, "Or throw inside a hatch, whose TypeScript keeps JavaScript's throw: sync makes the exception a defect ({0}), and try makes it an UnknownError.", bangText(written, "never", "never"))
 	return true
 }
 
 // plainContractFailureFix writes the Effect contract that EK2003's
-// plainContractFailure offers: `: string` becomes `: Effect<string, Invalid>`.
+// plainContractFailure offers: `: string` becomes `: string!Invalid!`.
 var plainContractFailureFix = &ls.CodeFixProvider{
 	Source:     diagnosticSource,
 	ErrorCodes: []int32{EK2003.Code},
@@ -84,7 +83,7 @@ var plainContractFailureFix = &ls.CodeFixProvider{
 		if failures == nil {
 			return nil, nil
 		}
-		contract := namedEffectText(effectTypeName(c, annotation), scanner.GetTextOfNode(annotation), c.TypeToString(failures))
+		contract := bangText(scanner.GetTextOfNode(annotation), c.TypeToString(failures))
 		return []*ls.CodeAction{{
 			Description: "Write " + contract,
 			Changes:     replaceRange(fix, nodeStart(fix.SourceFile, annotation), annotation.End(), contract),

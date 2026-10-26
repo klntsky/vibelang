@@ -22,8 +22,8 @@ func TestEditorQuickFixGoldens(t *testing.T) {
 		{"return value", "function main(job: Effect.Effect<number>) { Effect.succeed(0); return job }", "Call it to run it", "function main(job: Effect.Effect<number>) { Effect.succeed(0); return job() }", 4802},
 		{"return conditional", "function main(flag: boolean, a: Effect.Effect<number>, b: Effect.Effect<number>) { Effect.succeed(0); return flag ? a : b }", "Call it to run it", "function main(flag: boolean, a: Effect.Effect<number>, b: Effect.Effect<number>) { Effect.succeed(0); return (flag ? a : b)() }", 4802},
 		{"return conditional arm", "function main(flag: boolean, job: Effect.Effect<number>) { return flag ? job : Effect.succeed(1) }", "Call it to run it", "function main(flag: boolean, job: Effect.Effect<number>) { return flag ? job() : Effect.succeed(1) }", 4802},
-		{"return value as unknown", "function main(job: Effect.Effect<number>): Effect<unknown> { return job }", "Call it to run it", "function main(job: Effect.Effect<number>): Effect<unknown> { return job() }", 4802},
-		{"return program by name as unknown", "function main(job: () => Effect<number>): Effect<unknown> { return job }", "Call it to run it", "function main(job: () => Effect<number>): Effect<unknown> { return job() }", 4802},
+		{"return value as unknown", "function main(job: Effect.Effect<number>): unknown!! { return job }", "Call it to run it", "function main(job: Effect.Effect<number>): unknown!! { return job() }", 4802},
+		{"return program by name as unknown", "function main(job: () => number!!): unknown!! { return job }", "Call it to run it", "function main(job: () => number!!): unknown!! { return job() }", 4802},
 		{"return coalesced operand", "function main(n: number | undefined, job: Effect.Effect<number>) { Effect.succeed(0); return n ?? job }", "Call it to run it", "function main(n: number | undefined, job: Effect.Effect<number>) { Effect.succeed(0); return n ?? job() }", 4802},
 		{"retain failure contract", `function main(job: Effect.Effect<number, string>) { const narrow = job as Effect.Effect<number>; return narrow() }`, "Remove the assertion", `function main(job: Effect.Effect<number, string>) { const narrow = job; return narrow() }`, 4810},
 		{"Effect 4 name", `function main() { return Effect.catchAll(Effect.fail("bad"), () => Effect.succeed(1)) }`, "Write Effect.catch", `function main() { return Effect.catch(Effect.fail("bad"), () => Effect.succeed(1)) }`, 4813},
@@ -32,13 +32,9 @@ func TestEditorQuickFixGoldens(t *testing.T) {
 		{"arrow object", "// @vibelang-diagnostics EK4823:warning\nexport const box = (x: number) => { return { value: x } }", "Write the value as the body", "// @vibelang-diagnostics EK4823:warning\nexport const box = (x: number) => ({ value: x })", 4823},
 		{"error field comma", "error OutOfStock { sku: string, available: number }", "Write ; for the comma", "error OutOfStock { sku: string; available: number }", 1013},
 		{"schema error field comma", "schema error Bad { sku: string,\n  reason: string }", "Write ; for the comma", "schema error Bad { sku: string;\n  reason: string }", 1013},
-		{"service field comma", "service Stock { region: string, count(): Effect<number> }", "Write ; for the comma", "service Stock { region: string; count(): Effect<number> }", 1013},
+		{"service field comma", "service Stock { region: string, count(): number!! }", "Write ; for the comma", "service Stock { region: string; count(): number!! }", 1013},
 		{"data field comma", "data Shape { Rect { width: number, height: number } }", "Write ; for the comma", "data Shape { Rect { width: number; height: number } }", 1013},
 		{"data variant comma", "data Answer { Yes, No }", "Write ; for the comma", "data Answer { Yes; No }", 1013},
-		// D308: the retired ! form's fix writes the Effect type it stood for,
-		// through the Effect namespace where an import hides the prelude's type.
-		{"retired effect type", "error Gone\nexport function load(): number!Gone { throw new Gone() }", "Write Effect<number, Gone, infer R>", "error Gone\nexport function load(): Effect<number, Gone, infer R> { throw new Gone() }", 1014},
-		{"retired effect type beside an imported Effect namespace", "import { Effect } from \"effect\"\nerror Gone\nexport function load(): number!Gone { return Effect.succeed(1) }", "Write Effect.Effect<number, Gone, infer R>", "import { Effect } from \"effect\"\nerror Gone\nexport function load(): Effect.Effect<number, Gone, infer R> { return Effect.succeed(1) }", 1014},
 		{"tagged schema", `// @vibelang-diagnostics EK4821:warning
 export const Person = Schema.Struct({ _tag: Schema.Literal("Person"), name: Schema.String })`, "Write Schema.TaggedStruct", `// @vibelang-diagnostics EK4821:warning
 export const Person = Schema.TaggedStruct("Person", { name: Schema.String })`, 4821},
@@ -103,7 +99,7 @@ export const Person = Schema.TaggedStruct("Person", { name: Schema.String })`, 4
 // not offered for a returned union with a member that is no program: calling
 // `chosen` where it may be undefined would not check.
 func TestEditorQuickFixSkipsUncallableUnion(t *testing.T) {
-	source := "export function main(job: Effect.Effect<number> | undefined): Effect<unknown> { const chosen = job; return chosen }"
+	source := "export function main(job: Effect.Effect<number> | undefined): unknown!! { const chosen = job; return chosen }"
 	program, file, service, converters := editorProgram(t, source)
 	var diagnostic *ast.Diagnostic
 	for _, d := range program.GetSemanticDiagnostics(t.Context(), file) {

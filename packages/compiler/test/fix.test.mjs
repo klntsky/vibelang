@@ -48,7 +48,7 @@ export function find(id: string): Effect.Effect<string, NotFound, never> {
 const fixed = `
 export error NotFound { id: string }
 
-export function find(id: string): Effect<string, NotFound, never> {
+export function find(id: string): string!NotFound! {
   if (id === "") throw new NotFound({ id })
   return id
 }
@@ -111,7 +111,7 @@ test("--fix writes only the project's own files, and leaves a dependency's sourc
   config.include = ["src"]
   config.vibelang = { trustedPackages: ["@repro/*"] }
   writeFileSync(join(root, "tsconfig.json"), JSON.stringify(config))
-  const dependency = "export const run: number!Error! = () => { return 1 }\n"
+  const dependency = "export type Run = Effect.Effect<number>\nexport const run = 1\n"
   mkdirSync(join(root, "dependency"))
   writeFileSync(join(root, "dependency/package.json"), '{"name":"@repro/dependency","type":"module","exports":"./index.vibe"}')
   writeFileSync(join(root, "dependency/index.vibe"), dependency)
@@ -121,9 +121,9 @@ test("--fix writes only the project's own files, and leaves a dependency's sourc
   writeFileSync(join(root, "src/index.vibe"), 'import { run } from "@repro/dependency"\nexport const x = run\n')
   writeFileSync(join(root, "src/own.vibe"), dependency)
   const result = vibelang(root, "-p", "tsconfig.json", "--fix", "--pretty", "false")
-  assert.match(result.stdout, /^vibelang --fix: src\/own\.vibe: 1 fix \(EK1014 ×1\)$/m)
+  assert.match(result.stdout, /^vibelang --fix: src\/own\.vibe: 1 fix \(EK4833 ×1\)$/m)
   assert.match(result.stdout, /^vibelang --fix: 1 fix in 1 file\.$/m)
   assert.equal(readFileSync(join(root, "dependency/index.vibe"), "utf8"), dependency)
   assert.notEqual(readFileSync(join(root, "src/own.vibe"), "utf8"), dependency)
-  assert.match(result.stdout, /^dependency\/index\.vibe\(1,\d+\): \w+ EK1014/m, "the compilation still reports the dependency's diagnostic")
+  assert.match(result.stdout, /^dependency\/index\.vibe\(1,\d+\): \w+ EK4833/m, "the compilation still reports the dependency's diagnostic")
 })

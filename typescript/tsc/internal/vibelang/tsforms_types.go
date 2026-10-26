@@ -5,19 +5,23 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 )
 
-// EK4833 (D287, amended by D308): an Effect type written through the Effect
-// module, which the prelude's Effect type writes without the module:
+// EK4833 (D287, D308, D309): an Effect type written through the Effect
+// module, which the ! form (D127) writes in fewer tokens:
 //
-//	Effect.Effect<User, NotFound, Db>   Effect<User, NotFound, Db>
+//	Effect.Effect<User, NotFound, Db>   User!NotFound!Db
+//	Effect.Effect<User>                 User!!
 //
-// The fix removes the module and keeps the type arguments as written, so the
-// type is the same everywhere: the prelude's Effect<A, E = never, R = never>
-// is effect's Effect, and a type argument left out means what it means in
-// TypeScript. A file that imports Effect from effect still has the prelude's
-// type, since the import binds only a namespace. Refused: a reference where
-// the name Effect is not effect's Effect type, as under a type of that name
-// the file declares, a reference with a type argument left out, and one in
-// JSDoc.
+// The prelude's Effect<A, E, R> is the other accepted spelling and draws
+// nothing. The parser expands the ! form into Effect.Effect<A, E, R>, so the
+// rewrite is exact, with one rule about the dependencies: in the return
+// annotation of a function with a body, a ! form that leaves them out infers
+// them (D127), while a type argument left out of Effect.Effect is never
+// (D308), so there Effect<A, E> and Effect<A, E, never> become A!E!,
+// Effect<A> becomes A!!, and Effect<A, E, infer R> becomes A!E; elsewhere a
+// left-out slot is never, so Effect<A, E> becomes A!E. EK4831's fix uses the
+// same rewrite for a service member written with either spelling. Refused:
+// infer in another slot or outside such an annotation, and a reference the !
+// form cannot spell, such as one in JSDoc.
 
 func init() {
 	tsFormRules[EK4833.Code] = &tsFormRule{
@@ -29,21 +33,23 @@ func init() {
 }
 
 // isEffectTypeName reports whether reference, a type reference, names
-// effect's Effect interface, as Effect.Effect, the prelude's Effect type, or
-// an imported Effect, in source the user wrote.
+// effect's Effect interface, as Effect.Effect or as the prelude's Effect type,
+// in source the user wrote.
 func isEffectTypeName(c *checker.Checker, reference *ast.Node) bool {
 	name := reference.AsTypeReferenceNode().TypeName
 	if name.Flags&ast.NodeFlagsReparsed != 0 || reference.Flags&ast.NodeFlagsJSDoc != 0 {
-		return false // a retired A!E!R the parser expanded (EK1014), or JSDoc
+		return false // an A!E!R the parser expanded
 	}
 	if rightmostName(name).Text() != "Effect" {
 		return false
 	}
+	// Effect.Effect, the prelude's Effect, or Effect imported from effect:
+	// each names effect's own Effect interface.
 	return isEffectType(c, c.GetTypeFromTypeNode(reference))
 }
 
 // findEffectTypes reports EK4833 at each Effect type of file written through
-// the Effect module that the prelude's Effect type can write.
+// the Effect module, Effect.Effect<...>, that the ! form can write.
 func findEffectTypes(c *checker.Checker, file *ast.SourceFile, report func(at *ast.Node, rewrite *formRewrite, args ...any)) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
@@ -57,43 +63,79 @@ func findEffectTypes(c *checker.Checker, file *ast.SourceFile, report func(at *a
 	file.AsNode().ForEachChild(visit)
 }
 
-// effectTypeRewrite plans EK4833's fix for reference: Effect in place of
-// its qualified name.
+// isBodyReturnAnnotation reports whether node is the return annotation of a
+// function with a body, where a ! form without dependencies infers them.
+func isBodyReturnAnnotation(node *ast.Node) bool {
+	fn := node.Parent
+	return fn != nil && ast.IsFunctionLike(fn) && fn.Type() == node && fn.Body() != nil
+}
+
+// effectTypeRewrite plans EK4833's fix for reference.
 func effectTypeRewrite(c *checker.Checker, file *ast.SourceFile, reference *ast.Node) *formRewrite {
-	if !isEffectTypeName(c, reference) || !ast.IsQualifiedName(reference.AsTypeReferenceNode().TypeName) || !preludeEffectTypeAt(c, reference) {
+	if !isEffectTypeName(c, reference) {
 		return nil
 	}
 	arguments := reference.TypeArguments()
 	if len(arguments) == 0 || len(arguments) > 3 {
 		return nil
 	}
-	for _, argument := range arguments {
+	bodyReturn := isBodyReturnAnnotation(reference)
+	for i, argument := range arguments {
 		if ast.NodeIsMissing(argument) {
 			return nil // a type argument left out, as in Effect.Effect<A, , R>: a syntax error the parser reported
 		}
+		if ast.IsInferTypeNode(argument) && !(bodyReturn && i == 2) {
+			return nil
+		}
 	}
-	name := reference.AsTypeReferenceNode().TypeName
-	edit := sourceEdit{nodeStart(file, name), name.End(), "Effect"}
-	text := file.Text()
-	description := "Effect" + text[name.End():reference.End()]
-	return &formRewrite{edits: []sourceEdit{edit}, description: shortText(description, "Effect<…>")}
+	slot := func(i int) string {
+		if i >= len(arguments) || arguments[i].Kind == ast.KindNeverKeyword {
+			return ""
+		}
+		return bangSlot(expressionText(file, arguments[i]), i > 0)
+	}
+	success, errors, dependencies := slot(0), slot(1), slot(2)
+	if success == "" {
+		success = "never"
+	}
+	var text string
+	switch {
+	case bodyReturn && len(arguments) == 3 && ast.IsInferTypeNode(arguments[2]):
+		text = success + "!" + errors
+		if errors == "" {
+			// A!! would promise no dependencies; write never for the errors.
+			text = success + "!never"
+		}
+	case bodyReturn || dependencies != "":
+		text = success + "!" + errors + "!" + dependencies
+	default:
+		text = success + "!" + errors
+		if errors == "" {
+			text = success + "!!"
+		}
+	}
+	if needsBangParentheses(reference) {
+		text = "(" + text + ")"
+	}
+	return &formRewrite{edits: []sourceEdit{{nodeStart(file, reference), reference.End(), text}}, description: text}
 }
 
-// preludeEffectTypeAt reports whether the bare name Effect, as a type where
-// node stands, is effect's Effect type: the prelude's, unless the file
-// declares or imports a type of that name that is something else.
-func preludeEffectTypeAt(c *checker.Checker, node *ast.Node) bool {
-	symbol := c.ResolveName("Effect", node, ast.SymbolFlagsType, false /*excludeGlobals*/)
-	// The prelude's Effect is one symbol for the re-exported namespace and the
-	// type alias; an imported type is an alias of an interface or a type alias.
-	for symbol != nil {
-		if symbol.Flags()&(ast.SymbolFlagsTypeAlias|ast.SymbolFlagsInterface) != 0 {
-			return isEffectType(c, c.GetDeclaredTypeOfSymbol(symbol))
-		}
-		if symbol.Flags()&ast.SymbolFlagsAlias == 0 {
-			return false
-		}
-		symbol = c.GetAliasedSymbol(symbol)
+// needsBangParentheses reports whether an Effect type in the ! form needs
+// parentheses where reference stands: as a member of a union or an
+// intersection, which would join its first slot; before [] or an index; as
+// the operand of keyof or readonly; in a conditional type; or in a slot of
+// another ! form.
+func needsBangParentheses(reference *ast.Node) bool {
+	parent := reference.Parent
+	if parent == nil {
+		return false
+	}
+	switch parent.Kind {
+	case ast.KindUnionType, ast.KindIntersectionType, ast.KindArrayType, ast.KindIndexedAccessType, ast.KindTypeOperator,
+		ast.KindConditionalType, ast.KindOptionalType, ast.KindRestType:
+		return true
+	case ast.KindTypeReference:
+		return parent.AsTypeReferenceNode().TypeName.Flags&ast.NodeFlagsReparsed != 0
 	}
 	return false
 }

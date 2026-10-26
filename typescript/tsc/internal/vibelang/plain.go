@@ -57,10 +57,10 @@ func (a *analyzer) isSplittable(fn *ast.Node) bool {
 
 // widensContract reports whether fn's contract writes an error or a
 // requirement that its body need not raise or use, such as
-// `Effect<number, Gone, Needed>` on a body that returns 1. A caller sees the contract,
+// `number!Gone!Needed` on a body that returns 1. A caller sees the contract,
 // not the body (Chapter 14), so such a function is an Effect and has no
 // $direct variant. A channel written `infer Name` comes from the body, and a
-// contract whose E and R are never, such as `Effect<number>`, keeps the plain path.
+// contract whose E and R are never, such as `number!!`, keeps the plain path.
 func (a *analyzer) widensContract(fn *ast.Node) bool {
 	k := a.contractOf(fn)
 	if k == nil {

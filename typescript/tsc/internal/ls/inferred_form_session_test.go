@@ -24,7 +24,7 @@ func TestFormChoiceDidChange(t *testing.T) {
 		"/src/closed.vibe":   source,
 		"/src/host.ts":       `import type { Effect } from "effect/Effect"; export declare function work(x: number): Effect<number>`,
 		"/src/node_modules/vibelang-runtime/package.json": `{"name":"vibelang-runtime","types":"index.d.ts"}`,
-		"/src/node_modules/vibelang-runtime/index.d.ts":   `export { Effect } from "effect"; import type * as EffectModule from "effect/Effect"; export type Effect<A, E = never, R = never> = EffectModule.Effect<A, E, R>`,
+		"/src/node_modules/vibelang-runtime/index.d.ts":   `export * as Effect from "effect/Effect"`,
 		"/src/node_modules/effect/package.json":           `{"name":"effect","types":"index.d.ts"}`,
 		"/src/node_modules/effect/index.d.ts":             `export * as Effect from "./Effect"`,
 		"/src/node_modules/effect/Effect.d.ts":            `export interface Effect<A,E=never,R=never> { readonly "~effect/Effect": { readonly _A: (_:never)=>A; readonly _E: (_:never)=>E; readonly _R: (_:never)=>R } }`,

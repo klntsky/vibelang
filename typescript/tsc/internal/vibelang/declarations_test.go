@@ -225,7 +225,7 @@ func TestDeclarationElidesPrivateJSDoc(t *testing.T) {
 	}{
 		{"elided namespace import", "/** PRIVATE_DOC */\nimport type * as E from \"effect/Effect\"\n/** PUBLIC_DOC */\nexport const visible = 2", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
 		{"strip internal", "/** @internal PRIVATE_DOC */\nexport const hidden = 1\n/** PUBLIC_DOC */\nexport const visible = 2", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
-		{"private Effect function", "/** PRIVATE_DOC */\nfunction hidden(): Effect.Effect<number> { return 1 }\n/** PUBLIC_DOC */\nexport function visible(): Effect.Effect<number> { return 2 }", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		{"private Effect function", "/** PRIVATE_DOC */\nfunction hidden(): number!! { return 1 }\n/** PUBLIC_DOC */\nexport function visible(): number!! { return 2 }", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
 		{"overload implementation", "function hidden(x: number): number;\n/** PRIVATE_DOC */\nfunction hidden(x: number): number { return x }\n/** PUBLIC_DOC */\nexport const visible = 2", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
 		{"namespace private", "export namespace Public {\n/** PRIVATE_DOC */\nconst hidden = 1\n/** PUBLIC_DOC */\nexport const visible = 2\n}", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
 		{"prelude import", "/** PRIVATE_DOC */\nconst hidden = 1\n/** PUBLIC_DOC */\nexport declare const visible: Effect.Effect<number, never, never>", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},

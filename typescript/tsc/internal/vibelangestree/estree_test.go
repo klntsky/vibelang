@@ -60,9 +60,8 @@ func utf16Slice(text string, start, end int) string {
 }
 
 var forms = map[string]string{
-	"contracts":      "function read(id: string): Effect<string, Gone, Users> { return Users.find(id) }\nfunction partial(id: string): Effect<string, infer E> { return Users.find(id) }\ntype Program = Effect<number>\n",
-	"retired":        "function read(id: string): string!Gone!Users { return Users.find(id) }\ntype Program = number!!\n",
-	"declarations":   "error Gone { id: string }\nerror Timeout\nservice Users { find(id: string): Effect<string, Gone> }\ncontrol Ask { answer(): Effect<boolean> }\nschema Ticket { id: string; mutable count: number }\nschema Code = \"a\" | \"b\"\nschema Point = { x: number }\nlayer Live: Users { find(id) { return id } }\n",
+	"contracts":      "function read(id: string): string!Gone!Users { return Users.find(id) }\ntype Program = number!!\n",
+	"declarations":   "error Gone { id: string }\nerror Timeout\nservice Users { find(id: string): string!Gone }\ncontrol Ask { answer(): boolean!! }\nschema Ticket { id: string; mutable count: number }\nschema Code = \"a\" | \"b\"\nschema Point = { x: number }\nlayer Live: Users { find(id) { return id } }\n",
 	"error classes":  "export error AppError implements Coded {\n  _tag: string\n  /** The code. */\n  code: string\n  static readonly family = \"app\"\n  constructor(code: string) { super({ code }) }\n  get label(): string { return this.code }\n}\nerror NotFound extends AppError { mutable path: string; describe(): string { return this.path } }\nerror Timeout extends AppError\nabstract error Http { status: number; abstract describe(): string }\nschema error FsError { _tag: string; method: string; mutable path?: string }\nschema error Missing extends FsError { attempts: number }\n",
 	"blocks":         "function f() { return withSpan(\"f\") { const value = do { 1 }; return value } }\n",
 	"provide":        "function f() { provide Live, Clock = clock { return Users.find(\"1\") } }\n",
@@ -101,7 +100,7 @@ const moduleFile = "import { suffix } from \"./suffix.ts\"\n" +
 	"import text\n" +
 	"export { clean as tidy } from text\n" +
 	"export * from text\n" +
-	"export function main(): Effect<string, Unclean> { return clean(\" a \") }\n"
+	"export function main(): string!Unclean { return clean(\" a \") }\n"
 
 // find returns the nodes of tree whose type is typ.
 func find(tree any, typ string) []map[string]any {
@@ -282,8 +281,7 @@ func TestTokensAndCommentsAreTheSourceText(t *testing.T) {
 
 func TestVibeLangFormsHaveTheirOwnNodeTypes(t *testing.T) {
 	want := map[string][]string{
-		"contracts":    {"VibeInferType"},
-		"retired":      {"VibeEffectType"},
+		"contracts":    {"VibeEffectType"},
 		"declarations": {"ClassDeclaration", "VariableDeclaration", "TSTypeLiteral", "PropertyDefinition"},
 		"provide":      {"VibeProvideStatement", "VibeServiceProvider"},
 		"catch":        {"VibeCatchExpression"},

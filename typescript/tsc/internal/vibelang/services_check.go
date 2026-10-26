@@ -9,7 +9,7 @@ import (
 )
 
 // Checks of service and control classes (design D1, D2): a member without a
-// body whose return type is not an Effect type (EK2101), a key that two services share (EK3001), and a
+// full contract (EK2101), a key that two services share (EK3001), and a
 // service used as a base class (EK3002, EK3003, EK3004), declared generic
 // (EK3005), or with a static member that shadows a service member (EK3006).
 
@@ -151,16 +151,16 @@ func checkServiceDeclaration(c *checker.Checker, class *ast.Node) {
 				cover(c, memberName) // TS7010: an implicit any return type
 			}
 			d := report(c, at, EK2101, name+"."+memberName.Text())
-			name := effectTypeName(c, member)
-			note(d, "Write {0}; use {1} if it cannot fail and needs nothing.", namedEffectText(name, writtenSuccess(member.Type()), "Errors", "Dependencies"), namedEffectText(name, writtenSuccess(member.Type())))
+			note(d, "Write {0}; use {1} if it cannot fail and needs nothing.", bangText(writtenSuccess(member.Type()), "Errors", "Dependencies"), bangText(writtenSuccess(member.Type()), "never", "never"))
 		}
 	}
 }
 
 // isEffectContract reports whether typeNode, a return type annotation,
-// states a contract: an Effect type, written Effect<A, E, R> or as an alias
-// of one. A type argument left out means what it means in TypeScript, so
-// Effect<A> is a contract that cannot fail and needs nothing (D308).
+// states a contract: an Effect type, written A!E!R, Effect<A, E, R>, or as an
+// alias of one. A type argument left out of Effect<...> means what it means
+// in TypeScript, so Effect<A> is a contract that cannot fail and needs
+// nothing (D309).
 func isEffectContract(c *checker.Checker, typeNode *ast.Node) bool {
 	return typeNode != nil && isEffectType(c, c.GetTypeFromTypeNode(typeNode))
 }

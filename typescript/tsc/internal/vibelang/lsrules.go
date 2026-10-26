@@ -218,7 +218,7 @@ func (r *ruleCheck) checkReturnedValue(fn *ast.Node, value *ast.Node) {
 	if literal := ast.SkipParentheses(value); isLambda(literal) && len(literal.Parameters()) == 0 {
 		if success := r.a.successNamesNoValue(fn); success != nil {
 			d := report(r.c, value, returnedLiteralAsValue, messageText(value, "The returned function"), functionDisplayName(fn), r.c.TypeToString(success))
-			note(d, "Write its body in place to run it, or write its type as the success type to return it: Effect<{0}, E, R>.", effectTypes(r.c.TypeToString(valueType)))
+			note(d, "Write its body in place to run it, or write its type as the success type to return it: ({0})!E!R.", bangTypes(r.c.TypeToString(valueType)))
 		}
 		return
 	}
@@ -227,11 +227,11 @@ func (r *ruleCheck) checkReturnedValue(fn *ast.Node, value *ast.Node) {
 			// A program named by reference, such as a module-level
 			// `const list = () => { ... }` or a parameter, returns as data
 			// where the success type names no value, as a program literal
-			// does: a handler `() => list` under an Effect<void> contract succeeded
+			// does: a handler `() => list` under a void!! contract succeeded
 			// with the function and ran none of it.
 			if success := r.a.successNamesNoValue(fn); success != nil {
 				d := report(r.c, value, returnedProgramAsValue, messageText(value, "This value"), functionDisplayName(fn), r.c.TypeToString(success))
-				note(d, "Call it to run it: {0}. To return the function itself, write its type as the success type: Effect<{1}, E, R>.", callText(value), effectTypes(r.c.TypeToString(valueType)))
+				note(d, "Call it to run it: {0}. To return the function itself, write its type as the success type: ({1})!E!R.", callText(value), bangTypes(r.c.TypeToString(valueType)))
 			}
 			return
 		}
@@ -257,7 +257,7 @@ func (r *ruleCheck) checkReturnedValue(fn *ast.Node, value *ast.Node) {
 	if declared == nil || accepted {
 		if named := r.a.successNamesNoValue(fn); named != nil {
 			d := report(r.c, value, returnedEffectAsValue, messageText(value, "This value"), functionDisplayName(fn), r.c.TypeToString(named))
-			note(d, "Call it to run it: {0}. To return the program itself, write its type as the success type: Effect<{1}, E, R>.", callText(value), effectTypes(r.c.TypeToString(valueType)))
+			note(d, "Call it to run it: {0}. To return the program itself, write its type as the success type: ({1})!E!R.", callText(value), bangTypes(r.c.TypeToString(valueType)))
 			return
 		}
 	}
@@ -285,7 +285,7 @@ func (r *ruleCheck) checkReturnedSubtype(fn *ast.Node, value *ast.Node, valueTyp
 		return // the boundary runs it
 	}
 	d := report(r.c, value, returnedEffectAsValue, messageText(value, "This value"), functionDisplayName(fn), r.c.TypeToString(named))
-	note(d, "Call it to run it: {0}. To return it itself, write its type as the success type: Effect<{1}, E, R>.", callText(value), effectTypes(r.c.TypeToString(valueType)))
+	note(d, "Call it to run it: {0}. To return it itself, write its type as the success type: ({1})!E!R.", callText(value), bangTypes(r.c.TypeToString(valueType)))
 }
 
 // checkReturnedUnion reports EK4802 where fn returns value, whose type is a
@@ -304,7 +304,7 @@ func (r *ruleCheck) checkReturnedUnion(fn *ast.Node, value *ast.Node, valueType 
 		return
 	}
 	d := report(r.c, value, returnedUnionAsValue, messageText(value, "This value"), functionDisplayName(fn), r.c.TypeToString(named))
-	note(d, "Return the program where it is chosen, as an if statement that returns its call does. To return it itself, write its type as the success type: Effect<{0}, E, R>.", effectTypes(r.c.TypeToString(valueType)))
+	note(d, "Return the program where it is chosen, as an if statement that returns its call does. To return it itself, write its type as the success type: ({0})!E!R.", bangTypes(r.c.TypeToString(valueType)))
 }
 
 // programMembers reports whether t, a union, has a member that is an Effect

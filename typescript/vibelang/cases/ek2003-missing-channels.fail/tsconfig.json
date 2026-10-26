@@ -10,10 +10,11 @@
     "strict": true,
     "types": [],
     "skipLibCheck": true,
-    "outDir": "out",
-    "declaration": true
+    "rewriteRelativeImportExtensions": true,
+    "outDir": "out"
   },
   "include": [
-    "*.vibe"
+    "*.vibe",
+    "*.ts"
   ]
 }

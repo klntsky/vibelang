@@ -100,9 +100,9 @@ func TestEditorRefactorGoldens(t *testing.T) {
 	for _, test := range []struct{ name, source, action, want string }{
 		{"interface to schema", "export interface /*cursor*/Person { readonly name: string }", "Convert to a schema declaration", "export schema Person { readonly name: string }"},
 		{"type to schema", "export type /*cursor*/Person = { name: string }", "Convert to a schema declaration", "export schema Person { name: string }"},
-		{"inferred contract", "export function /*cursor*/double(x: number) { return x * 2 }", "Write the inferred contract", "export function double(x: number): Effect<number> { return x * 2 }"},
-		{"inferred effect contract", "export function /*cursor*/load() { return Effect.succeed(1) }", "Write the inferred contract", "export function load(): Effect<number> { return Effect.succeed(1) }"},
-		{"remove contract", "export function /*cursor*/double(x: number): Effect<number> { return x * 2 }", "Remove the contract", "export function double(x: number) { return x * 2 }"},
+		{"inferred contract", "export function /*cursor*/double(x: number) { return x * 2 }", "Write the inferred contract", "export function double(x: number): number!! { return x * 2 }"},
+		{"inferred effect contract", "export function /*cursor*/load() { return Effect.succeed(1) }", "Write the inferred contract", "export function load(): number!! { return Effect.succeed(1) }"},
+		{"remove contract", "export function /*cursor*/double(x: number): number!! { return x * 2 }", "Remove the contract", "export function double(x: number) { return x * 2 }"},
 		{"nested calls", helpers + "export const value = /*cursor*/f(g(1))", "Convert to a pipe", helpers + "export const value = 1 |> g(%) |> f(%)"},
 		{"pipe to calls", helpers + "export const value = 1 /*cursor*/|> g(%) |> f(%)", "Convert the pipe to calls", helpers + "export const value = f(g(1))"},
 		{"pipe precedence", "export const value = (1 + 2) /*cursor*/|> % * 3", "Convert the pipe to calls", "export const value = (1 + 2) * 3"},
@@ -192,8 +192,8 @@ func TestEditorHoverOnByNameArgumentBeforeCheck(t *testing.T) {
 	line := strings.Split(source, "\n")[2]
 	first := hoverText(t, service, uri, lsproto.Position{Line: 2, Character: uint32(strings.Index(line, "(%,") + 1)})
 	second := hoverText(t, service, uri, lsproto.Position{Line: 2, Character: uint32(strings.Index(line, "${%}") + 2)})
-	if !strings.Contains(first, "(topic) %: Effect<string>") || !strings.HasPrefix(second, "(topic) %: stringThe value") {
-		t.Fatalf("hovers %q, then %q; want the program Effect<string>, then the value string", first, second)
+	if !strings.Contains(first, "(topic) %: string!!") || !strings.HasPrefix(second, "(topic) %: stringThe value") {
+		t.Fatalf("hovers %q, then %q; want the program string!!, then the value string", first, second)
 	}
 }
 

@@ -59,7 +59,7 @@ func checkNeverStoredCall(c *checker.Checker, a *analyzer, file *ast.SourceFile,
 	}
 	text := expressionText(file, call.Expression()) + core.IfElse(len(call.Arguments()) == 0, "()", "(…)")
 	d := report(c, call, EK1012, text, target)
-	switch typeText := effectTypes(c.TypeToString(program)); kind {
+	switch typeText := bangTypes(c.TypeToString(program)); kind {
 	case storedConst:
 		note(d, "To keep the program, write its type, const {0}: {1} = …, or store a function: () => {2}. To run it here, write it as a statement.", name, typeText, text)
 	case storedField:

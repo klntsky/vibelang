@@ -210,7 +210,7 @@ func pausingCallbackFix(c *checker.Checker, file *ast.SourceFile, call *ast.Node
 				if _, path := ownerCall(callback); len(path) == 1 && path[0].argument < len(fn.Parameters()) {
 					parameter = nodeText(file, fn.Parameters()[path[0].argument].Name())
 				}
-				return format("{0} calls {1} as a plain function. Give {0} a contract that runs {1}: {1}: () => Effect<A, E, R>, with E and R added to {0}'s contract, Effect<…, E, R>.", []any{nodeText(file, call.Expression()), parameter})
+				return format("{0} calls {1} as a plain function. Give {0} a contract that runs {1}: {1}: () => A!E!R, with E and R added to {0}'s return type, as in …!E!R.", []any{nodeText(file, call.Expression()), parameter})
 			}
 		}
 	}

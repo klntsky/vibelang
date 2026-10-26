@@ -1,5 +1,4 @@
-function read(id: string): Effect<string, Gone, Users> { return Users.find(id); }
-function partial(id: string): Effect<string, infer E, infer R> { return Users.find(id); }
-type Program = Effect<number>;
-type Errors = Effect<string, Gone>;
-type Requirements = Effect<boolean, never, Users>;
+function read(id: string): Effect.Effect<string, Gone, Users> { return Users.find(id); }
+type Program = Effect.Effect<number, never, never>;
+type Errors = Effect.Effect<string, Gone, never>;
+type Requirements = Effect.Effect<boolean, never, Users>;

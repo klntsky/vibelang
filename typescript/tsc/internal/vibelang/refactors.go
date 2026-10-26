@@ -20,7 +20,7 @@ import (
 // Each is a refactor.rewrite code action in a .vibe file, offered where
 // the cursor is:
 //
-//	Write the inferred contract     function load(id: string): Effect<User, NotFound, Users> { … }
+//	Write the inferred contract     function load(id: string): User!NotFound!Users { … }
 //	Remove the contract             the reverse
 //	Convert to a schema declaration interface User { … } becomes schema User { … }
 //	Convert to a VibeLang function   async function f() { await p } becomes function f() { try(p) }
@@ -118,7 +118,7 @@ func (rc *refactorContext) contractRefactors(fn *ast.Node) []*ls.CodeAction {
 	if close < 0 {
 		return nil
 	}
-	return []*ls.CodeAction{rc.action("Write the inferred contract", close, close, ": "+namedEffectText(effectTypeName(rc.c, fn), texts...))}
+	return []*ls.CodeAction{rc.action("Write the inferred contract", close, close, ": "+bangText(texts...))}
 }
 
 // closeParenOf returns the position after the ) that closes fn's parameter

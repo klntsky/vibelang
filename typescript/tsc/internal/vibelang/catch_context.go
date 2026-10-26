@@ -12,7 +12,7 @@ import (
 // sides would see only $catchExpression's type parameters and a literal such
 // as _tag: "Found" would widen to string before it reached the declared type:
 //
-//	function select(n: number): Effect<Outcome> {
+//	function select(n: number): Outcome!! {
 //	  return { _tag: "Found", value: find(n) } catch (error) => ({ _tag: "Error", error })
 //	}
 
