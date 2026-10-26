@@ -42,7 +42,7 @@ for (const version of ["4.0.5", "4.0.6", "3.99.0"]) {
           expect(output.trim()).toBe("42")
         } else {
           expect(result.exitCode).not.toBe(0)
-          expect(output).toContain("vibelang-runtime@0.0.7 requires effect@4.0.5")
+          expect(output).toContain("vibelang-runtime@0.0.8 requires effect@4.0.5")
           expect(output).toContain(`found effect@${version}`)
           expect(output).toContain("npm install effect@4.0.5")
         }

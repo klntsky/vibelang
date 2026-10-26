@@ -12,7 +12,7 @@
         "vitest": "5.0.5",
       },
       "peerDependencies": {
-        "vibelang": "0.0.7",
+        "vibelang": "0.0.8",
         "vite": ">=7 <9",
       },
     },

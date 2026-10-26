@@ -10,13 +10,13 @@
   "dependencies": {
     "effect": "4.0.5",
     "@effect/platform-node": "4.0.5",
-    "vibelang-runtime": "0.0.7"
+    "vibelang-runtime": "0.0.8"
   },
   "devDependencies": {
     "@effect/vitest": "4.0.5",
     "vitest": "5.0.5",
-    "vibelang": "0.0.7",
-    "vibelang-vite": "0.0.7",
+    "vibelang": "0.0.8",
+    "vibelang-vite": "0.0.8",
     "@types/node": "26.6.5"
   },
   "overrides": {

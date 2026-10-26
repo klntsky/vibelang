@@ -4,9 +4,11 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
-## 0.0.8 (unreleased)
+## 0.0.8
 
-### Changes that can break code since 0.0.7
+0.0.7 was not published: 0.0.8 replaces it, and these notes include its changes.
+
+### Changes that can break code since 0.0.6
 
 - A contract is written `Effect<A, E, R>`, as in TypeScript. The shorthand
   `Result!Error!Dependencies` is retired: each use is the error EK1014,
@@ -28,22 +30,6 @@ one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
   function with a body was EK2003; it now checks that the function cannot
   fail and needs nothing. A service or control member may write
   `Effect<User>` or `Effect<User, NotFound>`, which EK2101 rejected.
-- EK4833 reports only `Effect.Effect<A, E, R>`, and its fix writes
-  `Effect<A, E, R>`. Hovers and messages show Effect types as `Effect<…>`.
-
-### Language
-
-- A `data` declaration declares a tagged union with Effect's own
-  `Data.TaggedEnum` type and its `Data.taggedEnum` constructors:
-  `data Delivery { Waiting; Sent { tracking: string } }`.
-  `Delivery.Sent({ tracking })` builds a value, and
-  `when Delivery.Sent { let tracking }:` matches one. A `match` without
-  `default` over a data type must handle every variant (EK4701). See
-  [Data](../data-types/073-data.md).
-
-## 0.0.7
-
-### Changes that can break code since 0.0.6
 
 - The starter treats EK3205 as an error: an entry module's `main` that
   needs services without providers stops the build and emits no JavaScript.
@@ -69,6 +55,14 @@ one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
 ### Compiler
 
+- A `data` declaration declares a tagged union with Effect's own
+  `Data.TaggedEnum` type and its `Data.taggedEnum` constructors:
+  `data Delivery { Waiting; Sent { tracking: string } }`.
+  `Delivery.Sent({ tracking })` builds a value, and
+  `when Delivery.Sent { let tracking }:` matches one. A `match` without
+  `default` over a data type must handle every variant (EK4701). See
+  [Data](../data-types/073-data.md).
+
 - CommonJS output binds the names a file takes from the prelude, including
   `TaggedError`, bare Effect functions, `pipe` and `flow`. These names
   could previously fail with a `ReferenceError` when the module ran.
@@ -82,6 +76,10 @@ one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
 ### New diagnostics
 
+- EK1014 reports the retired contract shorthand and offers its
+  `Effect<...>` replacement in the editor and through `vibelang --fix`.
+- EK4833 reports only `Effect.Effect<A, E, R>`, and its fix writes
+  `Effect<A, E, R>`. Hovers and messages show Effect types as `Effect<…>`.
 - EK1013 names the field separator error, and its quick fix replaces the
   comma with a semicolon. Misspelled names in a `.vibe` file can suggest
   names from the prelude.
@@ -113,6 +111,8 @@ one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
 ### Docs
 
+- The guides and packaged skill use `Effect<...>` contracts and teach
+  `data` declarations and exhaustive matches.
 - Setup describes npm and Bun separately, makes Bun optional for npm users
   and links TypeScript 7's removed-option migration notes. The Vite guide
   explains source checking and import extensions.
@@ -128,7 +128,8 @@ one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 ### Known limitations
 
 - Stock `tsc`, `vue-tsc` and `svelte-check` do not check `.vibe` imports.
-  The TypeScript 7.1 content mapper is experimental and unpublished; see
+  The TypeScript 7.1 content mapper is experimental and unpublished, and
+  does not lower `data` declarations; see
   [the current mapper limitation](known-limitations.md).
 - Native Windows binaries are not available; Windows needs WSL.
 - Effect remains pinned to `4.0.5` exactly. Effect `4.0.6` changes cleanup

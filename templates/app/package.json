@@ -12,13 +12,13 @@
   "dependencies": {
     "effect": "4.0.5",
     "@effect/platform-node": "4.0.5",
-    "vibelang-runtime": "0.0.7"
+    "vibelang-runtime": "0.0.8"
   },
   "devDependencies": {
-    "vibelang": "0.0.7",
+    "vibelang": "0.0.8",
     "vitest": "5.0.5",
     "@effect/vitest": "4.0.5",
-    "vibelang-vite": "0.0.7"
+    "vibelang-vite": "0.0.8"
   },
   "engines": {
     "node": ">=26"
