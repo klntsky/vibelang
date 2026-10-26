@@ -1,0 +1,5 @@
+// expect: TS2540
+export function increment(state: { n: number }) { state.n++ }
+
+export function mutable(state: { mutable n: number }) { state.n++ }
+export function quoted(state: { "display-name": number }) { state["display-name"]++ }

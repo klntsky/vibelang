@@ -1,0 +1,2 @@
+declare it mutable: { mutable n: number }
+declare it mutable: { mutable "display-name": number }

@@ -1,0 +1,2 @@
+main.vibe(2,57): error TS2540
+main.vibe(5,67): error TS2540

@@ -354,6 +354,7 @@ Library debugging concepts still apply; VibeLang's call execution, service decla
 | EK1015 | Calls already run in VibeLang. Remove `yield*` from `const value = yield* load()`. Generators keep their own yield syntax. |
 | EK4502 | A call already ran; its value has no `pipe` method. Write `f(s) \|> retry(%, policy)` or `retry(f(s), policy)`. |
 | EK4503 | Read service values with `Users().region`. Extract an implementation method with `Users().find`; call it directly with `Users.find(id)`. |
+| TS2540 | Object-type and interface members in `.vibe` are readonly by default. For a member you assign, declare `{ mutable n: number }`. Class fields and TypeScript declarations keep their own readonly rules. |
 
 ---
 
