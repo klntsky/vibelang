@@ -1,6 +1,6 @@
 # Reference machine (strategy B)
 
-**PROPOSED:** This is an explicit-frame reference runtime for the language contract in [independent-design-codex.md](../../docs/research/independent-design-codex.md). It uses public Effect APIs and keeps handler clauses and resumed computations in one Effect fiber.
+**PROPOSED:** This is an explicit-frame reference runtime for the language contract in [independent-design.md](../../docs/research/independent-design.md). It uses public Effect APIs and keeps handler clauses and resumed computations in one Effect fiber.
 
 **VERIFIED:** Effect is pinned to exactly 4.0.5. Installation and tests run with Bun:
 

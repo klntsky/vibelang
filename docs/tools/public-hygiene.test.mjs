@@ -32,3 +32,15 @@ test("the hygiene check rejects references as well as service files", () => {
 test("the public tree contains no review artifacts or scratch paths", () => {
   assert.deepEqual(findings.filter(p => p.endsWith("a removed review artifact or scratch path")), [])
 })
+
+test("the public spec keeps rationale without internal author or review provenance", () => {
+  assert.deepEqual(findings.filter(p => p.endsWith("internal decision or review provenance")), [])
+})
+
+test("review provenance checks handle capitalization without rejecting ordinary future tense", () => {
+  const file = "docs/design/src/example.md"
+  for (const text of ["Review probe " + "R9", "Prototype finding " + "19", "finding " + "1"]) {
+    assert.ok(publicHygiene(file, text).includes("internal decision or review provenance"), text)
+  }
+  assert.deepEqual(publicHygiene(file, "The runtime will preserve the continuation."), [])
+})

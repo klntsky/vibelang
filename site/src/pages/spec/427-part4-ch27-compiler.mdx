@@ -154,7 +154,7 @@ sh vibelang/smoke.sh --status
 
 The harness compiles cases in parallel, runs successful programs on Node, and
 checks expected failure codes and optional diagnostic positions. A `pending`
-case reports its owning compiler lane and doesn't fail the suite. Source-map
+case reports its responsible compiler component and doesn't fail the suite. Source-map
 and tracing cases check original `.vibe` frames and generated spans (D34, D36).
 The docs checker, `bun docs/tools/check-snippets.ts` run from the repository
 root, checks user-guide snippets independently.

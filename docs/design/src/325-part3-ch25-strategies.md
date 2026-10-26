@@ -23,8 +23,8 @@ The machine in Chapter 20 is fixed. These are ways to run it. Two were built and
 
 | Strategy | Same-fiber semantics | Capture through TypeScript-authored Effect frames | Depends on Effect internals | Status |
 | --- | --- | --- | --- | --- |
-| **A. Effect-native prompts.** Prompt and owner frames live on Effect's real `_stack`; capture splices it. | Yes | Yes: through `Effect.forEach`, `Effect.scoped`, `provideService` (T1, T7a) | Yes: `_stack`, `interruptible`, `_interruptedCause`, frame keys, and the interruption skip loop's reliance on `ensureCont` | Built: `packages/runtime/src/kernel/`; {{testCount}} tests pass in under a second, including a 54-test conformance suite written by an independent reviewer |
-| **B. Explicit frame machine.** A defunctionalized interpreter inside one Effect fiber, using only public APIs. | Yes | No: an embedded Effect is an opaque step; its frames are not the machine's | No | Built independently by Codex (GPT-6.1 Sol): 20 tests pass in about 18 s. Disagrees with A on the Context a reinstalled prompt records (review probe R9), and lacks `transfer` and `onReturn` |
+| **A. Effect-native prompts.** Prompt and owner frames live on Effect's real `_stack`; capture splices it. | Yes | Yes: through `Effect.forEach`, `Effect.scoped`, `provideService` (T1, T7a) | Yes: `_stack`, `interruptible`, `_interruptedCause`, frame keys, and the interruption skip loop's reliance on `ensureCont` | Built: `packages/runtime/src/kernel/`; {{testCount}} tests pass in under a second, including a 54-test conformance suite covering runtime boundaries |
+| **B. Explicit frame machine.** A defunctionalized interpreter inside one Effect fiber, using only public APIs. | Yes | No: an embedded Effect is an opaque step; its frames are not the machine's | No | Built independently: 20 tests pass in about 18 s. Disagrees with A on the Context a reinstalled prompt records (`tests/runtime-boundaries.test.ts`), and lacks `transfer` and `onReturn` |
 | **C. One fiber per prompt.** The body runs on a child fiber; operations are messages to the parent. | No: the clause and the body run on different fibers, and interruption is relayed | Partially | No | Not built |
 | **D. Generator kernel.** Each activation is a generator driven by a VibeLang loop inside one fiber. | Yes | No, for the same reason as B | No | Not built; the earlier VibeLang project's checkpoint built one beside its own host loop |
 | **E. CPS or state machines.** A representation of compiled function frames, not a capture strategy. | Under A, yes | Under A, yes | No | Evaluated below |
@@ -40,13 +40,13 @@ depth  4000:    23.4 ms,   8,006,001 frames copied
 depth  8000:    78.9 ms,  32,012,001 frames copied
 ```
 
-The growth is quadratic, but the constant is about 2.5 ns per frame copy, so it matters only for very deep producers. The Codex machine's deep test hits the same shape and takes most of its 18 s. Segmented stacks would remove the quadratic term for both strategies, but only Effect can make `_stack` segmented (G17).
+The growth is quadratic, but the constant is about 2.5 ns per frame copy, so it matters only for very deep producers. The reference machine's deep test hits the same shape and takes most of its 18 s. Segmented stacks would remove the quadratic term for both strategies, but only Effect can make `_stack` segmented (G17).
 
 #### Decision
 
 **Strategy A is the runtime** [Rule]. It is the only candidate where TypeScript-authored Effect code on the same fiber is transparent to capture (T7a), which seamless Effect interop requires. It also reuses Effect's finalizers, masks, scheduler, and tracing instead of re-implementing them.
 
-**Strategy B is the reference semantics** [Rule]. Two independent implementations of the same laws make the laws, not an implementation, the specification. Today they pass separate suites, and they do not agree everywhere: B records the `handle` site's Context in a reinstalled prompt where Chapter 22 requires the resume site's (R9). Passing tests in both is therefore not evidence of agreement. G16 writes the Chapter 20 laws once and runs them against both; R9 is its first law. A law that one passes and the other fails is a bug in an implementation or an ambiguity in Chapter 20, never something to paper over.
+**Strategy B is the reference semantics** [Rule]. Two independent implementations of the same laws make the laws, not an implementation, the specification. Today they pass separate suites, and they do not agree everywhere: B records the `handle` site's Context in a reinstalled prompt where Chapter 22 requires the resume site's (the prompt-context regression). Passing tests in both is therefore not evidence of agreement. G16 writes the Chapter 20 laws once and runs them against both; Prompt-context restoration is its first law. A law that one passes and the other fails is a bug in an implementation or an ambiguity in Chapter 20, never something to paper over.
 
 **What strategy A costs** [Rule]. The kernel reaches undocumented fields structurally, because `package.json` maps `effect/internal/*` to `null`. The pin points:
 

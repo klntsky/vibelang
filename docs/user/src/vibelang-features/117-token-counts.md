@@ -21,8 +21,8 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 | The skill and the [cheat sheet](115-cheat-sheet.md) | 13,788 |
 | The skill and the user guide (131 pages) | 207,617 |
 | The user guide alone | 202,938 |
-| The specification (33 chapters) | 105,466 |
-| The decision log, `docs/design/DECISIONS.md` | 64,524 |
+| The specification (33 chapters) | 104,753 |
+| The decision log, `docs/design/DECISIONS.md` | 61,543 |
 
 ## Effect TypeScript beside VibeLang
 
@@ -267,7 +267,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 
 | Page | Tokens |
 | --- | ---: |
-| [Introduction](../../../design/src/000-intro.md) | 1,605 |
+| [Introduction](../../../design/src/000-intro.md) | 1,600 |
 | **Part I. The language by example** | **30,030** |
 | [1. A first look](../../../design/src/101-part1-ch01-first-look.md) | 1,681 |
 | [2. Functions and calls](../../../design/src/102-part1-ch02-functions.md) | 1,481 |
@@ -281,31 +281,31 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [10. Working with TypeScript](../../../design/src/110-part1-ch10-typescript.md) | 3,342 |
 | [11. The standard library](../../../design/src/111-part1-ch11-stdlib.md) | 2,810 |
 | [12. Questions Effect users ask](../../../design/src/112-part1-ch12-faq.md) | 3,285 |
-| **Part II. The rules** | **12,745** |
+| **Part II. The rules** | **12,732** |
 | [13. What a call means](../../../design/src/213-part2-ch13-calls.md) | 4,669 |
-| [14. Contracts and inference](../../../design/src/214-part2-ch14-contracts.md) | 2,781 |
+| [14. Contracts and inference](../../../design/src/214-part2-ch14-contracts.md) | 2,777 |
 | [15. Which functions compile to plain JavaScript](../../../design/src/215-part2-ch15-direct.md) | 2,175 |
 | [16. Callbacks and higher-order functions](../../../design/src/216-part2-ch16-callbacks.md) | 1,320 |
-| [17. Failures, defects, interruption, and cleanup](../../../design/src/217-part2-ch17-failures.md) | 1,800 |
-| **Part III. The runtime** | **20,826** |
+| [17. Failures, defects, interruption, and cleanup](../../../design/src/217-part2-ch17-failures.md) | 1,791 |
+| **Part III. The runtime** | **20,788** |
 | [18. Why a continuation runtime](../../../design/src/318-part3-ch18-why.md) | 2,127 |
 | [19. The checkout trace, step by step](../../../design/src/319-part3-ch19-trace.md) | 1,582 |
-| [20. The machine](../../../design/src/320-part3-ch20-machine.md) | 3,284 |
-| [21. One-shot ownership and races](../../../design/src/321-part3-ch21-ownership.md) | 1,885 |
-| [22. What resume restores](../../../design/src/322-part3-ch22-restore.md) | 1,478 |
+| [20. The machine](../../../design/src/320-part3-ch20-machine.md) | 3,290 |
+| [21. One-shot ownership and races](../../../design/src/321-part3-ch21-ownership.md) | 1,879 |
+| [22. What resume restores](../../../design/src/322-part3-ch22-restore.md) | 1,477 |
 | [23. Boundaries and finalization](../../../design/src/323-part3-ch23-boundaries.md) | 1,663 |
-| [24. What Effect provides and what the kernel adds](../../../design/src/324-part3-ch24-effect.md) | 3,815 |
-| [25. Implementation strategies and costs](../../../design/src/325-part3-ch25-strategies.md) | 1,933 |
-| [26. What compiled code must guarantee](../../../design/src/326-part3-ch26-compiled.md) | 3,059 |
+| [24. What Effect provides and what the kernel adds](../../../design/src/324-part3-ch24-effect.md) | 3,806 |
+| [25. Implementation strategies and costs](../../../design/src/325-part3-ch25-strategies.md) | 1,926 |
+| [26. What compiled code must guarantee](../../../design/src/326-part3-ch26-compiled.md) | 3,038 |
 | **Part IV. The compiler** | **12,195** |
 | [27. Compiler architecture](../../../design/src/427-part4-ch27-compiler.md) | 1,662 |
 | [28. Tooling](../../../design/src/428-part4-ch28-tooling.md) | 10,533 |
-| **Part V. Decisions** | **15,010** |
-| [29. Decisions](../../../design/src/529-part5-ch29-decisions.md) | 12,364 |
-| [30. Risks and experiments](../../../design/src/530-part5-ch30-risks.md) | 2,646 |
-| **Appendices** | **13,055** |
-| [A. Evidence index and B. Prior art](../../../design/src/900-appendices.md) | 4,825 |
+| **Part V. Decisions** | **14,533** |
+| [29. Decisions](../../../design/src/529-part5-ch29-decisions.md) | 11,907 |
+| [30. Risks and experiments](../../../design/src/530-part5-ch30-risks.md) | 2,626 |
+| **Appendices** | **12,875** |
+| [A. Evidence index and B. Prior art](../../../design/src/900-appendices.md) | 4,645 |
 | [C. Every Effect feature in VibeLang](../../../design/src/901-appendix-c-coverage.md) | 8,230 |
-| **All 33 pages** | **105,466** |
+| **All 33 pages** | **104,753** |
 
 <!-- token-counts: end -->

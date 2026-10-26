@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Rename codemod: the language Effeck is VibeLang (Will, 2026-10-18).
+// Rename codemod: the language Effeck is VibeLang (2026-10-18).
 //
 // One deterministic, idempotent pass over the tracked files of a checkout. It
 // rewrites names inside files and renames files and directories:
@@ -314,7 +314,7 @@ function decisionText(number) {
   return [
     `## The name ${BRAND} (${DECISION_DATE})`,
     "",
-    `**D${number}. The language is ${BRAND}** (Will; supersedes D125). Will renamed the language before the 0.0.1 launch. ` +
+    `**D${number}. The language is ${BRAND}** (supersedes D125). The language was renamed before the 0.0.1 launch. ` +
       `The packages are \`${BRAND_LOWER}\` (the compiler and its \`${CLI}\` binary), \`${BRAND_LOWER}-runtime\`, \`${BRAND_LOWER}-vite\`, ` +
       `\`${BRAND_LOWER}-unplugin\`, \`create-${BRAND_LOWER}\`, and one \`${BRAND_LOWER}-<os>-<cpu>\` package per platform binary. ` +
       `Source files end in \`.${EXTENSION}\`, the editor language id and the Neovim filetype are \`${LANGUAGE_ID}\`, ` +

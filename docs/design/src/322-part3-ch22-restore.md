@@ -40,7 +40,7 @@ VibeLang takes the snapshot rule for three reasons:
 2. **Dependency injection stays stable.** A resumed computation keeps the providers it selected. Under DDB, where and when a continuation is resumed would change which `Database` a half-finished service method talks to.
 3. **Leaking a resumer's Context is a security bug class.** Request-scoped services (current user, tenant, credentials) must not flow into another request's computation. Effect 3 shipped exactly that leak through `AsyncLocalStorage` (GHSA-38f7-945m-qr2g, CVE-2026-32887).
 
-The cost is real, and it applies to handler lookup: a continuation transferred out of its outer handlers' region, then resumed where a different handler for the same operation is installed, does not rebind to that handler but fails loudly with `HandlerPromptExited` (T15) [Kernel]. The independent Codex design reached the same choice for the same DI reason. A program that needs the rest of a computation under different providers runs a fresh program under them; it does not rebind a live continuation.
+The cost is real, and it applies to handler lookup: a continuation transferred out of its outer handlers' region, then resumed where a different handler for the same operation is installed, does not rebind to that handler but fails loudly with `HandlerPromptExited` (T15) [Kernel]. The independent semantics proposal reached the same choice for the same DI reason. A program that needs the rest of a computation under different providers runs a fresh program under them; it does not rebind a live continuation.
 
 #### `AsyncLocalStorage` is fiber-wide, not delimited
 
@@ -50,4 +50,4 @@ The cost is real, and it applies to handler lookup: a continuation transferred o
 
 After `resume(k, x)` returns, the clause continues; it must see its own Context, not the body's. T13 resumes from inside a clause-local `provide` and checks three things: the body after resumption sees its own provider; the next clause invocation sees the resume site's provider; and so does the clause after `resume` returns.
 
-The reference machine (strategy B, Chapter 25) does not implement this rule yet. Review probe R9 resumes under a clause-local provider and performs again: the kernel's next clause sees the resume site's provider, as specified, while strategy B reuses its old prompt and sees the `handle` site's. The rule stands; aligning strategy B with it is the first law of G16.
+The reference machine (strategy B, Chapter 25) does not implement this rule yet. The runtime boundary regression resumes under a clause-local provider and performs again: the kernel's next clause sees the resume site's provider, as specified, while strategy B reuses its old prompt and sees the `handle` site's. The rule stands; aligning strategy B with it is the first law of G16.

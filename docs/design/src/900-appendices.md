@@ -21,9 +21,9 @@ The docs site build (`site/scripts/build-docs.ts`) runs this suite first and won
 
 #### How this revision was checked
 
-The first draft had two independent reviews. Codex (GPT-6.1 Sol) wrote 54 conformance tests against the kernel and found five bugs, all fixed. Fable reviewed the draft against the original request; its findings shaped Chapters 9, 13, and 26.
+The conformance suite exercises the kernel's ownership, interruption, tracing, and cleanup laws. Boundary regressions pin mixed causes, acquisition masking, transferred continuations, and generator tail resumes. The fixes and their regression tests are described in `experiments/KERNEL-CHANGES.md`.
 
-The second draft had two more on 2026-10-16: Both checks passed the central test and verified counterexamples with probes. Five were kernel or lowering defects, fixed with regression tests K11-K15; 12 of those tests fail on a copy of the kernel with the fixes reverted, and K15 pins Effect's own acquisition behavior (`experiments/KERNEL-CHANGES.md`). The rest were rule gaps, decided in D9-D21. Next, a feature-coverage audit mapped every section of Effect's documentation to the language (`docs/research/effect-feature-coverage.md`, 309 features): D22-D28 and D37-D43 decide its gaps, and Appendix C is its map. Then a prototype compiler compiled 46 example files written from this document and ran them on the kernel; D44-D53 decide its findings. Last, a single-pass experiment reached the same lowering, byte for byte, with one patched TypeScript check per file; D56 and D52 decide its probes.
+A feature-coverage audit mapped 309 Effect features to the language (`docs/research/effect-feature-coverage.md`); D22-D28 and D37-D43 resolve its gaps. A prototype compiler compiled 46 examples from the specification (D44-D53). A single-pass experiment reached the same lowering, byte for byte, with one TypeScript check per file (D56 and D52).
 
 #### Effect facts
 
@@ -36,7 +36,7 @@ The second draft had two more on 2026-10-16: Both checks passed the central test
 | F9 | same | Direct recursion limit: about 39,900 frames on Bun 1.4.1 and 10,150 on Node 26.10 |
 | F10a, F10b | `tests/wakeup-chain.test.ts`, `scripts/` | A chain of `Deferred` wake-ups overflows in one fiber and strands the rest; effect 3.22.3 completes the same chain at 100,000 hops |
 | T5a, T6b | `tests/kernel.test.ts` | `Effect.callback` drops a late resume silently; plain JavaScript recursion overflows |
-| D01-D05 | `tests/conformance/source-claims.test.ts` | The conformance review's corrections to the first draft's Effect claims: synchronous callback resume, fork-time async context, `zip`'s `concurrent` flag, `catchCause` on a self-raised interrupt, sibling provides sharing a supplied `MemoMap` |
+| D01-D05 | `tests/conformance/source-claims.test.ts` | Corrections to the first draft's Effect claims: synchronous callback resume, fork-time async context, `zip`'s `concurrent` flag, `catchCause` on a self-raised interrupt, sibling provides sharing a supplied `MemoMap` |
 | A3 | `tests/fiber-behavior.test.ts` | Two providers for one key in `Layer.merge`: the later one wins silently |
 | K15a | `tests/kernel-regressions.test.ts` | Default `acquireRelease` masks a wait: interruption waits for the value, which is then released |
 
@@ -68,27 +68,27 @@ The second draft had two more on 2026-10-16: Both checks passed the central test
 | T01, T02 | `tests/conformance/tracing-cache.test.ts` | `Effect.fn` and `withSpan` frames across capture; `Context.Reference` and fiber caches at every boundary |
 | W01-W05 | `tests/conformance/wake.test.ts` | Wake budget ordering and release on every losing path |
 | X01, X02 | `tests/conformance/async-frames.test.ts` | Effect's async finalizer frame inside a captured segment |
-| B | `reference-machine/` | The independent strategy-B machine (Codex, GPT-6.1 Sol): 20 tests on the same laws |
+| B | `reference-machine/` | The independent strategy-B machine: 20 tests on the same laws |
 
-The conformance suite (A, D, F, I, O, S, T, W, X) is the Codex review of the first kernel; its failing tests found the first five bugs. Tests that encoded the old behavior as counterexamples now assert the corrected behavior.
+The conformance suite (A, D, F, I, O, S, T, W, X) covers the kernel laws. Tests that encoded the old behavior as counterexamples now assert the corrected behavior.
 
-#### Review probes
+#### Runtime boundary regressions
 
-Counterexamples from the 2026-10-16 reviews, kept as observational tests. A probe of a fixed defect now asserts the fixed behavior.
+Runtime counterexamples are kept as observational tests. A probe of a fixed defect now asserts the fixed behavior.
 
 | ID | File | What it showed |
 | --- | --- | --- |
-| R1 | `tests/runtime-boundaries.test.ts` | `Effect.catch` recovers a cause holding both a failure and a defect, and drops the defect (D13, K14) |
-| R2, R2b | same | Owner-driven abandonment keeps a cleanup defect; explicit `abandon` dropped it while an interruption was pending (D15, K12) |
-| R3 | same | Default `acquireRelease` shields `suspend` from cancellation (D25, K15) |
-| R4 | same | Inlining an `Effect.sync` operation removes an interruption point (D10) |
-| R5 | same | A child that transfers into its inherited Scope and exits stranded the segment (D16, K13) |
-| R6 | same | A TypeScript function forks its operation without taking a program argument (D20) |
-| R7 | same | A provider around `resumeWith` can't satisfy the injected program's R (D17) |
-| R8 | same | A block-wide Scope closes acquisitions not marked `using` (D14) |
-| R9 | same | Strategies A and B disagree on the next clause's Context after a resume (G16) |
-| R10 | same | A generator clause written `return yield* resume(k, v)` defeats constant-stack iteration (D18, K11) |
-| Fable probes | `tests/acquisition-cancellation.test.ts` | The masked adapter's race branches never run; generator clauses grow 200,003 frames over 100,000 elements before K11 |
+| Boundary | `tests/runtime-boundaries.test.ts` | `Effect.catch` recovers a cause holding both a failure and a defect, and drops the defect (D13, K14) |
+| Boundary | same | Owner-driven abandonment keeps a cleanup defect; explicit `abandon` dropped it while an interruption was pending (D15, K12) |
+| Boundary | same | Default `acquireRelease` shields `suspend` from cancellation (D25, K15) |
+| Boundary | same | Inlining an `Effect.sync` operation removes an interruption point (D10) |
+| Boundary | same | A child that transfers into its inherited Scope and exits stranded the segment (D16, K13) |
+| Boundary | same | A TypeScript function forks its operation without taking a program argument (D20) |
+| Boundary | same | A provider around `resumeWith` can't satisfy the injected program's R (D17) |
+| Boundary | same | A block-wide Scope closes acquisitions not marked `using` (D14) |
+| Boundary | same | Strategies A and B disagree on the next clause's Context after a resume (G16) |
+| Boundary | same | A generator clause written `return yield* resume(k, v)` defeats constant-stack iteration (D18, K11) |
+| Acquisition and tail resume | `tests/acquisition-cancellation.test.ts` | The masked adapter's race branches never run; generator clauses grow 200,003 frames over 100,000 elements before K11 |
 | Services | `tests/service-identity/probe.ts` | Structurally equal abstract classes alias in R, and the program dies with `Service not found` (D1) |
 
 #### Prototype compiler
@@ -152,7 +152,7 @@ vibelang/smoke.sh vibelang-infer   # one case
 - `docs/research/continuation-prior-art.md`: OCaml 5, Kotlin, Swift, Loom, WasmFX, Koka, Effekt, Effection, js_of_ocaml, and the papers.
 - `docs/research/vibelang.md`: the earlier VibeLang project's `main` (`c60eca97`) and the unmerged checkpoint (`ebe89a2b`).
 - `docs/research/typescript-native-compiler.md`: the native compiler upstream and effect-tsgo.
-- `docs/research/independent-design-codex.md`: the independent semantics Codex wrote from the same brief.
+- `docs/research/independent-design.md`: an independent semantics proposal from the same language requirements.
 - `docs/research/pipe-census.md`: how real Effect code uses `pipe` (D8).
 - `docs/research/tc39-syntax.md`: the status of every TC39 proposal that could give syntax to an Effect feature, fetched 2026-10-16.
 - `docs/research/effect-feature-coverage.md`: every Effect docs section mapped to the language (Appendix C).

@@ -93,7 +93,7 @@ export const profile = Effect.fnUntraced(function* (raw: string) {
 
 Region bodies are closures over the function's variables, so assignments inside a region are visible after it. `return`, `break`, and `continue` that leave a region produce a completion record (`{ kind: "return", value }`, `{ kind: "break", label }`, `{ kind: "normal" }`) that the enclosing frame dispatches on. This is the same transform TypeScript's own downlevel generator emit performs, applied to Effect frames. Because closures hide assignments from TypeScript's definite-assignment analysis, the compiler checks definite assignment on the source, before lowering (D52).
 
-The prototype compiler (`prototype/esc`) emits these shapes and runs them on the kernel. Its `regions.vibe` example reproduces plain JavaScript's results and `finally` order through labeled `break`, `continue`, and `return` across nested `try`, `catch`, and `finally`, and a `using` in a loop body releases once per iteration on every exit (`prototype/esc/FINDINGS.md`, findings 15 and 17).
+The prototype compiler (`prototype/esc`) emits these shapes and runs them on the kernel. Its `regions.vibe` example reproduces plain JavaScript's results and `finally` order through labeled `break`, `continue`, and `return` across nested `try`, `catch`, and `finally`, and a `using` in a loop body releases once per iteration on every exit (`prototype/esc/FINDINGS.md`).
 
 #### Scope regions
 
@@ -126,11 +126,11 @@ export const serve = Effect.fnUntraced(function* (port: number) {
 })
 ```
 
-A Scope finalizer registered later runs earlier, so the child is interrupted and awaited before resources acquired earlier in the block are released. A block that calls `fork` without declaring `using` is a region too (D47); without that rule, the prototype compiler's fork-only block found no `Scope` and died with `Service not found` (finding 18).
+A Scope finalizer registered later runs earlier, so the child is interrupted and awaited before resources acquired earlier in the block are released. A block that calls `fork` without declaring `using` is a region too (D47); without that rule, the prototype compiler's fork-only block found no `Scope` and died with `Service not found`.
 
 #### Clauses
 
-A clause compiles like any function, with one rule for its last step (D18). When a clause's last action is `return resume(k, v)` and no `try`, `catch`, `finally`, or `using` region of the clause encloses it, the compiler emits `return tailResume(k, v)`: the request is returned, never yielded, so the clause's generator finishes and the `Clause(k)` frame performs the resume with the clause gone (K11a, K11c). Inside such a region the compiler emits `yield* resume(k, v)`, because the region's cleanup must run after the resumed computation, and the stack grows by design (K11d). In the prototype compiler, producer loops, handler clauses, and loop bodies with `try` and `finally` stay under 50 frames over 100,000 elements (`stack-depth.vibe`, finding 23).
+A clause compiles like any function, with one rule for its last step (D18). When a clause's last action is `return resume(k, v)` and no `try`, `catch`, `finally`, or `using` region of the clause encloses it, the compiler emits `return tailResume(k, v)`: the request is returned, never yielded, so the clause's generator finishes and the `Clause(k)` frame performs the resume with the clause gone (K11a, K11c). Inside such a region the compiler emits `yield* resume(k, v)`, because the region's cleanup must run after the resumed computation, and the stack grows by design (K11d). In the prototype compiler, producer loops, handler clauses, and loop bodies with `try` and `finally` stay under 50 frames over 100,000 elements (`stack-depth.vibe`).
 
 #### Producers
 
@@ -160,13 +160,13 @@ A loop body with `using`, `try`, or `finally` runs those regions inside the clau
 Evidence [Kernel]:
 
 - T16 runs internal iteration over an infinite producer with a finalizer. `break` after three elements runs the producer's finalizer before the loop exits.
-- K11a runs this exact generator-clause lowering over 100,000 elements; the deepest stack is 3 frames. K11b adds a per-element `using` and `finally`: 5 frames, with every region closed before each resume. Before the fix, the same clause written as `return yield* resume(k, undefined)` reached 200,003 frames (review probe R10; Fable review finding 1).
+- K11a runs this exact generator-clause lowering over 100,000 elements; the deepest stack is 3 frames. K11b adds a per-element `using` and `finally`: 5 frames, with every region closed before each resume. Before the fix, the same clause written as `return yield* resume(k, undefined)` reached 200,003 frames (`tests/generator-tail-resume.test.ts`).
 - T17 covers the `flatMap`-shaped clause, which the kernel also drops in constant stack.
 - T10 runs external iteration with `transfer`. Each element is one capture and one resume. A producer is one-shot per run: iterating it again runs it again from the start.
 
 If a producer's own loop iterated another producer, abandoning the outer one would reach the inner loop's owner frame and abandon the inner producer too, finalizers included (O01).
 
-**The `Stream` adapter** [Experiment]. Where a `Stream` is expected, or across the TypeScript boundary, a producer becomes a `Stream` that runs the producer on a fiber of its own, under internal iteration, and hands over one element per pull through a zero-capacity handoff: the clause completes the pending pull and waits for the next one before it resumes the producer. A buffer of one element, as the prototype compiler used (`Stream.callback` with `bufferSize: 1`), lets the producer run one element ahead, which D26 forbids (prototype finding 26). Closing the stream interrupts the producer's fiber, which abandons the producer and runs its finalizers. `for...of` over a `Stream` needs no adapter: it opens a Scope region, takes the stream's pull with `Stream.toPull`, and loops over chunks until the pull signals the end. G12 is the experiment that confirms the adapter. A `for...of` over any other iterable whose body can pause, other than an array or a string, runs through the same runtime loop, which calls the iterator's `return()` when the loop exits before the end: a jump, a failure, or an interruption. JavaScript's own `for...of` would do it for a jump only, since Effect abandons the generator without calling `return()` (Chapter 24).
+**The `Stream` adapter** [Experiment]. Where a `Stream` is expected, or across the TypeScript boundary, a producer becomes a `Stream` that runs the producer on a fiber of its own, under internal iteration, and hands over one element per pull through a zero-capacity handoff: the clause completes the pending pull and waits for the next one before it resumes the producer. A buffer of one element, as the prototype compiler used (`Stream.callback` with `bufferSize: 1`), lets the producer run one element ahead, which D26 forbids. Closing the stream interrupts the producer's fiber, which abandons the producer and runs its finalizers. `for...of` over a `Stream` needs no adapter: it opens a Scope region, takes the stream's pull with `Stream.toPull`, and loops over chunks until the pull signals the end. G12 is the experiment that confirms the adapter. A `for...of` over any other iterable whose body can pause, other than an array or a string, runs through the same runtime loop, which calls the iterator's `return()` when the loop exits before the end: a jump, a failure, or an interruption. JavaScript's own `for...of` would do it for a jump only, since Effect abandons the generator without calling `return()` (Chapter 24).
 
 #### Trusted calls
 
