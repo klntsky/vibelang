@@ -1,6 +1,6 @@
 error UserNotFound { id: string }
 service Users {
-  find(id: string): string!UserNotFound
+  find(id: string): Effect<string, UserNotFound>
 }
 
 const UsersLive = Layer.succeed(Users, {
