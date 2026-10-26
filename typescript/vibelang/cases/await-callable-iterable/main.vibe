@@ -1,0 +1,23 @@
+module inputs {
+  import { Effect } from "effect"
+
+  export function values() {
+    return Object.assign(() => {}, {
+      *[Symbol.iterator]() {
+        yield Effect.succeed(3)
+        yield Effect.succeed(7)
+      }
+    })
+  }
+}
+import { values } from inputs
+
+// expect-result: {"all":[3,7],"settled":[3,7],"race":3,"any":3}
+export function main() {
+  const input = sync(() => values())
+  const all = await.all input
+  const settled = await.allSettled input
+  const race = await.race input
+  const any = await.any input
+  return { all, settled: settled.map((r) => Result.getOrElse(r, () => 0)), race, any }
+}

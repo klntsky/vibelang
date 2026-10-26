@@ -93,6 +93,30 @@ test("await.all reads a single-use iterable once and remains rerunnable", async 
   expect(await Effect.runPromise(all)).toEqual([2, "second"])
 })
 
+for (const [name, wait, expected] of [
+  ["await.all", $awaitAll, [3, 7]],
+  ["await.allSettled", $awaitAllSettled, [Result.succeed(3), Result.succeed(7)]],
+  ["await.race", $awaitRace, 3],
+  ["await.any", $awaitAny, 3]
+] as const) {
+  test(`${name} accepts a callable iterable and reads it once`, async () => {
+    let iterations = 0
+    let runs = 0
+    const values = Object.assign(() => {}, {
+      *[Symbol.iterator]() {
+        expect(++iterations).toBe(1)
+        yield Effect.sync(() => { runs++; return 3 })
+        yield Effect.succeed(7)
+      }
+    })
+    const waiting = wait(values)
+    expect(runs).toBe(0)
+    expect(await Effect.runPromise(waiting)).toEqual(expected)
+    expect(iterations).toBe(1)
+    expect(runs).toBe(1)
+  })
+}
+
 test("await.all failure closes held fibers before propagating", async () => {
   await Effect.runPromise(Effect.gen(function*() {
     const started = yield* Deferred.make<void>()

@@ -156,7 +156,7 @@ type RaceReturn<Arg> = Effect.Effect<
 >
 
 const isIterable = (u: unknown): u is Iterable<unknown> =>
-  typeof u === "object" && u !== null && Symbol.iterator in u && !Effect.isEffect(u)
+  u !== null && (typeof u === "object" || typeof u === "function") && Symbol.iterator in u && !Effect.isEffect(u)
 
 const elementEffect = (element: unknown): Effect.Effect<unknown, unknown, unknown> =>
   Fiber.isFiber(element)

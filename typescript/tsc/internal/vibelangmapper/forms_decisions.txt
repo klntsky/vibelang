@@ -89,6 +89,9 @@ typescript/vibelang/cases/arrow-body-leading-comment/main.vibe:28:14 lambda plai
 typescript/vibelang/cases/arrow-body-leading-comment/main.vibe:30:8 lambda plain table
 typescript/vibelang/cases/arrow-body-leading-comment/main.vibe:32:17 lambda plain fallback
 typescript/vibelang/cases/arrow-body-leading-comment/main.vibe:6:15 lambda effectFn annotation
+typescript/vibelang/cases/await-callable-iterable/main.vibe:17:22 lambda plain table
+typescript/vibelang/cases/await-callable-iterable/main.vibe:22:38 lambda plain fallback
+typescript/vibelang/cases/await-callable-iterable/main.vibe:22:65 lambda plain table
 typescript/vibelang/cases/await-ops.fail/main.vibe:17:15 lambda plain table
 typescript/vibelang/cases/await-ops.fail/main.vibe:8:20 lambda effectFn table
 typescript/vibelang/cases/await-ops/main.vibe:100:22 byname program table
