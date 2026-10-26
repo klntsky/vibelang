@@ -22,16 +22,16 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 
 | Load | Tokens |
 | --- | ---: |
-| The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,693 |
-| The skill and the [cheat sheet](/vibelang-features/115-cheat-sheet) | 13,802 |
-| The skill and the user guide (131 pages) | 208,611 |
-| The user guide alone | 203,918 |
+| The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,809 |
+| The skill and the [cheat sheet](/vibelang-features/115-cheat-sheet) | 14,160 |
+| The skill and the user guide (131 pages) | 210,520 |
+| The user guide alone | 205,711 |
 | The specification (33 chapters) | 105,331 |
 | The decision log, `docs/design/DECISIONS.md` | 61,537 |
 
 ## Effect TypeScript beside VibeLang
 
-14.9% fewer tokens across 46 pairs in total; VibeLang is longer in 12 pairs. This is the saving over the combined source tokens, not the arithmetic mean of the percentages below.
+14.0% fewer tokens across 46 pairs in total; VibeLang is longer in 13 pairs. This is the saving over the combined source tokens, not the arithmetic mean of the percentages below.
 
 Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Effect TypeScript blocks against its VibeLang blocks. A negative saving means the VibeLang snippet is longer.
 
@@ -73,8 +73,8 @@ Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Eff
 | Match a data type's variants | 29 | 42 | -44.8% |
 | Option, Exit, and Result | 60 | 62 | -3.3% |
 | Test and bind | 44 | 45 | -2.3% |
-| Plain, self-contained TypeScript inside `sync`, `try`, and `callback` | 129 | 183 | -41.9% |
-| TypeScript modules inline | 42 | 42 | 0.0% |
+| Plain, self-contained TypeScript inside `sync`, `try`, and `callback` | 174 | 233 | -33.9% |
+| TypeScript modules inline | 88 | 89 | -1.1% |
 | Fork and join | 43 | 34 | 20.9% |
 | Wait for several | 62 | 57 | 8.1% |
 | First success, expected outcomes | 53 | 48 | 9.4% |
@@ -83,7 +83,7 @@ Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Eff
 | Wait for a Deferred | 30 | 28 | 6.7% |
 | Race | 43 | 56 | -30.2% |
 | A concurrent loop | 40 | 28 | 30.0% |
-| **All 46 entries** | **2,143** | **1,824** | **14.9%** |
+| **All 46 entries** | **2,234** | **1,921** | **14.0%** |
 
 ## Every page
 
@@ -94,10 +94,10 @@ Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Eff
 | **Start Here** | **2,241** |
 | [Welcome](/001-onboarding) | 1,641 |
 | [Why VibeLang?](/getting-started/002-why-effect) | 600 |
-| **Learning Path** | **8,674** |
+| **Learning Path** | **9,013** |
 | [The Effect Type](/getting-started/003-the-effect-type) | 1,783 |
 | [Installation](/getting-started/004-installation) | 2,221 |
-| [Creating Effects](/getting-started/005-creating-effects) | 2,583 |
+| [Creating Effects](/getting-started/005-creating-effects) | 2,922 |
 | [Two Types of Errors](/error-management/006-two-error-types) | 646 |
 | [Basic Concurrency](/concurrency/007-basic-concurrency) | 1,441 |
 | **Core Concepts** | **14,148** |
@@ -106,7 +106,7 @@ Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Eff
 | [Sequencing Effects](/getting-started/010-using-generators) | 1,184 |
 | [Building Pipelines](/getting-started/011-building-pipelines) | 1,807 |
 | [Devtools](/getting-started/012-devtools) | 8,559 |
-| **All 12 pages** | **25,063** |
+| **All 12 pages** | **25,402** |
 
 ### Setup
 
@@ -247,14 +247,14 @@ Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Eff
 | [Equivalence](/schema/102-equivalence) | 770 |
 | [Formatter](/schema/103-formatter) | 541 |
 | [Schema Compilers](/schema/104-compilers) | 2,122 |
-| **Platform** | **6,493** |
-| [Introduction](/platform/105-introduction) | 993 |
-| [FileSystem](/platform/106-file-system) | 1,164 |
-| [Path](/platform/107-path) | 848 |
+| **Platform** | **7,434** |
+| [Introduction](/platform/105-introduction) | 1,791 |
+| [FileSystem](/platform/106-file-system) | 1,215 |
+| [Path](/platform/107-path) | 940 |
 | [PlatformLogger](/platform/108-platformlogger) | 758 |
 | [Runtime](/platform/109-runtime) | 1,219 |
 | [Terminal](/platform/110-terminal) | 1,511 |
-| **All 98 pages** | **133,526** |
+| **All 98 pages** | **134,467** |
 
 ### VibeLang features
 
@@ -263,10 +263,10 @@ Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Eff
 | [Control operations and handlers](/vibelang-features/111-control-operations-and-handlers) | 1,923 |
 | [Producers](/vibelang-features/112-producers) | 1,291 |
 | [Building an HTTP API](/vibelang-features/113-building-an-http-api) | 1,392 |
-| [VibeLang for Effect users](/vibelang-features/114-vibelang-for-effect-users) | 4,220 |
-| [Cheat sheet](/vibelang-features/115-cheat-sheet) | 9,109 |
+| [VibeLang for Effect users](/vibelang-features/114-vibelang-for-effect-users) | 4,491 |
+| [Cheat sheet](/vibelang-features/115-cheat-sheet) | 9,351 |
 | [Pattern matching with match and is](/vibelang-features/116-match-and-is) | 3,760 |
-| **All 6 pages** | **21,695** |
+| **All 6 pages** | **22,208** |
 
 ### Specification
 

@@ -38,20 +38,35 @@ function attemptReservation(item: string, available: boolean) {
 ## Wrap synchronous operations
 
 ```vibe
-// run: Console.log(randomBytes(16).length)
-error RandomBytesFailed {
-  cause: unknown
-}
+// run: provide NodeServices.layer { Console.log(token().length) }
+import { NodeServices } from "@effect/platform-node"
+import { Crypto } from "effect/Crypto"
 
-function randomBytes(size: number) {
-  return try((size) => crypto.getRandomValues(new Uint8Array(size)),
-    (cause) => new RandomBytesFailed({ cause }), size)
+function token() {
+  return Crypto.randomBytes(16)
 }
-// Uint8Array!RandomBytesFailed!
 // Output: 16
 ```
 
-Platform work needs a boundary hatch. `try((size) => crypto.getRandomValues(new Uint8Array(size)), size)` turns an exception into the expected failure `Cause.UnknownError`, and a function in second place, as above, gives the failure a domain name.
+Platform work goes through Effect's services, not through a wrapper of your own. `Crypto.randomBytes(16)` replaces `crypto.getRandomValues`: import the service by name from its module and provide its platform layer, here `NodeServices.layer`, around the program. For each Node.js or web call, EK4402 names the service, its import, and its layer.
+
+```vibe
+// run: Console.log(isSymbolicLink("."))
+import { lstatSync } from "node:fs"
+
+error StatFailed {
+  cause: unknown
+}
+
+function isSymbolicLink(path: string) {
+  return try((path) => lstatSync(path).isSymbolicLink(),
+    (cause) => new StatFailed({ cause }), path)
+}
+// boolean!StatFailed!
+// Output: false
+```
+
+A platform API that Effect has no service for, such as `lstat`, which reads a symbolic link itself where `FileSystem.stat` follows it, needs a boundary hatch. `try((path) => lstatSync(path).isSymbolicLink(), path)` turns an exception into the expected failure `Cause.UnknownError`, and a function in second place, as above, gives the failure a domain name.
 
 The hatch's first argument is plain TypeScript, evaluated when the Effect runs: calls in it are not Effects, and platform APIs are allowed. It is self-contained: it may use its own parameters and locals, globals, imports, and the file's error declarations, but no other binding of the `.vibe` file, such as the parameter `size`. Pass such a value as an input, an argument after the function and the error mapper; it fills the function's first parameter. EK4405 reports a binding read from outside; its quick fix passes the binding as an input.
 
@@ -61,7 +76,7 @@ A synchronous TypeScript function can declare trust once with `/** @vibelang tru
 
 In Effect code, `catch` sees expected failures only, not defects from `Option.getOrThrow` or `Schema.decodeUnknownSync`; for recoverable input, use `Option.getOrElse`, `Effect.fromOption`, or `Schema.decodeUnknownEffect`. A catch whose try block has E = `never` gets EK2004 (defects pass through), a warning by default. A plain function's `catch` follows the same rule (D282): it receives typed failures only, so an exception from TypeScript code passes through it. Plain foreign calls at module top level are ordinary JavaScript calls, so their exceptions fail the module's import.
 
-`sync` wraps synchronous work whose exceptions should be defects: `sync(crypto.randomUUID())`, or `sync(() => { … })` for several statements. A small adapter can live in a `.vibe` hatch or a [module declaration](#write-typescript-in-a-module-declaration); keep larger foreign-library adapters in `.ts`. `.vibe` helpers that only calculate or mutate local data need no wrapper. Use `Console` or `Effect.log` for output and `FileSystem` for files.
+`sync` wraps synchronous work whose exceptions should be defects: `sync(hostname())`, with `hostname` imported from `node:os`, or `sync(() => { … })` for several statements. A small adapter for a foreign library or an API that Effect lacks can live in a `.vibe` hatch or a [module declaration](#write-typescript-in-a-module-declaration); keep larger ones in `.ts`. `.vibe` helpers that only calculate or mutate local data need no wrapper, and neither does a platform API that Effect covers: use `Console` for output, `FileSystem` for files, `Crypto` for random bytes and digests, and `HttpClient` for HTTP.
 
 String computation needs no hatch:
 
@@ -78,24 +93,27 @@ function slug(title: string) {
 ## Create effects from promises
 
 ```vibe
-// run: Console.log(digest("parcel").byteLength)
-error DigestFailed {
+// run: Console.log(sign("secret", "parcel").byteLength)
+error SigningFailed {
   cause: unknown
 }
 
-function digest(text: string) {
-  return try(async (text) => {
-    const bytes = new TextEncoder().encode(text)
-    return await crypto.subtle.digest("SHA-256", bytes)
-  }, (cause) => new DigestFailed({ cause }), text)
+function sign(secret: string, text: string) {
+  return try(async (secret, text) => {
+    const encoder = new TextEncoder()
+    const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
+    return await crypto.subtle.sign("HMAC", key, encoder.encode(text))
+  }, (cause) => new SigningFailed({ cause }), secret, text)
 }
-// ArrayBuffer!DigestFailed!
+// ArrayBuffer!SigningFailed!
 // Output: 32
 ```
 
+Effect's `Crypto` has random values and digests but no keys or signatures, so HMAC signing waits on the platform's promise in a hatch.
+
 `try` with a function that returns a promise, `async` or not, waits for it and maps a rejection into `E`; without a second argument the failure is `Cause.UnknownError`. The function receives an `AbortSignal` in the parameter after its inputs, when it declares one that takes it. Pass it to an API that supports cancellation; otherwise interruption stops the wait but not necessarily the foreign operation.
 
-`sync` with such a function treats rejection as a defect; it belongs in an adapter whose success-only promise contract is deliberate. `async` appears only inside a hatch: a VibeLang function waits by calling, `join` waits for a fiber, and `await` appears only in the await operations. For HTTP, use Effect's HTTP modules, not a wrapped browser `fetch` call.
+`sync` with such a function treats rejection as a defect; it belongs in an adapter whose success-only promise contract is deliberate. `async` appears only inside a hatch: a VibeLang function waits by calling, `join` waits for a fiber, and `await` appears only in the await operations. For HTTP, use Effect's `HttpClient`, not a wrapped `fetch` call; for a digest, `Crypto.digest`.
 
 ## Adapt callbacks and cancellation
 
@@ -128,24 +146,30 @@ For resource acquisition, cancellation must also release a resource that arrives
 ## Write TypeScript in a module declaration
 
 ```vibe
-// run: Console.log(/^[-0-9a-f]{36}$/.test(requestId()))
-module platform {
-  export function randomId(): string {
-    return crypto.randomUUID()
+// run: Console.log(linked("."))
+module links {
+  import { lstatSync } from "node:fs"
+
+  export function isSymbolicLink(path: string): boolean {
+    try {
+      return lstatSync(path).isSymbolicLink()
+    } catch {
+      return false
+    }
   }
 }
 
-import { randomId } from platform
+import { isSymbolicLink } from links
 
-function requestId() {
-  return sync(() => randomId())
+function linked(path: string) {
+  return sync((path) => isSymbolicLink(path), path)
 }
-// Output: true
+// Output: false
 ```
 
-`module platform { … }` declares a module whose body is TypeScript, checked and compiled as a `.ts` file would be (D283). There `throw`, `try` and `catch`, `async` and `await`, and platform APIs keep their TypeScript meaning, and VibeLang's own syntax, such as `A!E` or an `error` declaration, is a syntax error. The file reaches the module's exports only through an import whose specifier is the module's name, `import { randomId } from platform`, so a hatch uses them as it uses any import, and a call outside a hatch is a plain foreign call, as for an import from a `.ts` file. `export { randomId } from platform` re-exports one, and `import platform` runs a module for its effects. The body imports what it needs itself, its relative specifiers resolve from the `.vibe` file's directory, and it cannot read the `.vibe` file's bindings, so inputs reach the imported function as hatch arguments.
+`module links { … }` declares a module whose body is TypeScript, checked and compiled as a `.ts` file would be (D283). There `throw`, `try` and `catch`, `async` and `await`, and platform APIs keep their TypeScript meaning, and VibeLang's own syntax, such as `A!E` or an `error` declaration, is a syntax error. The file reaches the module's exports only through an import whose specifier is the module's name, `import { isSymbolicLink } from links`, so a hatch uses them as it uses any import, and a call outside a hatch is a plain foreign call, as for an import from a `.ts` file. `export { isSymbolicLink } from links` re-exports one, and `import links` runs a module for its effects. The body imports what it needs itself, its relative specifiers resolve from the `.vibe` file's directory, and it cannot read the `.vibe` file's bindings, so inputs reach the imported function as hatch arguments.
 
-Declare modules at a file's top level. In a `.vibe` file `module` never declares a namespace: write `namespace` for one. The emitted JavaScript holds each module the file imports inline, run once before the file's own code, and each module's declarations are a declaration file of their own, `main.vibe.platform.d.ts` beside `main.d.ts` (D303). A module the file imports only types from emits nothing. Move an adapter to its own `.ts` file when other files need it.
+Declare modules at a file's top level. In a `.vibe` file `module` never declares a namespace: write `namespace` for one. The emitted JavaScript holds each module the file imports inline, run once before the file's own code, and each module's declarations are a declaration file of their own, `main.vibe.links.d.ts` beside `main.d.ts` (D303). A module the file imports only types from emits nothing. Move an adapter to its own `.ts` file when other files need it.
 
 ## Suspend work
 

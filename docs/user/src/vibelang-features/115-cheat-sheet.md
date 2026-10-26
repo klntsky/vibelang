@@ -862,71 +862,84 @@ function firstFailure(outcome: Exit.Exit<User, NotFound>) {
 
 **Built-in exceptions (D101).** In an Effect function, `JSON.parse(text)` has a shipped contract: its `SyntaxError` is an expected failure that joins E and reaches `catch`. `decodeURI` and `decodeURIComponent` list `URIError`. Other built-ins' exceptions are defects. In a plain function `JSON.parse` is a JavaScript call, unless a `try` of that function whose `catch` handles the `SyntaxError` encloses it (D282); an exception that escapes into an Effect caller becomes a defect. Inside TypeScript's `Effect.gen`, by contrast, a plain `JSON.parse` throw is a defect.
 
-Use ordinary `catch` to map a built-in’s expected failure; reserve hatches for foreign or platform operations.
+Use ordinary `catch` to map a built-in’s expected failure; reserve hatches for foreign libraries and for platform operations that Effect has no service for. A platform API that Effect covers is a service call, not a hatch: EK4402 names the service, its import, and its layer.
 
 ```ts effect
 // fragment
-const id = Effect.sync(() => crypto.randomUUID())
+import { hostname } from "node:os"
+import { lstat } from "node:fs/promises"
+const host = Effect.sync(() => hostname())
 const parsed = Effect.try({ try: () => JSON.parse(text), catch: (error) => new BadJson({ error }) })
-const loaded = Effect.promise(() => crypto.subtle.digest("SHA-256", new Uint8Array()))
-const fetched = Effect.tryPromise((signal) => fetch(url, { signal }))
+const key = Effect.promise(() => crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, false, ["sign"]))
+const linked = Effect.tryPromise(async () => (await lstat(path)).isSymbolicLink())
 const tick = Effect.callback<number>((resume) => {
-  const timer = setTimeout(() => resume(Effect.succeed(7)), 10)
-  return Effect.sync(() => clearTimeout(timer))
+  const listener = (n: number) => resume(Effect.succeed(n))
+  ticker.once("tick", listener)
+  return Effect.sync(() => ticker.off("tick", listener))
 })
 const name = await Effect.runPromise(greetUser("1"))
 ```
 
 ```vibe es
-// run: provide Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]) { const value = hatches('{"ok":true}', "data:text/plain,hello"); Console.log(JSON.stringify({ ...value, id: /^[0-9a-f-]{36}$/.test(value.id) })) }
+// run: provide Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]) { const ticker = sync(() => { const ticker = new EventEmitter(); ticker.on("newListener", () => queueMicrotask(() => ticker.emit("tick", 7))); return ticker }); const value = hatches('{"ok":true}', ".", ticker); Console.log(JSON.stringify({ ...value, host: typeof value.host, key: value.key.type })) }
+import { hostname } from "node:os"
+import { lstat } from "node:fs/promises"
+import { EventEmitter } from "node:events"
+
 error BadJson { error: unknown }
 
-function hatches(text: string, url: string) {
-  const id = sync(crypto.randomUUID())
+function hatches(text: string, path: string, ticker: EventEmitter) {
+  const host = sync(hostname())
   const parsed = JSON.parse(text) catch (error) => throw new BadJson({ error })
-  const loaded = sync(async () => {
-    const digest = await crypto.subtle.digest("SHA-256", new Uint8Array())
-    return digest.byteLength
-  })
-  const fetched = try(async (url, signal) => await fetch(url, { signal }), url)
-  const tick = callback<number>((resume) => {
-    const timer = setTimeout(() => resume(7), 10)
-    return () => clearTimeout(timer)
-  })
+  const key = sync(async () => crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, false, ["sign"]))
+  const linked = try(async (path) => (await lstat(path)).isSymbolicLink(), path)
+  const tick = callback((ticker, resume: Resume<number, never>) => {
+    const listener = (n: number) => resume(n)
+    ticker.once("tick", listener)
+    return () => ticker.off("tick", listener)
+  }, ticker)
   const name = sync(async (greet) => runPromise(greet("1")), greetUser)
-  return { id, parsed, loaded, status: fetched.status, tick, name }
+  return { host, parsed, key, linked, tick, name }
 }
 // Output: Hello, Ada
-// Output: {"id":true,"parsed":{"ok":true},"loaded":32,"status":200,"tick":7,"name":"Ada"}
+// Output: {"host":"string","parsed":{"ok":true},"key":"secret","linked":false,"tick":7,"name":"Ada"}
 ```
 
 **TypeScript modules inline** (D283, [module declarations](https://github.com/tc39/proposal-module-declarations)). A module's body is TypeScript, compiled as a `.ts` file would be, so JavaScript's `throw` and `catch` and `async` keep their meaning there. It is self-contained: it imports what it needs, and the file reaches it only through imports.
 
 ```ts effect
 // fragment
-// platform.ts
-export function randomId(): string {
-  return crypto.randomUUID()
+// links.ts
+import { lstatSync } from "node:fs"
+export function isSymbolicLink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink()
+  } catch {
+    return false
+  }
 }
 // main.ts
-import { randomId } from "./platform.ts"
-const requestId = Effect.sync(() => randomId())
+import { isSymbolicLink } from "./links.ts"
+const linked = (path: string) => Effect.sync(() => isSymbolicLink(path))
 ```
 
 ```vibe es
-// run: Console.log(/^[-0-9a-f]{36}$/.test(requestId()))
-module platform {
-  export function randomId(): string {
-    return crypto.randomUUID()
+// run: Console.log(linked("."))
+module links {
+  import { lstatSync } from "node:fs"
+  export function isSymbolicLink(path: string): boolean {
+    try {
+      return lstatSync(path).isSymbolicLink()
+    } catch {
+      return false
+    }
   }
 }
 
-import { randomId } from platform
+import { isSymbolicLink } from links
 
-function requestId() {
-  return sync(() => randomId())
-}
-// Output: true
+const linked = (path: string) => sync((p) => isSymbolicLink(p), path)
+// Output: false
 ```
 
 ## Fibers

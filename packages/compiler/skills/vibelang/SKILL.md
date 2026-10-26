@@ -56,9 +56,9 @@ Declarations export like TypeScript declarations: `export data Shape { Circle { 
 | `Effect.forEach(xs, f, { concurrency: 8, discard: true })` | `for concurrent(8) (const x of xs) f(x)` |
 | `Effect.uninterruptibleMask`, `interruptible` | `uninterruptible { ... restore { ... } }`, `interruptible { ... }` |
 | a Stream from a generator | a producer: `function*` with `yield`; `for (const x of p())` pulls it |
-| `Effect.sync`, `Effect.promise` | `sync(() => f())`, `sync(crypto.randomUUID())`, `sync(async () => load())` |
-| `Effect.try`, `Effect.tryPromise` | `try((t) => JSON.parse(t), (e) => new Bad({ e }), text)`, `try(async (url, signal) => fetch(url, { signal }), url)` |
-| `Effect.callback` | `callback((resume) => { const t = setTimeout(() => resume(7), 10); return () => clearTimeout(t) })` |
+| `Effect.sync`, `Effect.promise` | `sync(() => f())`, `sync(hostname())`, `sync(async () => load())` |
+| `Effect.try`, `Effect.tryPromise` | `try((t) => JSON.parse(t), (e) => new Bad({ e }), text)`, `try(async (id, signal) => sdk.get(id, { signal }), id)` |
+| `Effect.callback` | `callback((resume) => { socket.once("open", resume); return () => socket.off("open", resume) })` |
 | `NodeRuntime.runMain(main)` | `export function main() { ... }`: runs when Node starts the module, not on import |
 | none (VibeLang's own) | `control Approval { approve(r: string): boolean!! }`, then `try { ... } handle Approval.approve(r) { resume(true) }` |
 | none (a TypeScript escape) | `module text { export function clean(s: string): string { ... } }`, `import { clean } from text` |
@@ -69,7 +69,7 @@ Declarations export like TypeScript declarations: `export data Shape { Circle { 
 ## Rules
 
 1. `await x` is an error (EK4601 to EK4603; a fiber is `join x`, EK4609; a Deferred `d.await()`, EK4610). `async` is EK1003. Inside a hatch or a `module` body both mean JavaScript, as in an `async function*` annotated `AsyncGenerator`.
-2. Platform APIs (`console.log`, `fetch`, timers, `Date.now()`, `process`) don't run in VibeLang code (EK4402, clock EK4403). Use `Console`, `Clock`, `sleep`, `FileSystem`, `Path`, `HttpClient`, `Config`, `Random`. Importing or passing one as a value is fine.
+2. Platform APIs (`node:*`, `console.log`, `fetch`, timers, `Date.now()`, `process`) don't run in VibeLang code (EK4402, clock EK4403); importing or passing one as a value is fine. Use Effect's services, never a wrapper of your own: the prelude's `Console`, `Clock`, `sleep`, `Config`, `Random`; `import { FileSystem } from "effect/FileSystem"`, likewise `Path`, `Crypto`, `Stdio` and `ChildProcessSpawner` (`effect/process/ChildProcessSpawner`), all provided by `provide NodeServices.layer { ... }` in `main`; `HttpClient` from `effect/http` with `FetchHttpClient.layer`. EK4402 names each API's replacement. A hatch is for what Effect lacks: `sync(hostname())`.
 3. In code a fiber runs, a plain function from a `.ts` file or a package runs only through a hatch (EK4401) unless trusted (module initialization and its plain callbacks are exempt): Effect's own packages, `"vibelang": { "trustedPackages": ["@scope/*"] }` at the top level of `tsconfig.json`, or `trusted(impl, [Errors])` (import it with `import { trusted } from "vibelang-runtime"`), in a `.ts` or `.vibe` file, for its expected failures.
 4. A hatch's first argument (`sync`, `try`, `callback`) is self-contained TypeScript. It may use its own parameters, globals, prelude names, imports, types and the file's `error` declarations; any other value of the `.vibe` file arrives as an input after it, filling its first parameters (EK4405). `try`'s mapper stays second. `runPromise` and `runFork` lead back in from a hatch or a `.ts` file. No catch expression in a hatch (EK2114).
 5. Outside a hatch or a `module` body, `throw` is always a typed failure. Constructors, accessors and static blocks run as plain JavaScript, as a module's top level does: a throw that can escape one is EK2003, and EK1001 at the top level. A function with a plain return annotation never fails and needs no service: a throw that can escape it, in a statement, a throw expression, a `match` arm or a `do` block, is EK2003, as is running an Effect; the quick fix writes the contract (`number!BadInput!`), or move the throw into a hatch. It may throw what its own `catch` handles. A plain callback that can fail is EK4301. Its calls of TypeScript code are JavaScript calls: their exceptions pass through its `catch` (EK2004 warns) and become defects at an effectful caller; a trusted call's listed failure is typed only inside the function's own `try`.
@@ -97,6 +97,7 @@ Declarations export like TypeScript declarations: `export data Shape { Circle { 
 - Resources: `using` in the block that owns them: `resource-management/029-introduction`. For a Disposable with an explicit release, acquire `{ value: disposable }` and release `holder.value`; binding the Disposable itself also calls `Symbol.dispose`.
 - Data: `schema` declarations; `Schema.Struct` for checks, transformations and exact optional keys: `schema/087-basic-usage`. A tagged union is a `data` declaration, matched by variant: `data-types/073-data`.
 - Matching: `vibelang-features/116-match-and-is`. Handlers: `vibelang-features/111-control-operations-and-handlers`. Producers: `vibelang-features/112-producers`.
+- Platform services and each Node.js or web call's replacement: `platform/105-introduction`.
 - TypeScript at the edges: hatches, trust, factories: `vibelang-features/114-vibelang-for-effect-users`.
 - Every form beside its Effect code: `vibelang-features/115-cheat-sheet`. The rules: `spec/`.
 

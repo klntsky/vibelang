@@ -97,7 +97,7 @@ Node runs the JavaScript output; importing the `.vibe` source directly with Node
 | `Effect.raceFirst(a, b)` | `await.race [a(), b()]`, like `Promise.race`: the first to finish wins |
 | `Effect.raceAll([a, b])` | `await.any [a(), b()]`, like `Promise.any`: the first success wins |
 | `Effect.forEach(items, f, { concurrency: 8, discard: true })` | `for concurrent(8) (const item of items) f(item)` |
-| `Effect.sync(() => crypto.randomUUID())` | `sync(crypto.randomUUID())` |
+| `Effect.sync(() => hostname())` | `sync(hostname())` |
 | `Effect.try({ try: () => parse(text), catch: (e) => new BadInput({ e }) })` | `try((text) => parse(text), (e) => new BadInput({ e }), text)` |
 | `Effect.tryPromise((signal) => fetchJson(url, signal))` | `try(async (url, signal) => fetchJson(url, signal), url)` |
 | `Effect.promise(() => load())` | `sync(async () => load())` |
@@ -184,9 +184,28 @@ function reportTime() {
 // Output: 123
 ```
 
-`console.log`, `fetch`, timers, and `Date.now()` are errors in `.vibe`; use `Console`, `Clock`, `Effect.sleep`, and Effect's HTTP modules. You can import a Node function or pass it as a value; running it directly is a platform API error. [Building an HTTP API](113-building-an-http-api.md) passes `createServer` to a server layer.
+`console.log`, `fetch`, timers, `Date.now()`, and `node:*` calls are errors in `.vibe` (EK4402, EK4403). Effect has a service for each, and the error names it, its import, and the layer that provides it. Use the prelude's `Console`, `Clock`, `sleep`, and `Config`. Import a platform service by name and provide its platform layer once, in `main`:
 
-Inside an Effect function, a plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a `.vibe` value, such as `text`, only as an input: an argument after the function, bound to its first parameter. To trust workspace or other TypeScript packages, set `"vibelang": { "trustedPackages": ["@acme/*"] }` at the top level of `tsconfig.json` (D261, D275). Exceptions from a matching package's synchronous plain calls are defects, its Effects run, and EK4401 does not fire. `trusted(impl, [Errors])` declares a function's expected failures. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
+```vibe
+// notes.vibe
+import { NodeServices } from "@effect/platform-node"
+import { FileSystem } from "effect/FileSystem"
+import { Path } from "effect/Path"
+
+export function main() {
+  provide NodeServices.layer {
+    using directory = FileSystem.makeTempDirectoryScoped()
+    const file = Path.join(directory, "note.txt")
+    FileSystem.writeFileString(file, "saved")
+    Console.log(FileSystem.readFileString(file))
+  }
+}
+// Output: saved
+```
+
+`NodeServices.layer` provides `FileSystem`, `Path`, `Crypto`, `Stdio`, `Terminal`, and `ChildProcessSpawner`; on Bun, `BunServices.layer` does. `HttpClient` comes from `effect/http`, provided by `FetchHttpClient.layer`. [The platform introduction](../platform/105-introduction.md) lists the service for each common Node.js and web call. Don't wrap a platform API that Effect covers in a hatch, a `module`, or a `.ts` adapter. You can import a Node function or pass it as a value; running it directly is a platform API error. [Building an HTTP API](113-building-an-http-api.md) passes `createServer` to a server layer.
+
+Inside an Effect function, a plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)`, or `sync(hostname())` for a platform API that Effect lacks, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a `.vibe` value, such as `text`, only as an input: an argument after the function, bound to its first parameter. To trust workspace or other TypeScript packages, set `"vibelang": { "trustedPackages": ["@acme/*"] }` at the top level of `tsconfig.json` (D261, D275). Exceptions from a matching package's synchronous plain calls are defects, its Effects run, and EK4401 does not fire. `trusted(impl, [Errors])` declares a function's expected failures. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
 
 ## Trace and debug calls
 

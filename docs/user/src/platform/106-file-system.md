@@ -1,32 +1,33 @@
 # FileSystem
 
-`FileSystem` exposes Effect's portable file operations. Request the service inside a function, call its operations, and provide a runtime implementation or test layer around the application.
+`FileSystem` exposes Effect's portable file operations, in place of `node:fs`. Import the service, call its operations, and provide a runtime implementation or test layer around the application.
 
 ## Requesting the file-system service
 
 ```vibe
-// run: provide FileSystem.layerNoop({ readFileString: () => '{"theme":"dark"}' }) { Console.log(readSettings()) }
+// run: provide layerNoop({ readFileString: () => '{"theme":"dark"}' }) { Console.log(readSettings()) }
+import { FileSystem, layerNoop } from "effect/FileSystem"
+
 function readSettings() {
-  const fs = Effect.service(FileSystem.FileSystem)
-  return fs.readFileString("./settings.json")
+  return FileSystem.readFileString("./settings.json")
 }
-// string!PlatformError.PlatformError!FileSystem.FileSystem
 // Output: {"theme":"dark"}
 ```
 
-`FileSystem` is the imported module; `FileSystem.FileSystem` is its service key. `Effect.service` retrieves the implementation and adds the service to R. `readFileString` returns text or fails with an expected `PlatformError`.
+`import { FileSystem } from "effect/FileSystem"` imports the service key, and `FileSystem.readFileString(path)` calls its operation, adding `FileSystem` to R. `readFileString` returns text or fails with an expected `PlatformError`. Without the import, `FileSystem` is the prelude's module, whose service key is `FileSystem.FileSystem`; `Effect.service(FileSystem.FileSystem)` returns the implementation.
 
 ## Performing file operations
 
 ```vibe
 // run: provide NodeFileSystem.layer { Console.log(JSON.stringify(saveSummary("ready"))) }
 import { NodeFileSystem } from "@effect/platform-node"
+import { FileSystem } from "effect/FileSystem"
+
 function saveSummary(text: string) {
-  const fs = Effect.service(FileSystem.FileSystem)
-  fs.makeDirectory("./output", { recursive: true })
-  fs.writeFileString("./output/summary.txt", text)
-  const content = fs.readFileString("./output/summary.txt", "utf8")
-  return { content, entries: fs.readDirectory("./output") }
+  FileSystem.makeDirectory("./output", { recursive: true })
+  FileSystem.writeFileString("./output/summary.txt", text)
+  const content = FileSystem.readFileString("./output/summary.txt", "utf8")
+  return { content, entries: FileSystem.readDirectory("./output") }
 }
 // Output: {"content":"ready","entries":["summary.txt"]}
 ```
@@ -50,10 +51,12 @@ Calls run in order: the write completes before the read starts. Expected I/O fai
 | `stream`, `sink`, `watch` | Stream bytes, write through a sink, or observe changes |
 
 ```vibe
-// run: provide NodeFileSystem.layer { const fs = Effect.service(FileSystem.FileSystem); using path = fs.makeTempFileScoped(); fs.writeFileString(path, "hello"); Console.log(String(fileSize(path))) }
+// run: provide NodeFileSystem.layer { using path = FileSystem.makeTempFileScoped(); FileSystem.writeFileString(path, "hello"); Console.log(String(fileSize(path))) }
+import { NodeFileSystem } from "@effect/platform-node"
+import { FileSystem } from "effect/FileSystem"
+
 function fileSize(path: string) {
-  const fs = Effect.service(FileSystem.FileSystem)
-  using file = fs.open(path)
+  using file = FileSystem.open(path)
   return file.stat().size
 }
 // Output: 5
@@ -65,31 +68,33 @@ function fileSize(path: string) {
 
 ```vibe
 // main.vibe
-import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
-function main() {
-  const fs = Effect.service(FileSystem.FileSystem)
-  using path = fs.makeTempFileScoped()
-  fs.writeFileString(path, "Project notes")
-  Console.log(fs.readFileString(path))
-}
+import { NodeFileSystem } from "@effect/platform-node"
+import { FileSystem } from "effect/FileSystem"
 
-NodeRuntime.runMain(() => Effect.provide(() => main(), NodeFileSystem.layer))
+export function main() {
+  provide NodeFileSystem.layer {
+    using path = FileSystem.makeTempFileScoped()
+    FileSystem.writeFileString(path, "Project notes")
+    Console.log(FileSystem.readFileString(path))
+  }
+}
 // Output: Project notes
 ```
 
-`NodeFileSystem.layer` supplies only the file system; `NodeServices.layer` supplies the whole Node platform bundle; Bun applications use the matching Bun adapter. Application functions need only `FileSystem`, not an adapter package.
+`NodeFileSystem.layer` supplies only the file system; `NodeServices.layer` supplies the whole Node platform bundle, and `BunServices.layer` from `@effect/platform-bun` Bun's. Application functions need only `FileSystem`, not an adapter package.
 
 ## Replacing behavior in tests
 
 ```vibe
 // run: provide FilesTest { Console.log(readFixture()) }
+import { FileSystem, layerNoop } from "effect/FileSystem"
+
 function readFixture() {
-  const fs = Effect.service(FileSystem.FileSystem)
-  if (!fs.exists("/fixtures/title.txt")) return "Untitled"
-  return fs.readFileString("/fixtures/title.txt")
+  if (!FileSystem.exists("/fixtures/title.txt")) return "Untitled"
+  return FileSystem.readFileString("/fixtures/title.txt")
 }
 
-const FilesTest = FileSystem.layerNoop({
+const FilesTest = layerNoop({
   exists: (path) => path === "/fixtures/title.txt",
   readFileString: () => "Release notes"
 })
