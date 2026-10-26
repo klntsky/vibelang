@@ -40,12 +40,15 @@ import (
 // overlaps one taken waits for the next round, which rechecks the edited
 // program. A round's fixes are kept only when the edited program reports no
 // error the original did not, compared by file, code, and message; when the
-// round as a whole would add one, each file's fixes are tried alone, then
-// one at a time, and each fix that adds an error is refused, named with the
-// first error it adds, and not tried again. After the last round, an import
-// of effect or one of its modules that the fixes left unused is removed.
-// Nothing is written until every round is done, and a second run finds
-// nothing to fix. --fix cannot be combined with --build or --watch.
+// round as a whole would add one, the files that report the added errors are
+// tried apart from the rest, and a set of files that adds one is halved until
+// the files that add it are found, then each such file's fixes are; each fix
+// that adds an error is refused, named with the first error it adds, and not
+// tried again. A round so costs a few checks of the program, not one per
+// file. After the last round, an import of effect or one of its modules that
+// the fixes left unused is removed. Nothing is written until every round is
+// done, nothing at all when the command is interrupted, and a second run
+// finds nothing to fix. --fix cannot be combined with --build or --watch.
 
 // FixFlag is the command line flag that applies the quick fixes.
 const FixFlag = "--fix"
@@ -86,6 +89,10 @@ func Fix(ctx context.Context, sys tsc.System, args []string) int {
 		return 0 // the compilation reports them
 	}
 	result := FixProject(ctx, sys.FS(), sys.DefaultLibraryPath(), config)
+	if ctx.Err() != nil {
+		fmt.Fprintln(sys.ErrorWriter(), "vibelang --fix: interrupted; no file written.")
+		return int(tsc.ExitStatusInvalidProject_OutputsSkipped)
+	}
 	for _, name := range result.Order {
 		file := result.Files[name]
 		if err := os.WriteFile(name.AsString(), []byte(file.Text), 0o644); err != nil {
@@ -182,16 +189,27 @@ func plural(n int, one, many string) string {
 const fixRounds = 16
 
 // FixProject applies the safe quick fixes to config's .vibe files and
-// returns the files they change, without writing them.
+// returns the files they change, without writing them. When ctx is done it
+// stops after the program it is checking, and returns what it had.
 func FixProject(ctx context.Context, fs vfs.FS, libraryPath tspath.RootedDirectoryPath, config *tsoptions.ParsedCommandLine) *FixResult {
 	result := &FixResult{Files: map[tspath.RootedFilePath]*FixedFile{}}
+	// A checker that sees its context canceled panics when it is asked
+	// again, so the checks run to their end and ctx is tested between them.
+	done := ctx
+	ctx = context.WithoutCancel(ctx)
 	texts := map[tspath.RootedFilePath]string{}
 	build := func(overlay map[tspath.RootedFilePath]string) *compiler.Program {
 		return fixProgram(fs, libraryPath, config, overlay)
 	}
 	program := build(texts)
-	g := &fixGate{ctx: ctx, build: build, baseline: errorCounts(ctx, program), refused: map[string]bool{}}
+	if done.Err() != nil {
+		return result
+	}
+	g := &fixGate{ctx: ctx, done: done, build: build, baseline: errorCounts(ctx, program), refused: map[string]bool{}}
 	for range fixRounds {
+		if done.Err() != nil {
+			return result
+		}
 		var proposals []proposal
 		for _, file := range fixableFiles(program) {
 			if p := fileFixes(ctx, program, file, g.refused); len(p.fixes) > 0 {
@@ -205,6 +223,9 @@ func FixProject(ctx context.Context, fs vfs.FS, libraryPath tspath.RootedDirecto
 			g.refused[key] = true
 			result.Refused = append(result.Refused, refusal)
 		})
+		if done.Err() != nil {
+			return result
+		}
 		if len(accepted) == 0 {
 			continue // every fix refused; the next round tries the rest
 		}
@@ -232,7 +253,7 @@ func FixProject(ctx context.Context, fs vfs.FS, libraryPath tspath.RootedDirecto
 			cleaned[name] = text
 		}
 	}
-	if len(cleaned) > 0 {
+	if len(cleaned) > 0 && done.Err() == nil {
 		if _, bad := newError(ctx, build(maps(texts, cleaned)), g.baseline); !bad {
 			for name, text := range cleaned {
 				result.Files[name].Text = text
@@ -313,23 +334,30 @@ func errorKey(d *ast.Diagnostic) string {
 // newError returns an error program reports that baseline does not hold, as
 // the line a refusal names, and true; or false.
 func newError(ctx context.Context, program *compiler.Program, baseline map[string]int) (string, bool) {
-	counts := errorCounts(ctx, program)
+	added := addedErrors(ctx, program, baseline)
+	if len(added) == 0 {
+		return "", false
+	}
+	return added[0], true
+}
+
+// addedErrors returns the errors program reports that baseline does not
+// hold, by errorKey, sorted.
+func addedErrors(ctx context.Context, program *compiler.Program, baseline map[string]int) []string {
 	var added []string
-	for key, n := range counts {
+	for key, n := range errorCounts(ctx, program) {
 		if n > baseline[key] {
 			added = append(added, key)
 		}
 	}
-	if len(added) == 0 {
-		return "", false
-	}
 	slices.Sort(added)
-	return added[0], true
+	return added
 }
 
 // fixGate keeps the fixes whose edited program adds no error to baseline.
 type fixGate struct {
-	ctx      context.Context
+	ctx      context.Context // never canceled: see FixProject
+	done     context.Context // canceled when the command is interrupted
 	build    func(map[tspath.RootedFilePath]string) *compiler.Program
 	baseline map[string]int
 	refused  map[string]bool // fixes refused, by fixKey
@@ -343,40 +371,94 @@ func (g *fixGate) passes(texts, overlay map[tspath.RootedFilePath]string) (strin
 }
 
 // accept returns proposals cut down to the fixes that, together, add no
-// error. It tries the round as a whole, then each file's fixes together,
-// then each of a failing file's fixes alone, and calls refuse for each fix
-// that adds an error.
+// error, and calls refuse for each fix that adds one. It tries the round as
+// a whole; when that adds an error, it tries the files that report none of
+// the added errors, then the files that do, which most likely hold the fixes
+// that add them. A set of files that adds an error is halved until each half
+// passes or is one file, keeping the halves that pass, and each failing
+// file's fixes are halved the same way, so that finding k bad files among n
+// costs about 2k·log2(n) checks of the program, not n.
 func (g *fixGate) accept(texts map[tspath.RootedFilePath]string, proposals []proposal, refuse func(FixRefusal, string)) []proposal {
 	all := map[tspath.RootedFilePath]string{}
 	for _, p := range proposals {
 		all[p.file.FileName()] = p.text()
 	}
-	if _, ok := g.passes(texts, all); ok {
+	added := addedErrors(g.ctx, g.build(maps(texts, all)), g.baseline)
+	if len(added) == 0 {
 		return proposals
 	}
-	var accepted []proposal
-	kept := map[tspath.RootedFilePath]string{}
+	var others, suspects []proposal
 	for _, p := range proposals {
-		name := p.file.FileName()
-		if _, ok := g.passes(texts, maps(kept, map[tspath.RootedFilePath]string{name: p.text()})); ok {
-			kept[name] = p.text()
-			accepted = append(accepted, p)
-			continue
+		prefix := p.file.FileName().AsString() + ": " // errorKey's
+		if slices.ContainsFunc(added, func(key string) bool { return strings.HasPrefix(key, prefix) }) {
+			suspects = append(suspects, p)
+		} else {
+			others = append(others, p)
 		}
-		var fixes []fileFix
-		for _, f := range p.fixes {
-			trial := proposal{file: p.file, fixes: append(slices.Clone(fixes), f)}
-			if error, ok := g.passes(texts, maps(kept, map[tspath.RootedFilePath]string{name: trial.text()})); !ok {
-				line, _ := scannerLineOf(p.file, firstEdit(f.edits))
-				refuse(FixRefusal{File: name, Line: line + 1, Code: f.code, Error: error}, f.key)
-				continue
+	}
+	var accepted, failing []proposal
+	kept := map[tspath.RootedFilePath]string{}
+	keep := func(p proposal) {
+		kept[p.file.FileName()] = p.text()
+		accepted = append(accepted, p)
+	}
+	var files func([]proposal, bool)
+	files = func(ps []proposal, known bool) { // known: ps together add an error
+		if g.done.Err() != nil {
+			return
+		}
+		if !known {
+			trial := maps(kept, nil)
+			for _, p := range ps {
+				trial[p.file.FileName()] = p.text()
 			}
-			fixes = append(fixes, f)
+			if _, ok := g.passes(texts, trial); ok {
+				for _, p := range ps {
+					keep(p)
+				}
+				return
+			}
 		}
-		if len(fixes) > 0 {
-			trimmed := proposal{file: p.file, fixes: fixes}
-			kept[name] = trimmed.text()
-			accepted = append(accepted, trimmed)
+		if len(ps) == 1 {
+			failing = append(failing, ps[0])
+			return
+		}
+		files(ps[:len(ps)/2], false)
+		files(ps[len(ps)/2:], false)
+	}
+	if len(others) == 0 || len(suspects) == 0 {
+		files(proposals, true)
+	} else {
+		files(others, false)
+		files(suspects, false)
+	}
+	for _, p := range failing {
+		name := p.file.FileName()
+		var taken []fileFix
+		var fixes func([]fileFix, bool)
+		fixes = func(fs []fileFix, known bool) { // known: taken and fs together add an error
+			if g.done.Err() != nil {
+				return
+			}
+			if !known || len(fs) == 1 {
+				trial := proposal{file: p.file, fixes: append(slices.Clone(taken), fs...)}
+				error, ok := g.passes(texts, maps(kept, map[tspath.RootedFilePath]string{name: trial.text()}))
+				if ok {
+					taken = append(taken, fs...)
+					return
+				}
+				if len(fs) == 1 {
+					line, _ := scannerLineOf(p.file, firstEdit(fs[0].edits))
+					refuse(FixRefusal{File: name, Line: line + 1, Code: fs[0].code, Error: error}, fs[0].key)
+					return
+				}
+			}
+			fixes(fs[:len(fs)/2], false)
+			fixes(fs[len(fs)/2:], false)
+		}
+		fixes(p.fixes, true)
+		if len(taken) > 0 {
+			keep(proposal{file: p.file, fixes: taken})
 		}
 	}
 	return accepted
