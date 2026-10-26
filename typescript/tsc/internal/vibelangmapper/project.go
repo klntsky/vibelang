@@ -245,6 +245,9 @@ func (p *projector) visit(node *ast.Node, e env) {
 	case isSchemaDeclaration(node) || isSchemaInterface(node) || isSchemaAliasType(node):
 		p.schemaDeclaration(node)
 		return
+	case parser.IsDataDeclaration(node) || parser.IsDataConstructors(node) || isDataDefinition(node):
+		p.dataDeclaration(node)
+		return
 	case isErrorDeclaration(node):
 		p.errorDeclaration(node)
 		return

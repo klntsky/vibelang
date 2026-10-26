@@ -749,6 +749,23 @@ func TestUnprojectedForm(t *testing.T) {
 	assertValidMap(t, projection, source)
 }
 
+// TestDataDeclarationIsUnprojected checks that the mapper, which does not
+// lower data declarations (D307), says so once per declaration, at the
+// declaration, and maps the rest of the file.
+func TestDataDeclarationIsUnprojected(t *testing.T) {
+	t.Parallel()
+	source := "export data Delivery {\n  Waiting\n  Sent { tracking: string }\n}\ndata Box<A> { Full { value: A } }\nconst label = \"x\"\n"
+	projection := Project(source, testContext)
+	assert.Equal(t, len(projection.Diagnostics), 2, "%v", projection.Diagnostics)
+	for i, want := range []string{"export data Delivery {", "data Box<A> {"} {
+		d := projection.Diagnostics[i]
+		assert.Equal(t, d.Code, int32(CodeUnprojectedForm))
+		assert.Assert(t, strings.HasPrefix(source[d.Start:d.Start+d.Length], want), "%q", source[d.Start:d.Start+d.Length])
+		assert.Assert(t, strings.Contains(d.Message, "data declaration"), d.Message)
+	}
+	assertValidMap(t, projection, source)
+}
+
 // TestAwaitOperations checks D196's four helper calls and their fiber
 // boundaries: calls and do blocks become programs, while a held Fiber
 // remains a value. Both all operations also preserve keyed operands.
