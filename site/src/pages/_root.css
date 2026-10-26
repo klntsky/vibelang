@@ -5,7 +5,16 @@
   --vocs-text-color-heading: #213547;
   --vocs-background-color-primary: #ffffff;
   --vocs-background-color-surface: #ffffff;
-  --vocs-background-color-code-block: #f6f6f7;
+  --vocs-background-color-code-block: #ffffff;
+  /* Opaque accent pairs: AA text contrast in every interaction state. */
+  --vibe-action-background: #4f46e5;
+  --vibe-action-hover: #4338ca;
+  --vibe-action-active: #3730a3;
+  --vibe-action-text: #ffffff;
+  --vibe-focus: #4f46e5;
+  --vibe-feedback: #4338ca;
+  --vibe-feedback-error: #b91c1c;
+  --vibe-heading-gradient: linear-gradient(120deg, #087eaa 8%, #555ac6 48%, #9023c6 88%);
 }
 
 :root[style*='color-scheme:dark'],
@@ -14,6 +23,14 @@
   --vocs-background-color-primary: #1b1b1f;
   --vocs-background-color-surface: #1b1b1f;
   --vocs-background-color-code-block: #161618;
+  --vibe-action-background: #a5a9ff;
+  --vibe-action-hover: #bdc0ff;
+  --vibe-action-active: #9296ed;
+  --vibe-action-text: #1b1b1f;
+  --vibe-focus: #a5a9ff;
+  --vibe-feedback: #a5a9ff;
+  --vibe-feedback-error: #ff9b9b;
+  --vibe-heading-gradient: linear-gradient(120deg, #41d1ff 8%, #747bff 48%, #bd34fe 88%);
 }
 
 :root:has(.vibe-home) {
@@ -37,7 +54,7 @@
 .vibe-gradient {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-image: linear-gradient(120deg, #41d1ff 8%, #747bff 48%, #bd34fe 88%);
+  background-image: var(--vibe-heading-gradient);
   background-clip: text;
   color: transparent;
 }
@@ -97,7 +114,7 @@
 }
 
 .vibe-home__eyebrow {
-  color: var(--vocs-color-accent);
+  color: var(--vibe-feedback);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -187,7 +204,7 @@
 .vibe-stat span {
   background: var(--vocs-background-color-surfaceMuted);
   border-radius: 5px;
-  color: var(--vocs-text-color-muted);
+  color: var(--vocs-text-color-primary);
   padding: 0.45rem 0.55rem;
 }
 
@@ -305,10 +322,10 @@
 
 .vibelang-copy-prompt {
   align-items: center;
-  background: var(--vocs-color-accent);
+  background: var(--vibe-action-background);
   border: 0;
   border-radius: 8px;
-  color: var(--vocs-color-accentInvert);
+  color: var(--vibe-action-text);
   cursor: pointer;
   display: inline-flex;
   font: inherit;
@@ -318,23 +335,23 @@
   justify-content: center;
   min-height: 42px;
   padding: 0.625rem 1.25rem;
-  transition: box-shadow 150ms ease, opacity 150ms ease, transform 150ms ease;
+  transition: background-color 150ms ease, transform 150ms ease;
   white-space: nowrap;
 }
 
 .vibelang-copy-prompt:hover {
-  opacity: 0.9;
+  background: var(--vibe-action-hover);
   transform: translateY(-1px);
 }
 
 .vibelang-copy-prompt:active {
+  background: var(--vibe-action-active);
   transform: translateY(0);
 }
 
 .vibelang-copy-prompt:focus-visible {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--vocs-color-accent) 30%, transparent);
-  outline: 2px solid var(--vocs-background-color-primary);
-  outline-offset: 1px;
+  outline: 3px solid var(--vibe-focus);
+  outline-offset: 3px;
 }
 
 .vibelang-copy-prompt__icon {
@@ -354,6 +371,7 @@
 }
 
 .vibelang-copy-prompt__preview {
+  background: var(--vocs-background-color-primary);
   color: var(--vocs-text-color-primary);
   font-family: var(--vocs-font-family-mono);
   font-size: 0.78rem;
@@ -386,7 +404,7 @@
 }
 
 .vibelang-copy-prompt__feedback {
-  color: var(--vocs-color-accent);
+  color: var(--vibe-feedback);
   gap: 0.35rem;
   left: 0;
   opacity: 0;
@@ -408,7 +426,7 @@
 }
 
 .vibelang-copy-prompt__feedback--error {
-  color: var(--vocs-color-destructive);
+  color: var(--vibe-feedback-error);
 }
 
 @media (max-width: 560px) {

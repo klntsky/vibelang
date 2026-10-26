@@ -39,6 +39,20 @@ npm run preview
 
 Vocs checks internal links during the production build, and a dead link fails it. docs/tools/check-site.ts then validates built page and heading targets and self-contained images. Generated output is written to `dist/`. The prebuild hook runs the kernel law suite and syncs both doc sets. The postbuild hook writes Markdown copies and llms.txt to dist/public using docs/tools/markdown.ts, normalizes Vocs build metadata to repo-relative paths, and runs the unchanged publication leak scan over dist/. Synthetic playground paths and IPs use public examples. Run npm run test:llms after building.
 
+### Browser contrast check
+
+After installing dependencies, install Chromium once and test the built site:
+
+```sh
+npx playwright install chromium
+npm run build
+npm run test:contrast
+```
+
+The check serves `dist/public` on a temporary loopback port and routes Vocs' public base URL to that build. It loads the home page and Welcome in light and dark themes, runs axe's color-contrast rule, and measures the copy button's text, icon, keyboard focus, clipboard success/error feedback, and interaction states. It also measures the site's hero text and gradient. `docs/tools` tests build the site and run this check during release validation; Chromium is required, and a missing browser fails with Playwright's install instructions.
+
+Set `CONTRAST_ARTIFACTS` to save 1366px home screenshots and `contrast.json` with all measured colors, failures and axe findings. `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` selects an existing Chromium. Two narrowly matched upstream Vocs 2.8.5 failures remain visible in the output: the light banner and Shiki's orange tokens. Their selectors, exact color pairs and minimum current ratios are checked in `scripts/contrast.mjs`; any other violation fails.
+
 ### Temporary Vocs search accessibility patch
 
 [`#1`](https://github.com/smithersai/vibelang/issues/1) tracks the search combobox's missing active-result relationship. npm has no native `patchedDependencies` mechanism here. The checked-in patch targets Vocs 2.8.5's `Search.tsx`; npm's `postinstall`, `prebuild` and `predev` hooks apply it with exact version/source checks and zero patch fuzz. The script recompiles only that module because Vocs loads its shipped `dist` JavaScript. It preserves the upstream [MIT license](https://github.com/wevm/vocs/blob/main/LICENSE), package and normal Vocs commands. Node, the existing TypeScript dependency, and the standard `patch` utility are required.
