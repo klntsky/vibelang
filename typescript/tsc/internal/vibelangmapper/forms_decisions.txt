@@ -1414,6 +1414,8 @@ typescript/vibelang/cases/match-patterns/main.vibe:138:26 lambda plain fallback
 typescript/vibelang/cases/match-patterns/main.vibe:158:21 lambda plain fallback
 typescript/vibelang/cases/match-patterns/main.vibe:41:31 byname program table
 typescript/vibelang/cases/match-patterns/main.vibe:89:3 lambda plain fallback
+typescript/vibelang/cases/match-subject-shadow/main.vibe:12:22 lambda dual fallback
+typescript/vibelang/cases/match-subject-shadow/main.vibe:29:25 lambda plain table
 typescript/vibelang/cases/methods-optional-chain.fail/main.vibe:5:21 lambda plain fallback
 typescript/vibelang/cases/module-declaration-cjs/main.vibe:58:14 lambda plain table
 typescript/vibelang/cases/module-declaration-cjs/main.vibe:58:51 lambda plain table

@@ -636,6 +636,12 @@ func (p *Parser) subjectPath(subject *ast.Node, anchor core.TextRange, prefix st
 			return p.cloneIdentExpression(inner)
 		}, nil
 	}
+	return p.cachedSubjectPath(subject, anchor, prefix)
+}
+
+// cachedSubjectPath reads a match subject outside all arm scopes, including
+// identifiers that a pattern may shadow and property accesses with getters.
+func (p *Parser) cachedSubjectPath(subject *ast.Node, anchor core.TextRange, prefix string) (matchPath, *ast.Node) {
 	p.vibelangMatchTemps++
 	name := prefix + strconv.Itoa(p.vibelangMatchTemps)
 	// The declaration starts at the anchor, so the references written at the
@@ -986,12 +992,56 @@ func (p *Parser) isExpression(info *isInfo, pos int) *ast.Node {
 	return p.finishNode(call, pos)
 }
 
-// matchStatements writes the arms of a match: the subject's const, if it
+// matchSubjectIsShadowed reports a pattern binding with the subject's root
+// name, including a root used through a property or element access.
+func matchSubjectIsShadowed(info *matchInfo) bool {
+	root := ast.SkipParentheses(info.subject)
+	for root.Kind == ast.KindPropertyAccessExpression || root.Kind == ast.KindElementAccessExpression {
+		root = ast.SkipParentheses(root.Expression())
+	}
+	if root.Kind != ast.KindIdentifier {
+		return false
+	}
+	var binds func(*pattern) bool
+	binds = func(pat *pattern) bool {
+		if pat == nil {
+			return false
+		}
+		if pat.kind == patternBinding && pat.name != nil && pat.name.Text() == root.Text() {
+			return true
+		}
+		for _, item := range pat.items {
+			if binds(item) {
+				return true
+			}
+		}
+		for _, clause := range pat.clauses {
+			if binds(clause.pattern) {
+				return true
+			}
+		}
+		return binds(pat.rest)
+	}
+	for _, arm := range info.arms {
+		if binds(arm.pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// matchStatements writes the arms of a match: the subject's const when it
 // needs one, then a block per arm whose tests guard success(value), then
 // the default arm or the fallthrough for an unmatched subject.
 func (p *Parser) matchStatements(info *matchInfo, success func(value *ast.Node, at core.TextRange) []*ast.Node, unmatched func(subject *ast.Node, at core.TextRange) *ast.Node) []*ast.Node {
-	var out []*ast.Node
 	path, decl := p.subjectPath(info.subject, info.anchor, "$match")
+	// Keep direct references for the checker's narrowing in existing arms.
+	// A binding which shadows the subject would put those references in its
+	// temporal dead zone, so hold that subject outside every arm instead.
+	if decl == nil && matchSubjectIsShadowed(info) {
+		path, decl = p.cachedSubjectPath(info.subject, info.anchor, "$match")
+	}
+	var out []*ast.Node
 	if decl != nil {
 		out = append(out, decl)
 	}
