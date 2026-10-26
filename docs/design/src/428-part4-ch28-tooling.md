@@ -239,7 +239,7 @@ coverage. Repairs are suggestions, not shipped code actions:
 | EK1010 | An unparenthesized throw expression is a binary operator's left operand (except comma), a conditional's condition, or the operand of `as` or `satisfies` (D186) | Write `throw (…)` to throw the whole expression | 3 |
 | EK1011 | A function compiles to an Effect, but the program cannot find effect's Effect type, because `effect` is not installed where the program resolves it (D4) | Install `effect` | 15 |
 | EK1012 | Warning: a call that runs and never succeeds is stored in a variable, a field, an element or an assignment, which then never holds a value (D147) | Store a function, `() => call()`, or write the declared Effect type (D262, D265, D269); or write the call as a statement | 13 |
-| EK1013 | A comma after a field of an `error`, `schema error`, `service`, or `control` declaration, whose body is a class body (D278, D128) | Write `;` or start a new line (quick fix) | 3, 4, 9 |
+| EK1013 | A comma after a field of an `error`, `schema error`, `service`, or `control` declaration, whose body is a class body (D278, D128), or after a variant or a variant's field of a `data` declaration, which separates them the same way (D307) | Write `;` or start a new line (quick fix) | 3, 4, 9, 11 |
 | EK2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | EK2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
 | EK2003 | An Effect return annotation with missing channel slots, a plain annotation on a non-method function whose body runs an Effect (D67, D74), or a plain annotation on a function, or a JavaScript iterator annotation on a generator, whose throw can escape, or a throw that can escape a constructor, an accessor or a class static block, which run as plain JavaScript (D282, D296) | For `Effect<T>`: `T!!` or no annotation; for a bare `T`: `T!!` or `T!Errors`; for an escaping throw, a quick fix writes `T!E!`, or a hatch keeps JavaScript's throw | 14 |
@@ -267,6 +267,12 @@ coverage. Repairs are suggestions, not shipped code actions:
 | EK2119 | Warning: a handle statement's clause returns a value computed from a `resume`'s result that the type of that result does not include, so a `resume` still waiting can receive a value outside its type (D97) | Write the function's success type to include it, `Effect<A, infer E, infer R>` | 9 |
 | EK2120 | Warning: a `service class` or `control class` declaration, the old spelling (D223) | Write `service` or `control` without `class`; the quick fix removes `class` | 4 |
 | EK2121 | Warning: a `layer` declaration, the old spelling (D221) | Write `Layer.effect(Service) { … }` or `Layer.succeed(Service, { … })`; the quick fix rewrites it | 4 |
+| EK2122 | A `data` declaration without variants (D307) | Write at least one variant | 11 |
+| EK2123 | A `data` declaration that declares a variant twice (D307) | Rename one, or remove the second | 11 |
+| EK2124 | A name `Data.taggedEnum` reserves: a variant named `$is` or `$match`, a variant's field named `_tag`, or another declaration in scope of a generic data type's `NameDefinition` (D307) | Rename the variant, the field, or the other declaration | 11 |
+| EK2125 | A member of a `data` variant that is not a field: a method, an index or call signature, a field without a type, or a `mutable` field (D307) | Write `name: Type` or `name?: Type`; a variant's fields are readonly | 11 |
+| EK2126 | A `data` declaration with more than four type parameters, or a constrained one, which `Data.TaggedEnum.WithGenerics` cannot pass (D307) | Use at most four unconstrained type parameters | 11 |
+| EK2127 | `Name.Variant` where `Name` is a data type without that variant, in a call, a pattern, or anywhere else; it replaces TypeScript's TS2339 (D307) | Name one of the variants the message lists | 11 |
 | EK3001 | Two services share a key | Rename one | 4 |
 | EK3002 | A class extends a service | Replace `extends` with `implements` | 4 |
 | EK3003 | `new` on a service | Use `Users()` for the implementation | 4 |
@@ -304,11 +310,13 @@ coverage. Repairs are suggestions, not shipped code actions:
 | EK4610 | `await` on a Deferred (D226) | Write `d.await()` (quick fix) | 7 |
 | EK4611 | `join` on a value that is not a Fiber or an array or object of fibers (D225) | Join fibers; wait for a Deferred with `d.await()`; fork a program first | 7 |
 | EK4612 | `join` in a hatch body, which is plain TypeScript (D225) | Move the `join` out of the hatch | 7 |
-| EK4701 | A `match` without a `default` arm over a finite union (tagged errors, Option, Exit, Result, literals) that misses a case (D209) | Add an arm for each case left, or a `default` arm | 3 |
+| EK4701 | A `match` without a `default` arm over a finite union (tagged errors, Option, Exit, Result, a data type's variants, literals) that misses a case, naming a data type's variants as `Delivery.Sent` (D209, D307) | Add an arm for each case left, or a `default` arm | 3, 11 |
 | EK4702 | A binding inside an `or` or `not` pattern (D210) | Bind outside the combinator, or match each alternative in its own arm | 3 |
 | EK4703 | An `is` whose pattern binds names outside the condition of an `if` or `while` (D211) | Move the test into an `if` or `while` condition, or use `match` | 3 |
 | EK4704 | A pattern form VibeLang does not support yet: regular expression, relational, or a computed key other than a name or literal (D212) | Use a guard: `if (/re/.test(x))` or `if (x < 5)` | 3 |
 | EK4705 | `and`, `or`, and `not` combined at one level without parentheses (D206) | Add parentheses: `(a and b) or c` | 3 |
+| EK4706 | A field list in braces after a matcher that is not a data variant, `when NotFound { let id }`, or an argument list after one that is, `when Delivery.Sent(let s)` (D307) | `when NotFound and { let id }`; `when Delivery.Sent { let tracking }` | 3, 11 |
+| EK4707 | A data variant's pattern whose subject's declared type, a finite union, has no case with that variant's tag (D307) | Match a variant of the subject's type | 3, 11 |
 | EK4801 | A statement that discards an Effect value, as `program` alone on a line; an error by default | Call it: `program()` (quick fix) | 2 |
 | EK4802 | Warning: an Effect function without a contract accepting that Effect as A returns an Effect value, so its caller gets the program, also as an arm of a returned conditional or an operand of `??`, `\|\|` or `&&`; declared binding and contextual contracts count (S7-3). Also a returned Effect value, Effect subtype, program literal, program named by reference, or value whose union type has one of them as a member, that is data because the success type names no value (`void`, `unknown`, `any`, or an unconstrained inferred type parameter), written contracts included | Call it: `return program()` (quick fix), or write the contract | 2 |
 | EK4803 | Warning: the program loads two versions of `effect`, an `@effect/*` package, or `vibelang-runtime` | Install one version | 28 |

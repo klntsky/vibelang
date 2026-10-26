@@ -28,6 +28,7 @@ type plan struct {
 	handlerPlan
 	producerPlan
 	exhaustivePlan
+	dataPlan
 	hatches     map[*ast.Node]hatchForm      // sync and try hatches, lowered to Effect's functions (hatches.go)
 	failureTags map[*ast.Node][]string       // the tags of each typed catch clause's test (catches.go)
 	causeThrows map[*ast.Node]bool           // throw statements whose value is a Cause (primitives.go)
@@ -60,6 +61,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 	p.topicClosures = map[*ast.Node][]*ast.Node{}
 	p.producerPlan = newProducerPlan()
 	p.exhaustivePlan = newExhaustivePlan()
+	p.dataPlan = newDataPlan()
 	r, ok := resolver.(*checker.EmitResolver)
 	if !ok {
 		return p
@@ -136,11 +138,13 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 			p.planPlain(a, node)
 			p.planServiceNode(c, node)
 			p.planExhaustiveMatch(c, node) // D294 (match_lower.go)
+			p.planVariantTest(c, node)     // D307 (data_lower.go)
 			node.ForEachChild(visit)
 			return false
 		}
 		file.AsNode().ForEachChild(visit)
 		p.prelude = p.withoutUnusedNoMatch(p.prelude)
+		p.prelude = p.withoutUnusedIs(p.prelude)
 		p.planTrustedCalls(c, a, file)
 		p.entry = planEntry(c, file)
 		p.planSpans(c, file)

@@ -28,6 +28,15 @@ import (
 // $noMatch, whose argument's narrowed type tells the checker which cases no
 // arm handles (EK4701, match.go in package vibelang).
 //
+// A data variant's pattern (D307) tests the variant with $is, which the
+// checker narrows and the lowering writes as the data type's own $is guard
+// (data.go in package vibelang), then reads the fields it lists:
+//
+//	when Delivery.Sent { let tracking }:     if ($is(Delivery.Sent, d)) { const tracking = d.tracking; ... }
+//
+// The variant fixes the fields, so a field the pattern binds needs no in
+// test, and an optional one the value leaves out binds undefined.
+//
 // x is P is a boolean expression. When P binds names, the if or while
 // statement whose condition joins it with && is rewritten so the bindings are
 // in scope in its body:
@@ -48,6 +57,7 @@ const (
 	patternArray                        // [items, ...rest]
 	patternObject                       // { clauses, ...rest }
 	patternExtractor                    // a variable pattern with an argument list: expr(items, ...rest)
+	patternVariant                      // a variant and its fields: expr { clauses, ...rest } (D307)
 	patternAnd                          // items joined by and
 	patternOr                           // items joined by or
 	patternNot                          // not items[0]
@@ -350,6 +360,14 @@ func (p *Parser) parseMatchPrimaryPattern() *pattern {
 			p.parseMatchListPattern(result, ast.KindCloseParenToken)
 			return result
 		}
+		if p.token == ast.KindOpenBraceToken && !p.hasPrecedingLineBreak() {
+			// Delivery.Sent { let tracking }: a variant and its fields (D307).
+			// After any other matcher, a syntax error before, the checker
+			// reports the field list (EK4706).
+			result := p.parseMatchObjectPattern(p.tokenRange())
+			result.kind, result.anchor, result.expr = patternVariant, anchor, expr
+			return result
+		}
 		return &pattern{kind: patternValue, anchor: anchor, expr: expr}
 	}
 	p.parseErrorAtCurrentToken(diagnostics.X_0_expected, "pattern")
@@ -489,7 +507,7 @@ func patternHasBindings(pat *pattern) bool {
 	switch pat.kind {
 	case patternBinding:
 		return true
-	case patternObject:
+	case patternObject, patternVariant:
 		for _, clause := range pat.clauses {
 			if patternHasBindings(clause.pattern) {
 				return true
@@ -707,6 +725,15 @@ func (p *Parser) knownTest(known knownMatcher, path matchPath, at core.TextRange
 	return p.mCall(guard, []*ast.Node{path()}, at)
 }
 
+// matcherTest writes $is(matcher, subject) for pat, a variable or variant
+// pattern. The call spans the matcher, so that the language service finds
+// a dotted matcher's names in it.
+func (p *Parser) matcherTest(pat *pattern, path matchPath) *ast.Node {
+	at := pat.anchor
+	span := core.NewTextRange(at.Pos(), max(at.End(), pat.expr.End()))
+	return p.mCall(p.mIdent("$is", at), []*ast.Node{pat.expr, path()}, span)
+}
+
 // compilePattern appends the steps that match pat against path to steps.
 func (p *Parser) compilePattern(pat *pattern, path matchPath, steps *[]matchStep, ctx *matchCompile) {
 	at := pat.anchor
@@ -729,7 +756,7 @@ func (p *Parser) compilePattern(pat *pattern, path matchPath, steps *[]matchStep
 		} else if known, ok := knownMatchers[dottedName(pat.expr)]; ok {
 			test(p.knownTest(known, path, at))
 		} else {
-			test(p.mCall(p.mIdent("$is", at), []*ast.Node{pat.expr, path()}, at))
+			test(p.matcherTest(pat, path))
 		}
 	case patternBinding:
 		if ctx.inline {
@@ -746,13 +773,21 @@ func (p *Parser) compilePattern(pat *pattern, path matchPath, steps *[]matchStep
 		}, func(n int) *ast.Node {
 			return p.mCall(p.mProperty(path(), "slice", at), []*ast.Node{p.mNumber(n, at)}, at)
 		}, func() *ast.Node { return p.mProperty(path(), "length", at) }, steps, ctx)
-	case patternObject:
-		typeOf := p.vibelangSpanning(p.factory.NewTypeOfExpression(path()), at)
-		test(p.mBinary(typeOf, ast.KindEqualsEqualsEqualsToken, p.mString("object", at), at))
-		test(p.mBinary(path(), ast.KindExclamationEqualsEqualsToken, p.mKeyword(ast.KindNullKeyword, at), at))
+	case patternObject, patternVariant:
 		var names []func() *ast.Node
+		if pat.kind == patternVariant {
+			// The variant's test; its tag is never part of a rest.
+			test(p.matcherTest(pat, path))
+			names = append(names, func() *ast.Node { return p.mString("_tag", at) })
+		} else {
+			typeOf := p.vibelangSpanning(p.factory.NewTypeOfExpression(path()), at)
+			test(p.mBinary(typeOf, ast.KindEqualsEqualsEqualsToken, p.mString("object", at), at))
+			test(p.mBinary(path(), ast.KindExclamationEqualsEqualsToken, p.mKeyword(ast.KindNullKeyword, at), at))
+		}
 		for _, clause := range pat.clauses {
-			test(p.propertyKeyTest(path, clause, at))
+			if pat.kind == patternObject || clause.pattern == nil {
+				test(p.propertyKeyTest(path, clause, at))
+			}
 			key := clause.key
 			if clause.computed {
 				names = append(names, func() *ast.Node { return p.cloneIdentExpression(key) })

@@ -1,0 +1,6 @@
+Delivery has no case Phase.Draft, so this pattern never matches.
+Delivery has no variant Snet. Its variants are Waiting, Sent, and Rejected.
+Delivery.Sent is a data variant, and a variant's pattern lists its fields in braces: Delivery.Sent { let field }.
+NotFound is not a variant of a data type, so no field list can follow it; write NotFound and { … }.
+This match does not handle every case of Delivery: Delivery.Sent | Delivery.Rejected is left.
+This match does not handle every case of LoadState<number, string>: LoadState.Failed is left.

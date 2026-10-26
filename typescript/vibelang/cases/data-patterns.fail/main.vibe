@@ -1,0 +1,63 @@
+// expect: EK2127 EK4706 EK4707 EK4701
+// What a data type's patterns and constructors check (D307).
+data Delivery {
+  Waiting
+  Sent { tracking: string }
+  Rejected { reason: string }
+}
+
+data LoadState<A, E> {
+  Idle
+  Loaded { value: A }
+  Failed { error: E }
+}
+
+data Phase { Draft; Done }
+
+error NotFound { id: string }
+
+// EK2127: Delivery has no variant Snet, in a call, a pattern, or an is.
+const typo = Delivery.Snet({ tracking: "parcel-8" })
+
+function typos(delivery: Delivery) {
+  if (delivery is Delivery.Snet) return 1
+  return match (delivery) {
+    when Delivery.Snet: 2;
+    default: 3;
+  }
+}
+
+// EK4706: a variant lists its fields in braces, and only a variant takes them.
+function shapes(delivery: Delivery, failure: NotFound) {
+  return [
+    match (delivery) {
+      when Delivery.Sent(let sent): sent;
+      default: "";
+    },
+    match (failure) {
+      when NotFound { let id }: id;
+    }
+  ]
+}
+
+// EK4707: Phase.Draft is no case of Delivery.
+function wrongType(delivery: Delivery) {
+  return match (delivery) {
+    when Phase.Draft: "draft";
+    default: "";
+  }
+}
+
+// EK4701: a match without default names each variant it leaves out.
+function missing(delivery: Delivery) {
+  return match (delivery) {
+    when Delivery.Waiting: "waiting";
+  }
+}
+
+function missingGeneric(state: LoadState<number, string>) {
+  return match (state) {
+    when LoadState.Idle: 0;
+    when LoadState.Loaded { let value }: value;
+  }
+}

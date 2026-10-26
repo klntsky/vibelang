@@ -1,0 +1,24 @@
+// expect-result: ["waiting","parcel-8",true,false]
+// A variant pattern runs as the data type's own $is guard, Delivery.$is("Sent"),
+// which tests the tag: $is cannot tell a variant's constructor from a
+// predicate. An exhaustive match's last arm runs untested (D294), as a
+// literal's would, and the file imports no $is (D307). expected/main.js pins both.
+data Delivery {
+  Waiting
+  Sent { tracking: string }
+}
+
+function describe(delivery: Delivery): string {
+  return match (delivery) {
+    when Delivery.Waiting: "waiting";
+    when Delivery.Sent { let tracking }: tracking;
+  }
+}
+
+function isSent(value: unknown): boolean {
+  return value is Delivery.Sent
+}
+
+export function main() {
+  return [describe(Delivery.Waiting()), describe(Delivery.Sent({ tracking: "parcel-8" })), isSent(Delivery.Sent({ tracking: "x" })), isSent({ tracking: "x" })]
+}

@@ -73,7 +73,7 @@ func (p *exhaustivePlan) planExhaustiveMatch(c *checker.Checker, node *ast.Node)
 	if i < 1 || statements[i-1].Kind != ast.KindBlock {
 		return // no arm, or only the subject's declaration
 	}
-	checked := slices.ContainsFunc(statements[:i], testsByMatcher)
+	checked := slices.ContainsFunc(statements[:i], func(statement *ast.Node) bool { return testsByMatcher(c, statement) })
 	subject := node.Arguments()[0]
 	for arm := statements[i-1]; arm.Kind == ast.KindBlock; {
 		body := arm.Statements()
@@ -96,16 +96,18 @@ func (p *exhaustivePlan) planExhaustiveMatch(c *checker.Checker, node *ast.Node)
 // testsByMatcher reports whether statement, an arm of a match, tests the
 // subject with a class or a custom matcher: whether a test in its chain of if
 // statements, or a declaration between them, calls $is or $extract. What the
-// arm runs once it matches doesn't count, nor does the subject's const.
-func testsByMatcher(statement *ast.Node) bool {
+// arm runs once it matches doesn't count, nor does the subject's const. A
+// data variant's $is tests a tag, which the type proves as it proves a
+// literal (D307, data.go).
+func testsByMatcher(c *checker.Checker, statement *ast.Node) bool {
 	if statement.Kind != ast.KindBlock {
 		return false
 	}
 	for _, s := range statement.Statements() {
 		switch {
-		case s.Kind == ast.KindVariableStatement && callsMatcher(s):
+		case s.Kind == ast.KindVariableStatement && callsMatcher(c, s):
 			return true
-		case s.Kind == ast.KindIfStatement && (callsMatcher(s.AsIfStatement().Expression) || testsByMatcher(s.AsIfStatement().ThenStatement)):
+		case s.Kind == ast.KindIfStatement && (callsMatcher(c, s.AsIfStatement().Expression) || testsByMatcher(c, s.AsIfStatement().ThenStatement)):
 			return true
 		}
 	}
@@ -114,14 +116,14 @@ func testsByMatcher(statement *ast.Node) bool {
 
 // callsMatcher reports whether node calls $is or $extract, the runtime's
 // tests of a class or a custom matcher, as the parser writes them.
-func callsMatcher(node *ast.Node) bool {
+func callsMatcher(c *checker.Checker, node *ast.Node) bool {
 	if ast.IsCallExpression(node) {
 		callee := node.Expression()
-		if callee.Kind == ast.KindIdentifier && callee.Flags&ast.NodeFlagsReparsed != 0 && (callee.Text() == "$is" || callee.Text() == "$extract") {
+		if callee.Kind == ast.KindIdentifier && callee.Flags&ast.NodeFlagsReparsed != 0 && (callee.Text() == "$is" || callee.Text() == "$extract") && dataVariantTest(c, node) == "" {
 			return true
 		}
 	}
-	return node.ForEachChild(callsMatcher)
+	return node.ForEachChild(func(child *ast.Node) bool { return callsMatcher(c, child) })
 }
 
 // withoutUnusedNoMatch removes $noMatch from names, a file's prelude uses,

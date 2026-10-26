@@ -1,0 +1,35 @@
+// expect-result: {"areas":[12,9,0],"sum":6,"leaves":3,"named":"square"}
+// Another module's data types construct, match and narrow as the module's own do.
+import { area, Shape, Tree } from "./shapes.vibe"
+import * as Shapes from "./shapes.vibe"
+
+function sum(tree: Tree<number>): number {
+  return match (tree) {
+    when Tree.Leaf { let value }: value;
+    when Tree.Node { let left, let right }: sum(left) + sum(right);
+  }
+}
+
+function leaves<A>(tree: Tree<A>): number {
+  if (tree is Tree.Leaf) return 1
+  return leaves(tree.left) + leaves(tree.right)
+}
+
+// A namespace import names the variants too.
+function name(shape: Shapes.Shape) {
+  return match (shape) {
+    when Shapes.Shape.Circle: "circle";
+    when Shapes.Shape.Square: "square";
+    when Shapes.Shape.Dot: "dot";
+  }
+}
+
+export function main() {
+  const tree = Tree.Node({ left: Tree.Leaf({ value: 1 }), right: Tree.Node({ left: Tree.Leaf({ value: 2 }), right: Tree.Leaf({ value: 3 }) }) })
+  return {
+    areas: [area(Shape.Circle({ radius: 2 })), area(Shape.Square({ side: 3 })), area(Shape.Dot())],
+    sum: sum(tree),
+    leaves: leaves(tree),
+    named: name(Shape.Square({ side: 1 }))
+  }
+}

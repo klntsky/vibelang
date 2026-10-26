@@ -27,12 +27,13 @@ const (
 	// Range runs through the token after it.
 	VibeSyntaxMutable
 	// VibeSyntaxDeclaration is error, schema error, service, control, schema,
-	// or layer (Name): Range is the statement from its first modifier, Head
+	// data, or layer (Name): Range is the statement from its first modifier, Head
 	// runs from the word through the declared name, and Open and Close are the
 	// body's braces, empty when the declaration has no body. Class is set for
 	// an error written with a class's features (D278): abstract, a heritage
 	// clause, or a member other than a field. For service Name: Type (D281),
-	// Head runs through the shape and Right is the shape.
+	// Head runs through the shape and Right is the shape. For data (D307),
+	// Variants lists the variants.
 	VibeSyntaxDeclaration
 	// VibeSyntaxBlockParam is a block after a call or a name (D188): Head is the
 	// callee, Open and Close the block's braces.
@@ -93,6 +94,16 @@ type VibeSyntax struct {
 	Index bool
 	Class bool
 	Arms  []VibeSyntaxArm
+	// Variants are the variants of a data declaration.
+	Variants []VibeSyntaxVariant
+}
+
+// VibeSyntaxVariant is one variant of a data declaration (D307): Name is
+// its name, Open and Close the braces of its fields, empty when it has none.
+type VibeSyntaxVariant struct {
+	Name  core.TextRange
+	Open  core.TextRange
+	Close core.TextRange
 }
 
 // VibeSyntaxArm is one arm of a match: Head runs from when through the

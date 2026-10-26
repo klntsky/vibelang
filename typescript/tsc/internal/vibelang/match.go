@@ -74,7 +74,14 @@ func checkExhaustive(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
 	if declared == nil || left.Flags()&checker.TypeFlagsNever != 0 {
 		return
 	}
-	d := reportAt(c, file, call.Expression().Loc, EK4701, c.TypeToString(declared), c.TypeToString(left))
+	declaredText, leftText := c.TypeToString(declared), c.TypeToString(left)
+	if symbol := c.GetSymbolAtLocation(call.Arguments()[0]); symbol != nil {
+		// A data type's variants by name, Delivery.Sent, not their object types (D307).
+		if names := dataNamesFor(c, symbol, call); names.hasVariants(c, declared) {
+			declaredText, leftText = names.typeText(c, declared), names.unionText(c, left)
+		}
+	}
+	d := reportAt(c, file, call.Expression().Loc, EK4701, declaredText, leftText)
 	note(d, "Add an arm for each case that is left, or a default arm.")
 }
 

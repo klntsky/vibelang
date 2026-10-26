@@ -1,0 +1,20 @@
+// A data type's declaration file holds Effect's own Data.TaggedEnum type and
+// constructors (D307), so TypeScript code constructs, narrows and matches it
+// with $is and $match. consumer/src/main.ts does; run.mjs compiles and runs it.
+export data Delivery {
+  Waiting
+  Sent { tracking: string }
+  Rejected { reason: string }
+}
+
+export data Box<A> {
+  Full { value: A }
+  Empty
+}
+
+export function track(delivery: Delivery) {
+  return match (delivery) {
+    when Delivery.Sent { let tracking }: tracking;
+    default: "none";
+  }
+}

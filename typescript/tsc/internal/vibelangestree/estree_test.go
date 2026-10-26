@@ -74,8 +74,14 @@ var forms = map[string]string{
 	"match":          "function f(x: number) { match (x) { when 1: log(\"one\"); default: log(\"other\"); } }\n",
 	"hatches":        "function f(text: string) { return try((text) => JSON.parse(text), text) ?? throw new Gone({ id: text }) }\n",
 	"service shapes": "service Prefix: string\nexport service Search: SearchApi { static readonly layer = live }\n",
+	"data":           dataFile,
 	"modules":        moduleFile,
 }
+
+// dataFile declares data types (D307) and matches their variants.
+const dataFile = "export data Delivery {\n  Waiting\n  /** On its way. */\n  Sent { tracking: string; note?: string }\n}\n" +
+	"data Box<A> { Full { value: A }; Empty }\n" +
+	"function f(d: Delivery) {\n  return match (d) {\n    when Delivery.Waiting: Box.Empty();\n    when Delivery.Sent { let tracking }: Box.Full({ value: tracking });\n  }\n}\n"
 
 // moduleFile declares a module (D283) whose TypeScript body holds the forms
 // the token scan rescans, and reaches it through every identifier specifier.
@@ -282,6 +288,7 @@ func TestVibeLangFormsHaveTheirOwnNodeTypes(t *testing.T) {
 		"pipes":        {"VibePipeExpression", "TopicReference"},
 		"primitives":   {"VibeMaskStatement"},
 		"modules":      {"VibeModuleDeclaration", "TSModuleBlock"},
+		"data":         {"ClassDeclaration", "PropertyDefinition", "TSTypeLiteral", "TSTypeParameterDeclaration"},
 	}
 	for name, types := range want {
 		seen := map[string]bool{}
@@ -407,6 +414,51 @@ func TestLoneSurrogatesSurviveAsEscapes(t *testing.T) {
 	}
 	if !strings.Contains(tree, `"value":"\ud800a"`) {
 		t.Errorf("the literal's value lost its surrogate: %s", tree)
+	}
+}
+
+// TestDataDeclarationIsAClassOfItsVariants pins D307's tree: class Name<T>
+// with a property per variant, typed by its fields, and without the
+// constant, the interface, or the type alias the parser wrote.
+func TestDataDeclarationIsAClassOfItsVariants(t *testing.T) {
+	text := dataFile
+	program := parse(t, "/x.vibe", text)
+	body := program["body"].([]any)
+	if len(body) != 3 {
+		t.Fatalf("got %d statements, want 3", len(body))
+	}
+	exported := body[0].(map[string]any)
+	if exported["type"] != "ExportNamedDeclaration" || exported["exportKind"] != "value" {
+		t.Fatalf("got %s %v, want an ExportNamedDeclaration of a value", exported["type"], exported["exportKind"])
+	}
+	for i, class := range []map[string]any{exported["declaration"].(map[string]any), body[1].(map[string]any)} {
+		if class["type"] != "ClassDeclaration" {
+			t.Fatalf("declaration %d is %s, want ClassDeclaration", i, class["type"])
+		}
+		var variants []string
+		for _, member := range class["body"].(map[string]any)["body"].([]any) {
+			m := member.(map[string]any)
+			start, end := rangeOf(m)
+			variants = append(variants, m["type"].(string)+" "+text[start:end])
+		}
+		want := [][]string{
+			{"PropertyDefinition Waiting", "PropertyDefinition Sent { tracking: string; note?: string }"},
+			{"PropertyDefinition Full { value: A }", "PropertyDefinition Empty"},
+		}[i]
+		if strings.Join(variants, "|") != strings.Join(want, "|") {
+			t.Errorf("declaration %d's variants are %q, want %q", i, variants, want)
+		}
+	}
+	if params := body[1].(map[string]any)["typeParameters"]; params == nil {
+		t.Errorf("Box has no type parameters")
+	}
+	for _, node := range nodes(program) {
+		if node["type"] == "TSTypeAliasDeclaration" || node["type"] == "TSInterfaceDeclaration" {
+			t.Errorf("a %s the parser wrote", node["type"])
+		}
+		if node["type"] == "Identifier" && (node["name"] == "taggedEnum" || node["name"] == "BoxDefinition") {
+			t.Errorf("%s, which the parser wrote", node["name"])
+		}
 	}
 }
 

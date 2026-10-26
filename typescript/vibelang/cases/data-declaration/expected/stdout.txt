@@ -1,0 +1,4 @@
+waiting
+parcel-8 by post
+rejected: no address (none)
+@@result {"described":["waiting","parcel-8 by post","rejected: no address (none)"],"loads":[0,3,7],"sent":true,"same":true,"different":false,"matched":"parcel-8","guard":[false,true],"note":"left at the door","fromObject":["parcel-8","none"]}

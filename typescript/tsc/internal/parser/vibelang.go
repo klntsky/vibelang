@@ -29,7 +29,7 @@ func (p *Parser) isVibeLangFile() bool {
 // that parses today.
 func isVibeLangDeclarationWord(text string) bool {
 	switch text {
-	case "error", "service", "control", "layer", "schema":
+	case "error", "service", "control", "layer", "schema", "data":
 		return true
 	}
 	return false
@@ -55,6 +55,11 @@ func (p *Parser) scanStartOfVibeLangDeclaration() bool {
 	if p.token == ast.KindClassKeyword {
 		return word == "service" || word == "control"
 	}
+	if word == "data" {
+		// data Name, then { or <: data as T and data satisfies T stay
+		// expressions (vibelang_data.go).
+		return p.scanDataName()
+	}
 	return p.isIdentifier()
 }
 
@@ -77,6 +82,8 @@ func (p *Parser) parseVibeLangDeclaration(pos int, jsdoc jsdocScannerInfo, modif
 		return p.parseServiceDeclaration(pos, jsdoc, modifiers, true /*control*/)
 	case "layer":
 		return p.parseLayerDeclaration(pos, jsdoc, modifiers)
+	case "data":
+		return p.parseDataDeclaration(pos, jsdoc, modifiers) // D307, vibelang_data.go
 	case "schema":
 		if p.isStartOfVibeLangSchemaError() {
 			return p.parseErrorDeclaration(pos, jsdoc, modifiers, true /*schema*/) // vibelang_errors.go

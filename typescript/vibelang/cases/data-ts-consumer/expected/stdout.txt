@@ -1,0 +1,7 @@
+waiting
+sent parcel-8
+rejected: no address
+parcel-8
+true
+6
+parcel-8

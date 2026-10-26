@@ -134,6 +134,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitBlockParamCall(node, tx.plan.blockForms[node]) // f(args) { block } for an Effect dual (blockparams.go)
 	case node.Kind == ast.KindCallExpression && tx.plan.hatches[node] != (hatchForm{}):
 		return tx.visitHatchCall(node)
+	case node.Kind == ast.KindCallExpression && tx.plan.variantTests[node] != "":
+		return tx.visitVariantTest(node, tx.plan.variantTests[node]) // a data variant's pattern (data_lower.go)
 	case node.Kind == ast.KindCallExpression && tx.plan.methods[node].module != "":
 		return tx.visitModuleMethodCall(node)
 	// A provide block may also own using resources or forked fibers. Keep
