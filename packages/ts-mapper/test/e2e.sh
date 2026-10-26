@@ -7,14 +7,14 @@
 #   packages/ts-mapper/test/e2e.sh
 #
 # Steps:
-#   1. go test the projector and the protocol server, and check that the
-#      generated L1 forms table matches a fresh generation
+#   1. Install that typescript and effect 4.0.5 into test/.cache.
+#   2. go test the projector and the protocol server, whose stock-compiler
+#      tests run that typescript and fail rather than skip without it, and
+#      check that the generated L1 forms table matches a fresh generation
 #      (scripts/check-forms-table.sh; never hand-edit the table).
-#   2. Build bin/vibelang-mapper.
-#   3. Install that typescript and effect 4.0.5 into test/.cache, then
-#      assemble the fixture in a temporary directory whose node_modules hold
-#      a copy of this package, effect, and vibelang-runtime built from
-#      packages/runtime.
+#   3. Build bin/vibelang-mapper, then assemble the fixture in a temporary
+#      directory whose node_modules hold a copy of this package, effect, and
+#      vibelang-runtime built from packages/runtime.
 #   4. tsc --runExternalCode must print exactly test/expected-tsc.txt: one
 #      error in main.ts (a misuse of greet's inferred type) and one in
 #      greet.vibe, at its .vibe position. forms-check.ts pins the
@@ -39,16 +39,6 @@ ts7_version="${TS7_VERSION:-$(node -e 'process.stdout.write(require(process.argv
 
 step() { printf '\n== %s\n' "$*"; }
 
-step "go test ./internal/vibelangmapper"
-(cd "$root/typescript/tsc" && CGO_ENABLED=0 go test -trimpath -gcflags=all=-dwarf=false ./internal/vibelangmapper/)
-
-step "forms table matches its generator"
-[ -d "$root/docs/tools/node_modules" ] || (cd "$root/docs/tools" && bun install --silent)
-bash "$root/scripts/check-forms-table.sh"
-
-step "build bin/vibelang-mapper"
-(cd "$root/typescript/tsc" && CGO_ENABLED=0 go build -trimpath -gcflags=all=-dwarf=false -o "$package/bin/vibelang-mapper" ./cmd/vibelang-mapper)
-
 step "install typescript@$ts7_version and effect@4.0.5"
 cache="$here/.cache/typescript-$ts7_version"
 if [ ! -x "$cache/node_modules/.bin/tsc" ] || [ ! -f "$cache/node_modules/effect/package.json" ]; then
@@ -58,6 +48,16 @@ fi
 tsc="$cache/node_modules/.bin/tsc"
 effect_dir="${EFFECT_DIR:-$cache/node_modules/effect}"
 "$tsc" --version
+
+step "go test ./internal/vibelangmapper"
+(cd "$root/typescript/tsc" && TS7_VERSION="$ts7_version" VIBELANG_REQUIRE_STOCK_TYPESCRIPT=1 CGO_ENABLED=0 go test -trimpath -gcflags=all=-dwarf=false ./internal/vibelangmapper/)
+
+step "forms table matches its generator"
+[ -d "$root/docs/tools/node_modules" ] || (cd "$root/docs/tools" && bun install --silent)
+bash "$root/scripts/check-forms-table.sh"
+
+step "build bin/vibelang-mapper"
+(cd "$root/typescript/tsc" && CGO_ENABLED=0 go build -trimpath -gcflags=all=-dwarf=false -o "$package/bin/vibelang-mapper" ./cmd/vibelang-mapper)
 
 step "assemble the fixture"
 [ -f "$effect_dir/package.json" ] || { echo "e2e: no effect at $effect_dir; set EFFECT_DIR" >&2; exit 1; }

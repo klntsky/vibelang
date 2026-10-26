@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -31,13 +32,18 @@ func stockTypeScriptVersion(root string) (string, error) {
 	return manifest.DevDependencies["typescript"], nil
 }
 
-// stockTypeScriptPath returns the pinned stock tsc, installed where e2e.sh and
-// CONTRIBUTING install it: packages/ts-mapper/test/.cache/typescript-<version>.
+// stockTypeScriptPath returns the stock tsc the tests run, installed where
+// e2e.sh and CONTRIBUTING install it: packages/ts-mapper/test/.cache/
+// typescript-<version>. The version is TS7_VERSION when set, as e2e.sh and
+// the parity harness read it, else the pin.
 func stockTypeScriptPath(t *testing.T, root string) string {
 	t.Helper()
-	version, err := stockTypeScriptVersion(root)
-	if err != nil {
-		t.Fatal(err)
+	version := os.Getenv("TS7_VERSION")
+	if version == "" {
+		var err error
+		if version, err = stockTypeScriptVersion(root); err != nil {
+			t.Fatal(err)
+		}
 	}
 	return filepath.Join(root, "packages/ts-mapper/test/.cache", "typescript-"+version, "node_modules/.bin/tsc")
 }
@@ -101,5 +107,27 @@ func TestStockTypeScriptPinHasOneSource(t *testing.T) {
 	scan(filepath.Join(root, "CONTRIBUTING.md"))
 	if len(found) > 0 {
 		t.Fatalf("stock TypeScript versions written outside packages/ts-mapper/package.json; read devDependencies.typescript instead:\n%s", strings.Join(found, "\n"))
+	}
+}
+
+// TestRequireStockTypeScriptWhenRequired: e2e.sh sets
+// VIBELANG_REQUIRE_STOCK_TYPESCRIPT=1, so a missing stock compiler fails the
+// stock-compiler tests there instead of skipping them unseen. Elsewhere a
+// missing compiler still skips with the install command.
+func TestRequireStockTypeScriptWhenRequired(t *testing.T) {
+	if os.Getenv("VIBELANG_STOCK_PROBE") == "1" {
+		requireStockTypeScript(t, filepath.Join(t.TempDir(), "typescript-0.0.0", "node_modules", ".bin", "tsc"))
+		return
+	}
+	for _, tc := range []struct {
+		required string
+		fails    bool
+	}{{required: "", fails: false}, {required: "1", fails: true}} {
+		command := exec.Command(os.Args[0], "-test.run=^TestRequireStockTypeScriptWhenRequired$", "-test.v")
+		command.Env = append(os.Environ(), "VIBELANG_STOCK_PROBE=1", "VIBELANG_REQUIRE_STOCK_TYPESCRIPT="+tc.required)
+		output, err := command.CombinedOutput()
+		if failed := err != nil; failed != tc.fails || !strings.Contains(string(output), "missing pinned stock TypeScript compiler") {
+			t.Errorf("VIBELANG_REQUIRE_STOCK_TYPESCRIPT=%q: failed %v, want %v\n%s", tc.required, failed, tc.fails, output)
+		}
 	}
 }

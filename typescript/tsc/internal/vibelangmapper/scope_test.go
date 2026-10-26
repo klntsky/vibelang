@@ -155,7 +155,13 @@ func requireStockTypeScript(t *testing.T, stock string) {
 	if _, err := os.Stat(stock); os.IsNotExist(err) {
 		cache := filepath.Dir(filepath.Dir(filepath.Dir(stock)))
 		version := strings.TrimPrefix(filepath.Base(cache), "typescript-")
-		t.Skipf("missing pinned stock TypeScript compiler %s; run npm install --prefix %s --no-audit --no-fund typescript@%s", stock, cache, version)
+		message := fmt.Sprintf("missing pinned stock TypeScript compiler %s; run npm install --prefix %s --no-audit --no-fund typescript@%s", stock, cache, version)
+		// e2e.sh installs the compiler first and requires it, so its run
+		// cannot pass with every stock-compiler test skipped.
+		if os.Getenv("VIBELANG_REQUIRE_STOCK_TYPESCRIPT") == "1" {
+			t.Fatal(message)
+		}
+		t.Skip(message)
 	} else if err != nil {
 		t.Fatalf("cannot inspect stock TypeScript compiler %s: %v", stock, err)
 	}
