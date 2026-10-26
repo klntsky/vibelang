@@ -34,7 +34,7 @@ func isVibeLangMaskWord(text string) bool {
 // isStartOfVibeLangMaskBlock reports whether the current token starts
 // `uninterruptible {`, `restore {`, or `interruptible {`.
 func (p *Parser) isStartOfVibeLangMaskBlock() bool {
-	return p.token == ast.KindIdentifier && isVibeLangMaskWord(p.scanner.TokenValue()) && p.isVibeLangFile() && p.lookAhead((*Parser).nextTokenIsOpenBraceOnSameLine)
+	return p.token == ast.KindIdentifier && isVibeLangMaskWord(p.scanner.TokenValue()) && p.isVibeLangFile() && p.lookAhead((*Parser).nextTokenIsBlockOrDoBlock)
 }
 
 // parseVibeLangMaskBlock parses an interruption block:
@@ -56,6 +56,7 @@ func (p *Parser) parseVibeLangMaskBlock() *ast.Node {
 	anchor := p.scanner.TokenRange()
 	form := VibeSyntax{Kind: VibeSyntaxBlockStatement, Word: anchor, Head: anchor}
 	p.nextToken()
+	p.rejectVibeLangBlockDo(word)
 	callee := p.vibelangSynthesized(p.factory.NewIdentifier("$"+word+vibelangMaskBlockLabel), anchor)
 	call := p.vibelangSynthesized(p.factory.NewCallExpression(callee, nil /*questionDotToken*/, nil /*typeArguments*/, p.newNodeList(anchor, nil), ast.NodeFlagsNone), anchor)
 	marker := p.vibelangSynthesized(p.factory.NewExpressionStatement(call), anchor)

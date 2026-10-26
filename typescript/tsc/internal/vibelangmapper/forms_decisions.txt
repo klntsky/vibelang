@@ -117,6 +117,7 @@ typescript/vibelang/cases/await-ops/main.vibe:80:5 lambda program table
 typescript/vibelang/cases/await-ops/main.vibe:89:21 byname program table
 typescript/vibelang/cases/await-ops/main.vibe:89:29 byname program table
 typescript/vibelang/cases/await-ops/main.vibe:95:29 byname program table
+typescript/vibelang/cases/block-do.fail/main.vibe:2:53 block appended/program table
 typescript/vibelang/cases/block-param-postfix.fail/main.vibe:5:22 block appended/effectFn annotation
 typescript/vibelang/cases/block-param-postfix.fail/main.vibe:6:25 block appended/effectFn annotation
 typescript/vibelang/cases/block-param-postfix.fail/main.vibe:7:14 block appended/effectFn annotation

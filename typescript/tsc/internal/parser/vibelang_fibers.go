@@ -44,6 +44,8 @@ func (p *Parser) nextTokenStartsForkOperand() bool {
 		return false
 	}
 	switch p.token {
+	case ast.KindDoKeyword:
+		return p.lookAhead((*Parser).nextTokenIsOpenBraceOnSameLine)
 	case ast.KindIdentifier, ast.KindThisKeyword, ast.KindNewKeyword, ast.KindSuperKeyword, ast.KindOpenBraceToken, ast.KindAwaitKeyword:
 		return true
 	}
@@ -57,6 +59,7 @@ func (p *Parser) parseVibeLangFork() *ast.Node {
 	pos := p.nodePos()
 	keyword := p.tokenRange()
 	callee := p.parseIdentifier()
+	p.rejectVibeLangBlockDo("fork")
 	var program *ast.Node
 	if p.token == ast.KindOpenBraceToken {
 		body := p.parseFunctionBlock(ParseFlagsNone, nil /*diagnosticMessage*/)
