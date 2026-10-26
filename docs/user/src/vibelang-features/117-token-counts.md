@@ -17,9 +17,9 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 
 | Load | Tokens |
 | --- | ---: |
-| The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,846 |
-| The skill and the [cheat sheet](115-cheat-sheet.md) | 13,955 |
-| The skill and the user guide (131 pages) | 206,750 |
+| The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,679 |
+| The skill and the [cheat sheet](115-cheat-sheet.md) | 13,788 |
+| The skill and the user guide (131 pages) | 206,583 |
 | The user guide alone | 201,904 |
 | The specification (33 chapters) | 105,525 |
 | The decision log, `docs/design/DECISIONS.md` | 64,537 |

@@ -63,3 +63,15 @@ test("5: comparisons use real Console and the homepage uses the fair generator",
   assert.doesNotMatch(homepage, /Effect\.fn\("greet"\)|Schema\.TaggedError<UserNotFound>/)
   assert.match(homepage, /Data\.TaggedError\("UserNotFound"\)/)
 })
+
+test("6: the shipped agent contract is self-contained and names current forms and routes", () => {
+  const skill = read("packages/compiler/skills/vibelang/SKILL.md")
+  assert.doesNotMatch(skill, /\bD\d+\b|docs\/design\/DECISIONS\.md/)
+  for (const form of ["export data Shape", "export error", "export service", "export schema", "Delivery.Waiting()", 'import { TestClock } from "effect/testing"']) assert.ok(skill.includes(form), form)
+  const idioms = skill.split("## Idioms")[1].split(String.fromCharCode(96).repeat(3))[0]
+  const routes = [...idioms.matchAll(new RegExp(String.fromCharCode(96) + "([^" + String.fromCharCode(96) + "]+)" + String.fromCharCode(96), "g"))].map(m => m[1]).filter(s => /\d{3}-|^spec\//.test(s))
+  assert.ok(routes.length > 10)
+  for (const route of routes) assert.match(route, /^[a-z-]+\/(?:\d{3}-[a-z-]+)?$/, route)
+  assert.ok(routes.includes("vibelang-features/111-control-operations-and-handlers"))
+  assert.ok(routes.includes("vibelang-features/112-producers"))
+})

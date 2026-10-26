@@ -177,7 +177,7 @@ The extension starts the project's own `vibelang` as the language server.
 
 ## Agent skill
 
-The package ships an agent skill for writing VibeLang, `node_modules/vibelang/skills/vibelang/SKILL.md`: every form, rule and idiom of this version, in about 4,000 tokens. Point an agent's instructions at it (D292).
+The package ships an agent skill for writing VibeLang, `node_modules/vibelang/skills/vibelang/SKILL.md`: every form, rule and idiom of this version, with [measured token counts](https://vibelang.sh/vibelang-features/117-token-counts). Point an agent's instructions at it (D292).
 
 ## Format .vibe files with dprint
 
