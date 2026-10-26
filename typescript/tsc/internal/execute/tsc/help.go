@@ -28,6 +28,19 @@ func getOptionsForHelp(commandLine *tsoptions.ParsedCommandLine) []*tsoptions.Co
 	// Sort our options by their names, (e.g. "--noImplicitAny" comes before "--watch")
 	opts := slices.Clone(tsoptions.OptionsDeclarations)
 	opts = append(opts, &tsoptions.TscBuildOption)
+	if identity != nil {
+		// These describe entry-point flags without registering compiler options.
+		for _, option := range identity.HelpOptions {
+			index := slices.IndexFunc(opts, func(existing *tsoptions.CommandLineOption) bool {
+				return existing.Name == option.Name
+			})
+			if index >= 0 {
+				opts[index] = option
+			} else {
+				opts = append(opts, option)
+			}
+		}
+	}
 
 	if commandLine.CompilerOptions().All.IsTrue() {
 		slices.SortFunc(opts, func(a, b *tsoptions.CommandLineOption) int {

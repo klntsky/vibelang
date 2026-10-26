@@ -6,14 +6,16 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/diagnostics"
 	"github.com/microsoft/TypeScript/tsc/internal/locale"
+	"github.com/microsoft/TypeScript/tsc/internal/tsoptions"
 )
 
 // Identity names a compiler built on this one in --version and --help.
 type Identity struct {
-	Command string // the command the --help examples run, such as "esc"
-	Title   string // the --help title, after which the options follow
-	Version string // the line --version prints
-	Icon    string // the two letters in the --help header's icon, such as "ES"
+	Command     string                         // the command the --help examples run, such as "esc"
+	Title       string                         // the --help title, after which the options follow
+	Version     string                         // the line --version prints
+	Icon        string                         // the two letters in the --help header's icon, such as "ES"
+	HelpOptions []*tsoptions.CommandLineOption // help-only additions or replacements by name
 }
 
 var identity *Identity
