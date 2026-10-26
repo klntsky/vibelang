@@ -136,6 +136,34 @@ test("a Disposable defect is retained beside a body failure; other finalizers st
   expect(Exit.isFailure(exit) && exit.cause.reasons.find(Cause.isDieReason)?.defect).toBe(defect)
 })
 
+test("using disposes callable resources at block exit", () => {
+  const events: string[] = []
+  const resource: (() => void) & Disposable = Object.assign(() => {}, {
+    [Symbol.dispose]() { events.push("disposed") }
+  })
+  Effect.runSync($region(scope => Effect.gen(function*() {
+    yield* $using(scope, Effect.succeed(resource))
+    events.push("body")
+  })))
+  expect(events).toEqual(["body", "disposed"])
+})
+
+test("using awaits disposal of callable async resources at block exit", async () => {
+  const events: string[] = []
+  const resource: (() => void) & AsyncDisposable = Object.assign(() => {}, {
+    async [Symbol.asyncDispose]() {
+      events.push("disposing")
+      await Promise.resolve()
+      events.push("disposed")
+    }
+  })
+  await Effect.runPromise($region(scope => Effect.gen(function*() {
+    yield* $using(scope, Effect.succeed(resource))
+    events.push("body")
+  })))
+  expect(events).toEqual(["body", "disposing", "disposed"])
+})
+
 const asyncResource = (events: string[], name: string, ms = 5): AsyncDisposable => ({
   async [Symbol.asyncDispose]() {
     await new Promise(resolve => setTimeout(resolve, ms))

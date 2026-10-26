@@ -72,7 +72,7 @@ export const $using = <A, E, R>(scope: Scope.Scope, acquire: Effect.Effect<A, E,
  * `[Symbol.asyncDispose]()` awaited. A throw or a rejection is a defect.
  */
 const disposal = (value: unknown, releasesItself: boolean): Effect.Effect<void> | undefined => {
-  if (value === null || typeof value !== "object") return undefined
+  if (value === null || (typeof value !== "object" && typeof value !== "function")) return undefined
   const resource = value as Partial<Disposable & AsyncDisposable>
   if (typeof resource[Symbol.dispose] === "function") return Effect.sync(() => resource[Symbol.dispose]!())
   if (!releasesItself && typeof resource[Symbol.asyncDispose] === "function") {
