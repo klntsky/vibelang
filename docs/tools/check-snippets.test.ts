@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { blockFilenames, classify, defaultCompiler, extract, markdownPages, normalizeOutput, parseDiagnostics } from "./check-snippets"
+import { blockFilenames, classify, defaultCompiler, extract, markdownPages, normalizeOutput, parseDiagnostics, writeProject } from "./check-snippets"
 
 const block = extract('```ts\nconst answer = 42\n```')[0]
 const diagnostic = (code: string, message = "example") => ({ code, message })
@@ -90,6 +90,19 @@ test("filename captions include TypeScript companions and only use the first two
   expect(blocks.map(b => b.filename)).toEqual(["launch-options.ts", "main.vibe", "nested/helper.vibe", undefined])
   expect([...blockFilenames(blocks).values()]).toEqual(["launch-options.ts", "main.vibe", "nested/helper.vibe", "block-4.vibe"])
   expect(() => extract("```ts\n// ../escape.ts\n``` ")).toThrow("Invalid snippet filename")
+})
+
+test("a data declaration's name reaches later blocks, as an error declaration's does (D307)", () => {
+  const root = mkdtempSync(join(tmpdir(), "snippet-data-test-"))
+  try {
+    const blocks = extract([
+      "```vibe", "export data Delivery {", "  Waiting", "  Sent { tracking: string }", "}", "error Lost", "```",
+      "```vibe", "const sent = Delivery.Sent({ tracking: 'parcel-8' })", "const lost = new Lost()", "```"
+    ].join("\n"))
+    const { filenames } = writeProject(join(root, "project"), blocks)
+    const second = readFileSync(join(root, "project", filenames.get(blocks[1].number)!), "utf8")
+    expect(second).toContain(`import { Delivery, Lost } from "./${filenames.get(blocks[0].number)}"`)
+  } finally { rmSync(root, { recursive: true, force: true }) }
 })
 
 test("repeated captions stay independent and cannot overwrite a named file", () => {

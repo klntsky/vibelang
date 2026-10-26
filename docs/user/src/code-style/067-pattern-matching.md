@@ -63,7 +63,7 @@ worker w-1
 report.csv
 ```
 
-`let n` binds a property, and a guard, `if (condition)`, tests the bindings before it. Matching `_tag` narrows a tagged union. An `error` class is itself a pattern: `when NotFound:` matches its instances.
+`let n` binds a property, and a guard, `if (condition)`, tests the bindings before it. Matching `_tag` narrows a tagged union. An `error` class is itself a pattern: `when NotFound:` matches its instances. A [`data` declaration](../data-types/073-data.md) declares a tagged union whose variants are patterns: `when Job.Running { let worker }`.
 
 ## Negating and combining patterns
 
@@ -127,7 +127,7 @@ function phaseLabel(phase: Phase) {
 Draft Published
 ```
 
-Without a `default` arm, a match over a finite union (literals, `error` classes, `Option`, `Exit`, or `Result`) must handle every case: add a member to `Phase` and this match is EK4701 until it gets an arm. A guard doesn't prove that every value of a type is covered. Over other types, a match no arm fits throws a `TypeError` when it runs.
+`match` is exhaustive. Without a `default` arm, a match over a finite union (literals, a data type's variants, `error` classes, `Option`, `Exit`, or `Result`) must handle every case: add a member to `Phase` and this match is EK4701, `This match does not handle every case of Phase: "review" is left.`, until it gets an arm. A guard doesn't prove that every value of a type is covered. Over other types, a match no arm fits throws a `TypeError` when it runs.
 
 ## Defaults, optional outputs, and result outputs
 

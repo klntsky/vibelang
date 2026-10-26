@@ -1,6 +1,94 @@
 # Data
 
-`Data` works in VibeLang exactly as in Effect. Use it for classes, tagged unions, and errors with Effect's equality and hashing.
+A `data` declaration declares a tagged union: Effect's own `Data.TaggedEnum` type and the `Data.taggedEnum` constructors, under one name, which `match` takes apart. The rest of `Data` works in VibeLang exactly as in Effect: use it for classes and errors with Effect's equality and hashing.
+
+## Declaring tagged unions with data
+
+```vibe
+// run: Console.log(describe(Delivery.Waiting())); Console.log(describe(sent)); Console.log(describe(Delivery.Rejected({ reason: "address missing" }))); Console.log(Equal.equals(sent, Delivery.Sent({ tracking: "parcel-8" })))
+data Delivery {
+  Waiting
+  Sent { tracking: string }
+  Rejected { reason: string; note?: string }
+}
+
+const sent = Delivery.Sent({ tracking: "parcel-8" })
+
+function describe(delivery: Delivery) {
+  return match (delivery) {
+    when Delivery.Waiting: "Waiting for dispatch";
+    when Delivery.Sent { let tracking }: `Tracking: ${tracking}`;
+    when Delivery.Rejected { let reason }: `Rejected: ${reason}`;
+  }
+}
+```
+
+```output
+Waiting for dispatch
+Tracking: parcel-8
+Rejected: address missing
+true
+```
+
+A variant without fields is a bare name. A variant with fields lists them in braces as an `error` does, `name: Type` or `name?: Type`, and they are readonly. A new line or `;` separates variants and fields; a comma is EK1013. `Delivery.Sent({ tracking })` and `Delivery.Waiting()` build values: plain records with a `_tag`, which compare and hash by their fields.
+
+`when Delivery.Sent { let tracking }` tests the variant and binds the fields its braces list, and `delivery is Delivery.Sent` tests it in a condition. `match` is exhaustive: without a `default` arm, a match that leaves out a variant is a compile error, `This match does not handle every case of Delivery: Delivery.Rejected is left.` (EK4701). See [Pattern matching with match and is](../vibelang-features/116-match-and-is.md#data-variants).
+
+## Generic data types
+
+```vibe
+// run: Console.log(JSON.stringify([loaded, failed, idle])); Console.log(count(loaded), count(idle))
+data LoadState<A, E> {
+  Idle
+  Loaded { value: A }
+  Failed { error: E }
+}
+
+const loaded = LoadState.Loaded({ value: ["one", "two"] })
+const failed = LoadState.Failed({ error: "offline" })
+const idle = LoadState.Idle()
+
+function count(state: LoadState<ReadonlyArray<string>, string>) {
+  return match (state) {
+    when LoadState.Loaded { let value }: value.length;
+    default: 0;
+  }
+}
+```
+
+```output
+[{"value":["one","two"],"_tag":"Loaded"},{"error":"offline","_tag":"Failed"},{"_tag":"Idle"}]
+2 0
+```
+
+A data type takes up to four type parameters, which the constructors infer from their arguments. A recursive data type, such as `data Tree<A> { Leaf { value: A }; Node { left: Tree<A>; right: Tree<A> } }`, works too.
+
+## What data declares
+
+`data Delivery { ... }` declares what Effect's documentation writes for a tagged union, so TypeScript code that imports `Delivery` gets Effect's types, `Delivery.$is` and `Delivery.$match`:
+
+```ts effect
+type Delivery = Data.TaggedEnum<{
+  Waiting: {}
+  Sent: { readonly tracking: string }
+  Rejected: { readonly reason: string; readonly note?: string }
+}>
+const Delivery = Data.taggedEnum<Delivery>()
+```
+
+Declaration files write the constant's type out, `Data.TaggedEnum.Constructor<Delivery>`, which is what `Data.taggedEnum<Delivery>()` returns. A generic data type passes its type parameters through the interface `Data.TaggedEnum.WithGenerics` describes, named for the type: `LoadStateDefinition`, which `export data` exports with the type and the constructors.
+
+```ts effect
+type LoadState<A, E> = Data.TaggedEnum<{
+  Idle: {}
+  Loaded: { readonly value: A }
+  Failed: { readonly error: E }
+}>
+interface LoadStateDefinition extends Data.TaggedEnum.WithGenerics<2> {
+  readonly taggedEnum: LoadState<this["A"], this["B"]>
+}
+const LoadState = Data.taggedEnum<LoadStateDefinition>()
+```
 
 ## Creating values with structural equality
 
@@ -48,7 +136,9 @@ PENDING true Archived
 
 `Class` supplies a constructor taking a field object, plus equality and hashing; `TaggedClass` adds a fixed `_tag` for narrowing union members. These concrete data classes are not the abstract classes that declare services.
 
-## Defining tagged unions with matching helpers
+## Writing a tagged union out with Data.TaggedEnum
+
+Effect's long form works in a `.vibe` file too, with the same `$is` and `$match`:
 
 ```vibe
 // run: Console.log(isSent(sent)); Console.log(describe(waiting)); Console.log(describe(sent)); Console.log(describe(rejected))
@@ -80,9 +170,9 @@ Tracking: parcel-8
 Rejected: address missing
 ```
 
-`TaggedEnum` describes the union as a map from tags to payloads. `taggedEnum` creates constructors that insert `_tag`, a `$is` guard factory, and a `$match` helper requiring a case per variant. Match callbacks compute values synchronously; for service work, narrow in an ordinary function first.
+`TaggedEnum` describes the union as a map from tags to payloads. `taggedEnum` creates constructors that insert `_tag`, a `$is` guard factory, and a `$match` helper requiring a case per variant. Match callbacks compute values synchronously; for service work, use `match`, whose arms can call Effect functions.
 
-## Adding generic union cases
+## Writing generic union cases out
 
 ```vibe
 // run: Console.log(JSON.stringify([loaded, failed, idle]))
@@ -107,6 +197,17 @@ const idle = LoadState.Idle()
 ```
 
 `WithGenerics<2>` gives the definition two type parameters, `A` and `B`; the constructors infer payload types per call. Keep the generic definition in a type or interface; it is not a generic service class.
+
+## Errors
+
+| Code | Cause | Fix |
+| --- | --- | --- |
+| EK2122 | A `data` declaration without variants | Write at least one variant |
+| EK2123 | A variant declared twice | Rename one, or remove the second |
+| EK2124 | A variant named `$is` or `$match`, a field named `_tag`, or another declaration of a generic data type's `NameDefinition` | Rename it: the constructors object has its own `$is` and `$match`, and the constructor sets `_tag` |
+| EK2125 | A variant member that is not a field: a method, a signature, a field without a type, or a `mutable` field | Write `name: Type` or `name?: Type` |
+| EK2126 | More than four type parameters, or a constrained one | Use at most four unconstrained type parameters |
+| EK2127 | `Delivery.Snet`, a name that is not one of the data type's variants | Use one of the variants the message lists |
 
 ## Defining ordinary and tagged errors
 

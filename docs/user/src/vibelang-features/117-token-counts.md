@@ -17,10 +17,10 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 
 | Load | Tokens |
 | --- | ---: |
-| The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,556 |
-| The skill and the [cheat sheet](115-cheat-sheet.md) | 13,090 |
-| The skill and the user guide (131 pages) | 201,853 |
-| The user guide alone | 197,297 |
+| The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,743 |
+| The skill and the [cheat sheet](115-cheat-sheet.md) | 13,617 |
+| The skill and the user guide (131 pages) | 204,408 |
+| The user guide alone | 199,665 |
 | The specification (33 chapters) | 104,854 |
 | The decision log, `docs/design/DECISIONS.md` | 61,769 |
 
@@ -39,6 +39,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | Layers | 45 | 41 | 8.9% |
 | Schemas | 44 | 24 | 45.5% |
 | Schema aliases | 18 | 10 | 44.4% |
+| Data types | 33 | 14 | 57.6% |
 | Readonly by default | 14 | 14 | 0.0% |
 | Statements instead of generators | 48 | 44 | 8.3% |
 | Programs passed by name | 28 | 27 | 3.6% |
@@ -62,6 +63,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | Blocks after calls | 77 | 78 | -1.3% |
 | Match a value | 53 | 40 | 24.5% |
 | Match errors by class | 59 | 44 | 25.4% |
+| Match a data type's variants | 29 | 42 | -44.8% |
 | Option, Exit, and Result | 60 | 62 | -3.3% |
 | Test and bind | 44 | 45 | -2.3% |
 | Plain, self-contained TypeScript inside `sync`, `try`, and `callback` | 129 | 183 | -41.9% |
@@ -74,7 +76,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | Wait for a Deferred | 30 | 28 | 6.7% |
 | Race | 43 | 56 | -30.2% |
 | A concurrent loop | 40 | 28 | 30.0% |
-| **All 44 entries** | **1,996** | **1,768** | **11.4%** |
+| **All 46 entries** | **2,058** | **1,824** | **11.4%** |
 
 ## Every page
 
@@ -192,18 +194,18 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Leftovers](../sink/062-leftovers.md) | 616 |
 | **Testing** | **1,274** |
 | [TestClock](../testing/063-testclock.md) | 1,274 |
-| **Code Style** | **7,223** |
+| **Code Style** | **7,287** |
 | [Guidelines](../code-style/064-guidelines.md) | 818 |
 | [Dual APIs](../code-style/065-dual.md) | 1,043 |
 | [Branded Types](../code-style/066-branded-types.md) | 1,135 |
-| [Pattern Matching](../code-style/067-pattern-matching.md) | 1,595 |
+| [Pattern Matching](../code-style/067-pattern-matching.md) | 1,659 |
 | [Excessive Nesting](../code-style/068-do.md) | 916 |
 | [Control Flow Operators](../code-style/069-control-flow.md) | 1,716 |
-| **Data Types** | **15,562** |
+| **Data Types** | **16,747** |
 | [BigDecimal](../data-types/070-bigdecimal.md) | 1,308 |
 | [Cause](../data-types/071-cause.md) | 1,107 |
 | [Chunk](../data-types/072-chunk.md) | 870 |
-| [Data](../data-types/073-data.md) | 1,465 |
+| [Data](../data-types/073-data.md) | 2,650 |
 | [DateTime](../data-types/074-datetime.md) | 2,808 |
 | [Duration](../data-types/075-duration.md) | 1,171 |
 | [Result](../data-types/076-result.md) | 1,448 |
@@ -245,7 +247,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [PlatformLogger](../platform/108-platformlogger.md) | 758 |
 | [Runtime](../platform/109-runtime.md) | 1,219 |
 | [Terminal](../platform/110-terminal.md) | 1,511 |
-| **All 98 pages** | **131,814** |
+| **All 98 pages** | **133,063** |
 
 ### VibeLang features
 
@@ -255,9 +257,9 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Producers](112-producers.md) | 1,275 |
 | [Building an HTTP API](113-building-an-http-api.md) | 1,392 |
 | [VibeLang for Effect users](114-vibelang-for-effect-users.md) | 3,662 |
-| [Cheat sheet](115-cheat-sheet.md) | 8,534 |
-| [Pattern matching with match and is](116-match-and-is.md) | 2,939 |
-| **All 6 pages** | **19,721** |
+| [Cheat sheet](115-cheat-sheet.md) | 8,874 |
+| [Pattern matching with match and is](116-match-and-is.md) | 3,718 |
+| **All 6 pages** | **20,840** |
 
 ### Specification
 

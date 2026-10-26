@@ -7,6 +7,8 @@ description: "match picks the first arm whose pattern fits a value; is tests a v
 
 `match` picks the first arm whose pattern fits a value; `is` tests a value against one pattern. Both come from the TC39 [pattern matching](https://github.com/tc39/proposal-pattern-matching) proposal (stage 1) and compile to plain conditionals, so TypeScript narrows the value in each arm, and an arm can call Effect functions.
 
+**`match` is exhaustive.** A match without a `default` arm over a finite union, such as a data type's variants, `error` classes or literals, must handle every case, or the compiler reports EK4701: `This match does not handle every case of Delivery: Delivery.Rejected is left.` See [Exhaustiveness](#exhaustiveness).
+
 ## match
 
 ```vibe
@@ -57,6 +59,7 @@ A function named `match` still works. Only `match (value) {` followed by `when`,
 | Array | An array of that length; `...` allows more | `when [let first, ...let rest]:` |
 | Object | A value with those properties; `{ let id }` binds `id` | `when { status: 200, let body }:` |
 | Matcher | An instance of a class, or what a custom matcher accepts | `when NotFound:` |
+| Variant | A data type's variant, and the fields its braces list | `when Delivery.Sent { let tracking }:` |
 | Extractor | A matcher's values, matched by the list in parentheses | `when Option.Some(let user):` |
 | `and`, `or`, `not` | Conjunction, alternative, or negation | `when "a" or "e":` |
 | Guard | A condition that is true | `when [let n] and if (n > 0):` |
@@ -113,6 +116,37 @@ function getUser(id: string): { name: string }!NotFound {
 // Output: Ada
 // Output: true
 ```
+
+## Data variants
+
+A [`data` declaration](/data-types/073-data)'s variant is a pattern. `when Delivery.Sent:` tests the variant's tag, as `when { _tag: "Sent" }` does, and braces after it bind the fields they list:
+
+```vibe
+data Delivery {
+  Waiting
+  Sent { tracking: string; carrier?: string }
+  Rejected { reason: string }
+}
+
+function track(delivery: Delivery) {
+  return match (delivery) {
+    when Delivery.Sent { let tracking, carrier: "rail" }: `${tracking} by rail`;
+    when Delivery.Sent { let tracking, let carrier }: `${tracking} by ${carrier ?? "post"}`;
+    when Delivery.Waiting or Delivery.Rejected: "not sent";
+  }
+}
+
+function carrierOf(delivery: Delivery) {
+  if (delivery is Delivery.Sent { let carrier }) return carrier ?? "post"
+  return "none"
+}
+// Output: ["parcel-8 by post","parcel-9 by rail","not sent"]
+// Output: rail
+```
+
+A field in braces takes a pattern, `carrier: "rail"`, or binds its value, `let tracking`. The variant decides which fields a value has, so a field binds without a presence test: an optional field the value leaves out binds `undefined`. `is` narrows too: after `delivery is Delivery.Sent`, `delivery.tracking` is a `string`. A data type a `.ts` file declares with `Data.taggedEnum` matches the same way.
+
+A variant's fields go in braces: `Delivery.Sent(let sent)` is EK4706, and so are braces after a matcher that is not a variant, `when NotFound { let id }`; write `when NotFound and { let id }`. A variant the subject's type has no case of is EK4707.
 
 ## Errors and custom matchers
 
@@ -185,7 +219,7 @@ Elsewhere, an `is` with bindings is EK4703.
 
 ## Exhaustiveness
 
-A match without a `default` arm whose value is a finite union must handle every case: literals, `null`, `undefined`, `error` classes, `Option`, `Exit`, `Result`, and other objects with a literal `_tag`. A missing case is a compile error:
+`match` is exhaustive. A match without a `default` arm whose value is a finite union must handle every case: literals, `null`, `undefined`, a data type's variants, `error` classes, `Option`, `Exit`, `Result`, and other objects with a literal `_tag`. A missing case is a compile error, EK4701, `This match does not handle every case of {type}: {cases} is left.`:
 
 ```vibe
 // expect-error: EK4701
@@ -201,6 +235,27 @@ function phaseLabel(phase: Phase) {
 
 ```text
 error EK4701: This match does not handle every case of Phase: "review" is left.
+```
+
+For a data type, the message names the variants left:
+
+```vibe
+// expect-error: EK4701
+data Shipment {
+  Packed
+  Shipped { carrier: string }
+  Delivered
+}
+
+function shipmentLabel(shipment: Shipment) {
+  return match (shipment) {
+    when Shipment.Packed: "packed";
+  }
+}
+```
+
+```text
+error EK4701: This match does not handle every case of Shipment: Shipment.Shipped | Shipment.Delivered is left.
 ```
 
 A class pattern covers its class and its subclasses, never another class with the same fields: each package's `error NotFound` needs its own arm, and so does an error that has a family base's fields without extending it:
@@ -235,6 +290,8 @@ For any other type, a match without `default` that no arm fits throws a `TypeErr
 | EK4703 | An `is` with bindings outside an `if` or `while` condition | Move the test into the condition, or use `match` |
 | EK4704 | A regular expression pattern, a relational pattern such as `< 10`, or a computed key other than a name or a literal | Use a guard: `and if (n < 10)` |
 | EK4705 | `and`, `or`, and `not` at one level without parentheses | Add parentheses |
+| EK4706 | Braces after a matcher that is not a data variant, or an argument list after a variant | `when NotFound and { let id }`; `when Delivery.Sent { let tracking }` |
+| EK4707 | A data variant that the subject's type has no case of | Match one of the subject type's variants |
 
 ## Not yet supported
 

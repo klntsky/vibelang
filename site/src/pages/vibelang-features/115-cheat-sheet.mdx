@@ -252,6 +252,28 @@ type Role = typeof Role.Type
 
 :::
 
+**Data types**. A tagged union: Effect's `Data.TaggedEnum` type and its `Data.taggedEnum` constructors under one name. A variant without fields is a bare name.
+
+:::code-group
+
+```vibe [VibeLang]
+data Delivery {
+  Waiting
+  Sent { tracking: string }
+}
+// Output: [{"_tag":"Waiting"},{"tracking":"parcel-8","_tag":"Sent"}]
+```
+
+```ts [Effect]
+type Delivery = Data.TaggedEnum<{
+  Waiting: {}
+  Sent: { readonly tracking: string }
+}>
+const Delivery = Data.taggedEnum<Delivery>()
+```
+
+:::
+
 **Readonly by default**. Write `mutable` for a member you assign.
 
 :::code-group
@@ -791,7 +813,7 @@ it.live("finds a user") {
 
 From the TC39 [pattern matching](https://github.com/tc39/proposal-pattern-matching) proposal (stage 1). See [Pattern matching with match and is](/vibelang-features/116-match-and-is).
 
-**Match a value**. Without `default`, a missing case of a finite union is EK4701, as with `Match.exhaustive`.
+**Match a value**. `match` is exhaustive: without `default`, a match that misses a case of a finite union is EK4701, as with `Match.exhaustive`. Leave out the second arm below and the compiler reports `This match does not handle every case of "draft" | "published": "published" is left.`
 
 :::code-group
 
@@ -837,6 +859,29 @@ const describeFailure = (failure: NotFound | Timeout) =>
     Match.tag("Timeout", () => "retry"),
     Match.exhaustive
   )
+```
+
+:::
+
+**Match a data type's variants**. A variant tests the tag; braces bind the fields they list.
+
+:::code-group
+
+```vibe [VibeLang]
+function deliveryLabel(delivery: Delivery) {
+  return match (delivery) {
+    when Delivery.Waiting: "waiting";
+    when Delivery.Sent { let tracking }: `sent ${tracking}`;
+  }
+}
+// Output: ["waiting","sent parcel-8"]
+```
+
+```ts [Effect]
+const deliveryLabel = Delivery.$match({
+  Waiting: () => "waiting",
+  Sent: ({ tracking }) => `sent ${tracking}`
+})
 ```
 
 :::

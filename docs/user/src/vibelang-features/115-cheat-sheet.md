@@ -213,6 +213,25 @@ schema Role = "admin" | "member"
 // Output: false
 ```
 
+**Data types** (D307). A tagged union: Effect's `Data.TaggedEnum` type and its `Data.taggedEnum` constructors under one name. A variant without fields is a bare name.
+
+```ts effect
+type Delivery = Data.TaggedEnum<{
+  Waiting: {}
+  Sent: { readonly tracking: string }
+}>
+const Delivery = Data.taggedEnum<Delivery>()
+```
+
+```vibe es
+// run: Console.log(JSON.stringify([Delivery.Waiting(), Delivery.Sent({ tracking: "parcel-8" })]))
+data Delivery {
+  Waiting
+  Sent { tracking: string }
+}
+// Output: [{"_tag":"Waiting"},{"tracking":"parcel-8","_tag":"Sent"}]
+```
+
 **Readonly by default** (D134). Write `mutable` for a member you assign.
 
 ```ts effect
@@ -686,7 +705,7 @@ it.live("finds a user") {
 
 From the TC39 [pattern matching](https://github.com/tc39/proposal-pattern-matching) proposal (stage 1). See [Pattern matching with match and is](116-match-and-is.md).
 
-**Match a value** (D206, D209). Without `default`, a missing case of a finite union is EK4701, as with `Match.exhaustive`.
+**Match a value** (D206, D209). `match` is exhaustive: without `default`, a match that misses a case of a finite union is EK4701, as with `Match.exhaustive`. Leave out the second arm below and the compiler reports `This match does not handle every case of "draft" | "published": "published" is left.`
 
 ```ts effect
 const phaseLabel = (phase: "draft" | "published") =>
@@ -728,6 +747,26 @@ function describeFailure(failure: NotFound | Timeout) {
   }
 }
 // Output: ["no user 7","retry"]
+```
+
+**Match a data type's variants** (D307). A variant tests the tag; braces bind the fields they list.
+
+```ts effect
+const deliveryLabel = Delivery.$match({
+  Waiting: () => "waiting",
+  Sent: ({ tracking }) => `sent ${tracking}`
+})
+```
+
+```vibe es
+// run: Console.log(JSON.stringify([deliveryLabel(Delivery.Waiting()), deliveryLabel(Delivery.Sent({ tracking: "parcel-8" }))]))
+function deliveryLabel(delivery: Delivery) {
+  return match (delivery) {
+    when Delivery.Waiting: "waiting";
+    when Delivery.Sent { let tracking }: `sent ${tracking}`;
+  }
+}
+// Output: ["waiting","sent parcel-8"]
 ```
 
 **Option, Exit, and Result** (D208). Arms can run Effect functions.

@@ -22,10 +22,10 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 
 | Load | Tokens |
 | --- | ---: |
-| The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,556 |
-| The skill and the [cheat sheet](/vibelang-features/115-cheat-sheet) | 13,090 |
-| The skill and the user guide (131 pages) | 201,853 |
-| The user guide alone | 197,297 |
+| The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,743 |
+| The skill and the [cheat sheet](/vibelang-features/115-cheat-sheet) | 13,617 |
+| The skill and the user guide (131 pages) | 204,408 |
+| The user guide alone | 199,665 |
 | The specification (33 chapters) | 104,854 |
 | The decision log, `docs/design/DECISIONS.md` | 61,769 |
 
@@ -44,6 +44,7 @@ Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Eff
 | Layers | 45 | 41 | 8.9% |
 | Schemas | 44 | 24 | 45.5% |
 | Schema aliases | 18 | 10 | 44.4% |
+| Data types | 33 | 14 | 57.6% |
 | Readonly by default | 14 | 14 | 0.0% |
 | Statements instead of generators | 48 | 44 | 8.3% |
 | Programs passed by name | 28 | 27 | 3.6% |
@@ -67,6 +68,7 @@ Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Eff
 | Blocks after calls | 77 | 78 | -1.3% |
 | Match a value | 53 | 40 | 24.5% |
 | Match errors by class | 59 | 44 | 25.4% |
+| Match a data type's variants | 29 | 42 | -44.8% |
 | Option, Exit, and Result | 60 | 62 | -3.3% |
 | Test and bind | 44 | 45 | -2.3% |
 | Plain, self-contained TypeScript inside `sync`, `try`, and `callback` | 129 | 183 | -41.9% |
@@ -79,7 +81,7 @@ Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Eff
 | Wait for a Deferred | 30 | 28 | 6.7% |
 | Race | 43 | 56 | -30.2% |
 | A concurrent loop | 40 | 28 | 30.0% |
-| **All 44 entries** | **1,996** | **1,768** | **11.4%** |
+| **All 46 entries** | **2,058** | **1,824** | **11.4%** |
 
 ## Every page
 
@@ -197,18 +199,18 @@ Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Eff
 | [Leftovers](/sink/062-leftovers) | 616 |
 | **Testing** | **1,274** |
 | [TestClock](/testing/063-testclock) | 1,274 |
-| **Code Style** | **7,223** |
+| **Code Style** | **7,287** |
 | [Guidelines](/code-style/064-guidelines) | 818 |
 | [Dual APIs](/code-style/065-dual) | 1,043 |
 | [Branded Types](/code-style/066-branded-types) | 1,135 |
-| [Pattern Matching](/code-style/067-pattern-matching) | 1,595 |
+| [Pattern Matching](/code-style/067-pattern-matching) | 1,659 |
 | [Excessive Nesting](/code-style/068-do) | 916 |
 | [Control Flow Operators](/code-style/069-control-flow) | 1,716 |
-| **Data Types** | **15,562** |
+| **Data Types** | **16,747** |
 | [BigDecimal](/data-types/070-bigdecimal) | 1,308 |
 | [Cause](/data-types/071-cause) | 1,107 |
 | [Chunk](/data-types/072-chunk) | 870 |
-| [Data](/data-types/073-data) | 1,465 |
+| [Data](/data-types/073-data) | 2,650 |
 | [DateTime](/data-types/074-datetime) | 2,808 |
 | [Duration](/data-types/075-duration) | 1,171 |
 | [Result](/data-types/076-result) | 1,448 |
@@ -250,7 +252,7 @@ Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Eff
 | [PlatformLogger](/platform/108-platformlogger) | 758 |
 | [Runtime](/platform/109-runtime) | 1,219 |
 | [Terminal](/platform/110-terminal) | 1,511 |
-| **All 98 pages** | **131,814** |
+| **All 98 pages** | **133,063** |
 
 ### VibeLang features
 
@@ -260,9 +262,9 @@ Each row is one [cheat sheet](/vibelang-features/115-cheat-sheet) entry: its Eff
 | [Producers](/vibelang-features/112-producers) | 1,275 |
 | [Building an HTTP API](/vibelang-features/113-building-an-http-api) | 1,392 |
 | [VibeLang for Effect users](/vibelang-features/114-vibelang-for-effect-users) | 3,662 |
-| [Cheat sheet](/vibelang-features/115-cheat-sheet) | 8,534 |
-| [Pattern matching with match and is](/vibelang-features/116-match-and-is) | 2,939 |
-| **All 6 pages** | **19,721** |
+| [Cheat sheet](/vibelang-features/115-cheat-sheet) | 8,874 |
+| [Pattern matching with match and is](/vibelang-features/116-match-and-is) | 3,718 |
+| **All 6 pages** | **20,840** |
 
 ### Specification
 
