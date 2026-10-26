@@ -223,4 +223,6 @@ function firstFailure(id: string) {
 }
 ```
 
+A data type's variant is a pattern too (D307, Chapter 11): `when Delivery.Sent { let tracking }` tests the tag and binds the fields its braces list.
+
 The parser writes both as conditionals TypeScript narrows, so each arm sees its own type and can call Effect functions (D214). A match without `default` over a finite union must cover every case: omitting `Timeout` above is EK4701 (D209). The same `match` handles a propagating failure, inside `catch (e)`, and a failure or Exit held as a value.

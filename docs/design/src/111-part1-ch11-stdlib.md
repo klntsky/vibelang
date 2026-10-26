@@ -95,6 +95,56 @@ schema Todo {
 
 A `schema` declaration declares both: the constant `Todo`, a `Schema.Struct`, and the interface `Todo`, its decoded type (D133). Each field has a type, and the compiler writes its schema: a primitive, a literal or a union, an array, a tuple, a record, an object type, or the name of another schema, standing for that schema's decoded type. `name?: T` is `Schema.optional`, which accepts an absent key or `undefined`. A field that needs another schema, such as `Schema.DateTimeUtc` or a checked string, names a schema constant: `const Created = Schema.DateTimeUtc`, then `created: Created`. A field type with no schema form is EK2109. The interface comes from the struct, so the two cannot drift apart.
 
+#### Data types
+
+```ts effect
+type Delivery = Data.TaggedEnum<{
+  Waiting: {}
+  Sent: { readonly tracking: string }
+  Rejected: { readonly reason: string }
+}>
+const Delivery = Data.taggedEnum<Delivery>()
+
+const describe = Delivery.$match({
+  Waiting: () => "waiting",
+  Sent: ({ tracking }) => `sent ${tracking}`,
+  Rejected: ({ reason }) => `rejected: ${reason}`
+})
+```
+
+```ts es
+data Delivery {
+  Waiting
+  Sent { tracking: string }
+  Rejected { reason: string }
+}
+
+function describe(delivery: Delivery) {
+  return match (delivery) {
+    when Delivery.Waiting: "waiting";
+    when Delivery.Sent { let tracking }: `sent ${tracking}`;
+    when Delivery.Rejected { let reason }: `rejected: ${reason}`;
+  }
+}
+// string!!
+```
+
+A `data` declaration declares both: the type `Delivery`, Effect's `Data.TaggedEnum` of the variants, and the constant `Delivery`, the constructors `Data.taggedEnum` makes, typed `Data.TaggedEnum.Constructor<Delivery>` (D307). A variant without fields is a bare name; a variant's fields are written as an `error`'s are, `name: Type` or `name?: Type`, and are readonly. A line break or `;` separates fields and variants; a comma is EK1013, as in an `error`'s body. `Delivery.Sent({ tracking: "parcel-8" })` and `Delivery.Waiting()` construct values, plain records with a `_tag` that compare and hash by their fields, and `Delivery.$is` and `Delivery.$match` are Effect's. Type parameters, at most four, pass through the interface `Data.TaggedEnum.WithGenerics` asks for, which the declaration names `NameDefinition`:
+
+```ts es
+data LoadState<A, E> {
+  Idle
+  Loaded { value: A }
+  Failed { error: E }
+}
+// interface LoadStateDefinition extends Data.TaggedEnum.WithGenerics<2> {
+//   readonly taggedEnum: LoadState<this["A"], this["B"]>
+// }
+// const LoadState = Data.taggedEnum<LoadStateDefinition>()
+```
+
+A variant is a pattern (Chapter 3): `when Delivery.Sent:` and `delivery is Delivery.Sent` test the tag, and `when Delivery.Sent { let tracking }` also binds the fields its braces list, an optional field the value leaves out as `undefined`. The checker narrows the subject by the tag, and the lowering runs the test as `Delivery.$is("Sent")(delivery)`. `match` is exhaustive: without `default`, a match over a data type that leaves out a variant is EK4701, which names it, `This match does not handle every case of Delivery: Delivery.Rejected is left.` A data type a `.ts` file declares with `Data.taggedEnum` matches the same way, since what makes `Delivery` a data type is its constructors' type.
+
 #### HTTP
 
 ```ts effect
