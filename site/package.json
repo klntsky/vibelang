@@ -17,7 +17,9 @@
     "postbuild": "bun scripts/build-docs.ts --markdown && node scripts/publication.mjs && bun ../docs/tools/check-site.ts dist/public && bun ../docs/tools/prepare-site.ts dist",
     "test:llms": "node --test scripts/llms.test.mjs",
     "social-card": "node scripts/render-social-card.mjs",
-    "test:contrast": "node --test scripts/contrast.test.mjs"
+    "test:contrast": "node --test scripts/contrast.test.mjs",
+    "test:infrastructure": "node --test scripts/cloudflare-stack.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "react": "^19.2.8",

@@ -12,6 +12,18 @@ export default Alchemy.Stack(
     state: Cloudflare.state(),
   },
   Effect.gen(function* () {
+    const { accountId } = yield* yield* Cloudflare.CloudflareEnvironment
+    const zoneId = yield* Cloudflare.Zone.resolveZoneId({
+      accountId,
+      zone: 'vibelang.sh',
+      hostname: 'vibelang.sh',
+    }).pipe(Effect.orDie)
+    yield* Cloudflare.Zone.Setting('BrowserCheck', {
+      zoneId,
+      settingId: 'browser_check',
+      value: 'off',
+    })
+
     const site = yield* Cloudflare.Website.StaticSite('Website', {
       command: 'npm run build',
       cwd: docsDir,
