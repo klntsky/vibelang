@@ -325,3 +325,55 @@ match (event) {
                 (string_fragment)
                 (template_substitution
                   (identifier))))))))))
+
+================================================================================
+Data variant patterns
+================================================================================
+
+const label = match (delivery) {
+  when Delivery.Sent { let tracking }: tracking;
+  when Delivery.Waiting: "waiting";
+}
+if (delivery is Delivery.Sent { let tracking }) log(tracking)
+
+--------------------------------------------------------------------------------
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (match_expression
+        subject: (parenthesized_expression
+          (identifier))
+        body: (match_body
+          (match_arm
+            pattern: (variant_pattern
+              variant: (member_expression
+                object: (identifier)
+                property: (property_identifier))
+              fields: (object_match_pattern
+                (binding_pattern
+                  name: (identifier))))
+            value: (identifier))
+          (match_arm
+            pattern: (member_expression
+              object: (identifier)
+              property: (property_identifier))
+            value: (string
+              (string_fragment)))))))
+  (if_statement
+    condition: (parenthesized_expression
+      (is_expression
+        left: (identifier)
+        pattern: (variant_pattern
+          variant: (member_expression
+            object: (identifier)
+            property: (property_identifier))
+          fields: (object_match_pattern
+            (binding_pattern
+              name: (identifier))))))
+    consequence: (expression_statement
+      (call_expression
+        function: (identifier)
+        arguments: (arguments
+          (identifier))))))

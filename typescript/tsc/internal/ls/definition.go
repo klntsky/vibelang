@@ -89,6 +89,9 @@ func (l *LanguageService) provideDefinitionAtPosition(ctx context.Context, progr
 	}
 
 	declarations := getDeclarationsFromLocation(c, node)
+	if len(declarations) == 0 {
+		declarations = definitionsFromHooks(c, node) // extensions.go
+	}
 	calledDeclaration := tryGetSignatureDeclaration(c, node)
 	if calledDeclaration != nil && !(ast.IsJsxOpeningLikeElement(node.Parent) && isJsxConstructorLike(calledDeclaration)) {
 		symbol := c.GetSymbolAtLocation(getDeclarationNameForKeyword(node))

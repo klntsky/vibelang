@@ -202,6 +202,7 @@ module.exports = grammar(TypeScript, {
       $.service_declaration,
       $.control_declaration,
       $.schema_declaration,
+      $.data_declaration,
       $.layer_declaration,
     ),
 
@@ -258,6 +259,24 @@ module.exports = grammar(TypeScript, {
         field('body', $.object_type),
         seq('=', field('value', $.type), $._semicolon),
       )),
+    )),
+
+    // data Delivery { Waiting; Sent { tracking: string } } (D307,
+    // vibelang_data.go): a tagged union of variants, each a name and, when it
+    // has fields, an object type of them. A line break, ;, or , separates
+    // variants; the compiler reports the comma (EK1013).
+    data_declaration: $ => seq(
+      'data',
+      field('name', $._type_identifier),
+      field('type_parameters', optional($.type_parameters)),
+      field('body', $.data_body),
+    ),
+
+    data_body: $ => seq('{', repeat(choice($.data_variant, ';', ',')), '}'),
+
+    data_variant: $ => prec.right(seq(
+      field('name', alias($.identifier, $.property_identifier)),
+      field('fields', optional($.object_type)),
     )),
 
     // layer UsersLive: Users { setup; find(id) { ... } readonly region = "eu" },
@@ -495,6 +514,7 @@ module.exports = grammar(TypeScript, {
       $.object_match_pattern,
       $.guard_pattern,
       $.extractor_pattern,
+      $.variant_pattern,
       $._match_value,
       $.string,
       $.number,
@@ -552,6 +572,12 @@ module.exports = grammar(TypeScript, {
       ')',
     )),
 
+    // Delivery.Sent { let tracking }: a data variant and its fields (D307).
+    variant_pattern: $ => prec(1, seq(
+      field('variant', $._match_value),
+      field('fields', $.object_match_pattern),
+    )),
+
     // A name, then .name and [expression] accesses.
     _match_value: $ => choice(
       $.identifier,
@@ -582,6 +608,7 @@ module.exports = grammar(TypeScript, {
       'service',
       'control',
       'schema',
+      'data',
       'layer',
       'provide',
       'fork',

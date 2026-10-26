@@ -6,6 +6,7 @@
 //   schema Code = "a" | "b"                (D280, read as a type alias)
 //   error Missing extends NotFound { path: string; describe(): string { ... } }
 //   schema error FsError { method: string }
+//   data Delivery { Waiting; Sent { tracking: string } }   (D307, read as an enum)
 //   service Users { find(id: string): User!NotFound }
 //   control Approval { approve(request: string): boolean }
 //   layer UsersLive: Users { find(id) { ... } }   (the old spelling, D221)
@@ -81,6 +82,36 @@ export function addVibeLangSyntax(grammar) {
     patterns: heritage.patterns.map((pattern) =>
       pattern.include === "#class-or-interface-heritage" ? { include: "#vibelang-error-heritage" } : pattern
     )
+  }
+  // data declares a tagged union (D307), colored as TypeScript colors an
+  // enum: the variants as its members, and a variant's fields as an object
+  // type's properties.
+  repository["vibelang-data-declaration"] = {
+    name: "meta.enum.declaration.ts",
+    begin: `${start}\\b(data)\\s+(${name})(?=\\s*(?:<|\\{|$|//|/\\*))`,
+    beginCaptures: {
+      1: { name: "keyword.control.export.ts" },
+      2: { name: "storage.type.enum.ts" },
+      3: { name: "entity.name.type.enum.ts" }
+    },
+    end: "(?<=\\})",
+    patterns: [
+      { include: "#comment" },
+      { include: "#type-parameters" },
+      {
+        begin: "\\{",
+        beginCaptures: { 0: { name: "punctuation.definition.block.ts" } },
+        end: "\\}",
+        endCaptures: { 0: { name: "punctuation.definition.block.ts" } },
+        patterns: [
+          { include: "#comment" },
+          { include: "#type-object" },
+          { match: name, name: "variable.other.enummember.ts" },
+          { include: "#punctuation-comma" },
+          { include: "#punctuation-semicolon" }
+        ]
+      }
+    ]
   }
   // service and control (D128, D223); the older spelling with class
   // (D220) matches too.
@@ -186,7 +217,7 @@ export function addVibeLangSyntax(grammar) {
     match: `(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))\\b(import)\\s+${specifier}`,
     captures: { 1: { name: "keyword.control.import.ts" }, 2: { name: "entity.name.type.module.ts" } }
   }
-  const vibelangIncludes = ["#vibelang-module-import", "#vibelang-error-declaration", "#vibelang-schema-alias", "#vibelang-type-declaration", "#vibelang-member-declaration", "#vibelang-layer-declaration", "#vibelang-handle-clause", "#vibelang-provide", "#vibelang-for-concurrent", "#vibelang-fork", "#vibelang-join"]
+  const vibelangIncludes = ["#vibelang-module-import", "#vibelang-error-declaration", "#vibelang-data-declaration", "#vibelang-schema-alias", "#vibelang-type-declaration", "#vibelang-member-declaration", "#vibelang-layer-declaration", "#vibelang-handle-clause", "#vibelang-provide", "#vibelang-for-concurrent", "#vibelang-fork", "#vibelang-join"]
   const statements = repository.statements.patterns.filter((pattern) => !vibelangIncludes.includes(pattern.include))
   repository.statements.patterns = [...vibelangIncludes.map((include) => ({ include })), ...statements]
   const vibelangExpressions = ["#vibelang-await-operation", "#vibelang-fork", "#vibelang-join", "#vibelang-match", "#vibelang-catch-expression"]

@@ -9,14 +9,19 @@
 ; await, match and when like switch and case, and is, and, or, and not like
 ; instanceof.
 
-; Declarations (D126, D128, D133, D221, D223)
+; Declarations (D126, D128, D133, D221, D223, D307)
 [
   "error"
   "service"
   "control"
   "schema"
+  "data"
   "layer"
 ] @keyword.type
+
+; A data declaration's variants (D307), as TypeScript colors enum members.
+(data_variant
+  name: (property_identifier) @constant)
 
 (service_declaration
   "class" @keyword.modifier)
@@ -130,6 +135,10 @@
 
 (extractor_pattern
   extractor: (identifier) @type)
+
+(variant_pattern
+  variant: (member_expression
+    property: (property_identifier) @constant))
 
 (extractor_pattern
   extractor: (member_expression

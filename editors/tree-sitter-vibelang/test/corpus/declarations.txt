@@ -456,3 +456,59 @@ export schema error Locked extends FsError {
               (member_expression
                 (this)
                 (property_identifier)))))))))
+
+================================================================================
+Data declarations
+================================================================================
+
+data Delivery {
+  Waiting
+  Sent { tracking: string; carrier?: string }
+}
+export data LoadState<A, E> { Idle; Loaded { value: A } }
+const data = { ok: true }
+
+--------------------------------------------------------------------------------
+
+(program
+  (data_declaration
+    name: (type_identifier)
+    body: (data_body
+      (data_variant
+        name: (property_identifier))
+      (data_variant
+        name: (property_identifier)
+        fields: (object_type
+          (property_signature
+            name: (property_identifier)
+            type: (type_annotation
+              (predefined_type)))
+          (property_signature
+            name: (property_identifier)
+            type: (type_annotation
+              (predefined_type)))))))
+  (export_statement
+    declaration: (data_declaration
+      name: (type_identifier)
+      type_parameters: (type_parameters
+        (type_parameter
+          name: (type_identifier))
+        (type_parameter
+          name: (type_identifier)))
+      body: (data_body
+        (data_variant
+          name: (property_identifier))
+        (data_variant
+          name: (property_identifier)
+          fields: (object_type
+            (property_signature
+              name: (property_identifier)
+              type: (type_annotation
+                (type_identifier))))))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (object
+        (pair
+          key: (property_identifier)
+          value: (true))))))

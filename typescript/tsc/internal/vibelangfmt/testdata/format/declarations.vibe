@@ -25,3 +25,12 @@ error Timeout extends Failure
 abstract error Http {status:number; abstract describe(): string}
 schema error FsError { method: string; path?: string }
 schema error Locked extends FsError {holder:string}
+/** A parcel on its way. */
+export data Delivery {
+  Waiting
+  Sent {   tracking: string;   carrier?: string }
+  Rejected {
+      reason: string
+  }
+}
+data LoadState<A,E> { Idle;   Loaded { value: A }; Failed { error: E } }

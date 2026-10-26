@@ -303,6 +303,23 @@ func (d *decoder) node(node *ast.Node) error {
 		} else {
 			d.replace(after, d.start(value), " ")
 		}
+		if holder.data {
+			// A data declaration's variants (D307): drop the colon before a
+			// variant's fields.
+			if value.Kind != ast.KindTypeLiteral {
+				return lost()
+			}
+			for _, variant := range value.Members() {
+				if variant.Kind != ast.KindPropertySignature || variant.Type() == nil {
+					continue
+				}
+				colon, after, ok := d.nextToken(variant.Name().End(), ':')
+				if !ok {
+					return lost()
+				}
+				d.replace(colon, after, "")
+			}
+		}
 	case placeholderClassHead:
 		class := parent
 		if class.Kind != ast.KindClassDeclaration || class.Name() != node {

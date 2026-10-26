@@ -35,6 +35,32 @@ func RegisterQuickInfoHook(hook QuickInfoHook) {
 	quickInfoHooks = append(quickInfoHooks, hook)
 }
 
+// DefinitionHook can answer go to definition on node when TypeScript finds
+// no declaration, such as for a property that a mapped type makes. It
+// returns the declarations to go to, or nil. c is the checker for node's
+// file.
+type DefinitionHook func(c *checker.Checker, node *ast.Node) []*ast.Node
+
+var definitionHooks []DefinitionHook
+
+// RegisterDefinitionHook adds hook to every definition request. Call it only
+// from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterDefinitionHook(hook DefinitionHook) {
+	definitionHooks = append(definitionHooks, hook)
+}
+
+// definitionsFromHooks returns the declarations the first hook that has any
+// gives for node, or nil.
+func definitionsFromHooks(c *checker.Checker, node *ast.Node) []*ast.Node {
+	for _, hook := range definitionHooks {
+		if declarations := hook(c, node); len(declarations) != 0 {
+			return declarations
+		}
+	}
+	return nil
+}
+
 // RegisterCodeFixProvider adds provider to the quick fixes. A provider whose
 // Source is not "" fixes diagnostics from that source, such as "EK". Call it
 // only from the init function of an in-tree package that tsc/cmd/tsc imports;

@@ -56,6 +56,26 @@ export schema Code = "root_missing" | "read_failed"
 schema Point = { x: number; y?: number }
 interface Cart { id: string; mutable items: Array<string>; mutable [key: string]: unknown }
 `,
+	"data": `/** A parcel on its way (D307). */
+export data Delivery {
+  Waiting
+  /** Handed to the carrier. */
+  Sent { tracking: string; carrier?: string }
+  Rejected {
+    reason: string
+    mutable note: string
+  }
+}
+data LoadState<A, E> { Idle; Loaded { value: A }; Failed { error: E } }
+data Answer { Yes, No }
+function describe(d: Delivery) {
+  return match (d) {
+    when Delivery.Waiting: "waiting";
+    when Delivery.Sent { let tracking }: tracking;
+    default: "rejected";
+  }
+}
+`,
 	"error classes": `/** The base of a family (D278, D304). */
 export abstract error AppError implements Coded {
   _tag: string

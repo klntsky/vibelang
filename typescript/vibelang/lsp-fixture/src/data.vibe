@@ -1,0 +1,16 @@
+// A data type (D307): hover, completion and go to definition on its variants.
+export data Delivery {
+  Waiting
+  Sent { tracking: string }
+  Rejected { reason: string }
+}
+
+export function describe(delivery: Delivery) {
+  return match (delivery) {
+    when Delivery.Waiting: "waiting";
+    when Delivery.Sent { let tracking }: tracking;
+    when Delivery.Rejected { let reason }: reason;
+  }
+}
+
+export const sent = Delivery.Sent({ tracking: "parcel-8" })

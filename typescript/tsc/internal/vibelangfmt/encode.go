@@ -18,6 +18,7 @@
 //	provide X { }, uninterruptible { }     $v6: { }
 //	error E { f: T }, schema S { f: T }    type $v7 = { f: T }
 //	schema S = T                           type $v7 = T
+//	data D { A; B { f: T } }               type $v7 = { A; B: { f: T } }
 //	service S { m(): A!E }                 class $v8 { m(): $v9 }
 //	service S: T, service S: T { static }  class $v8 {}, class $v8 { static }
 //	for concurrent(n) (const x of xs)      for (const x of xs)
@@ -80,6 +81,9 @@ type placeholder struct {
 	// alias marks a schema alias, schema Name = Type (D280), whose = and type
 	// the type alias keeps as written.
 	alias bool
+	// data marks a data declaration (D307), whose variants with fields the
+	// type literal writes with a colon before the fields.
+	data bool
 	// nested marks a placeholder whose edit an opaque edit swallowed, such as
 	// an Effect type in the shape of service Format: (s: string) => string!!:
 	// the enclosing placeholder keeps its text, so decoding never sees it.
@@ -363,6 +367,18 @@ func (e *encoder) declaration(form parser.VibeSyntax) error {
 			e.insert(form.Range.End(), " = {}", 0)
 		} else {
 			e.insert(form.Open.Pos(), "= ", 0)
+		}
+	case parser.VibeSyntaxData:
+		// data D { A; B { f: T } } is type $v = { A; B: { f: T } }: a variant
+		// is a property, and its fields, if any, its type.
+		name := e.hold(placeholderTypeHead, head, form.Head.Pos(), firstLineWidth(head)-len("type  ="))
+		e.holders[len(e.holders)-1].data = true
+		e.add(edit{pos: form.Head.Pos(), end: form.Head.End(), text: "type " + name, opaque: true})
+		e.insert(form.Open.Pos(), "= ", 0)
+		for _, variant := range form.Variants {
+			if variant.Open.Pos() != variant.Open.End() {
+				e.insert(variant.Name.End(), ":", 0)
+			}
 		}
 	case parser.VibeSyntaxSchemaAlias:
 		// schema Code = "a" | "b" is type $v = "a" | "b": only the head changes.

@@ -41,6 +41,9 @@
 					"include": "#vibelang-error-declaration"
 				},
 				{
+					"include": "#vibelang-data-declaration"
+				},
+				{
 					"include": "#vibelang-schema-alias"
 				},
 				{
@@ -6197,6 +6200,62 @@
 					"name": "entity.name.type.module.ts"
 				}
 			}
+		},
+		"vibelang-data-declaration": {
+			"name": "meta.enum.declaration.ts",
+			"begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:(\\bexport)\\s+)?\\b(data)\\s+([_$[:alpha:]][_$[:alnum:]]*)(?=\\s*(?:<|\\{|$|//|/\\*))",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.export.ts"
+				},
+				"2": {
+					"name": "storage.type.enum.ts"
+				},
+				"3": {
+					"name": "entity.name.type.enum.ts"
+				}
+			},
+			"end": "(?<=\\})",
+			"patterns": [
+				{
+					"include": "#comment"
+				},
+				{
+					"include": "#type-parameters"
+				},
+				{
+					"begin": "\\{",
+					"beginCaptures": {
+						"0": {
+							"name": "punctuation.definition.block.ts"
+						}
+					},
+					"end": "\\}",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.definition.block.ts"
+						}
+					},
+					"patterns": [
+						{
+							"include": "#comment"
+						},
+						{
+							"include": "#type-object"
+						},
+						{
+							"match": "[_$[:alpha:]][_$[:alnum:]]*",
+							"name": "variable.other.enummember.ts"
+						},
+						{
+							"include": "#punctuation-comma"
+						},
+						{
+							"include": "#punctuation-semicolon"
+						}
+					]
+				}
+			]
 		}
 	}
 }

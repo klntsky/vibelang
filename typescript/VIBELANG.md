@@ -384,7 +384,7 @@ An entry module, one that exports a parameterless `function main`, gets `runtime
 
 In `.vibe` files, `parsePostfixTypeOrHigher` leaves `!` to `parseType`, which reads the slots of an Effect type; JSDoc's postfix non-null `T!` does not parse there. Hovers rewrite Effect types into the `!` form through `ls.RegisterQuickInfoTextHook` (`vibelang/bang.go`), and contract messages write them the same way.
 
-The VS Code grammar adds these forms in `editors/vscode/scripts/vibelang-grammar.mjs`, which `derive-grammar.mjs` applies whenever it rederives the grammar from TypeScript's.
+The VS Code grammar adds these forms in `editors/vscode/scripts/vibelang-grammar.mjs`, which `derive-grammar.mjs` applies whenever it rederives the grammar from TypeScript's. `site/vibe.tmLanguage.json` is a copy of it.
 
 ## Seams in upstream files
 

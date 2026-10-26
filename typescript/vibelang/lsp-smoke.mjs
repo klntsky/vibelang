@@ -663,6 +663,30 @@ try {
     assert(location.range.start.line === lineOf("src/main.vibe", "function lookup"), `line ${location.range.start.line}`)
   })
 
+  await check("diagnostics: data.vibe, with a data declaration, checks clean", async () => {
+    open("src/data.vibe", "vibe")
+    const items = await diagnostics("src/data.vibe")
+    assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)
+  })
+
+  await check("hover: a data type shows its declaration, and a variant its fields", async () => {
+    const declaration = await hover("src/data.vibe", "delivery: Delivery", { offset: 10 })
+    assert(declaration.includes("data Delivery {\n  Waiting\n  Sent { tracking: string }\n  Rejected { reason: string }\n}"), `got ${JSON.stringify(declaration)}`)
+    const variant = await hover("src/data.vibe", "Sent({", {})
+    assert(variant.includes("(variant) Delivery.Sent { tracking: string }"), `got ${JSON.stringify(variant)}`)
+    const pattern = await hover("src/data.vibe", "Waiting:", {})
+    assert(pattern.includes("(variant) Delivery.Waiting"), `got ${JSON.stringify(pattern)}`)
+  })
+
+  await check("definition: a data variant goes to the variant in its declaration", async () => {
+    for (const needle of ["Sent({", "Sent { let"]) {
+      const [location, ...rest] = await definition("src/data.vibe", needle)
+      assert(location && rest.length === 0, `${needle}: expected one location, got ${JSON.stringify([location, ...rest])}`)
+      const want = at("src/data.vibe", "Sent { tracking")
+      assert(location.uri === fileUri("src/data.vibe") && location.range.start.line === want.line && location.range.start.character === want.character, `${needle}: range ${JSON.stringify(location.range)}`)
+    }
+  })
+
   await check("diagnostics: module.vibe, with a module declaration, checks clean", async () => {
     open("src/module.vibe", "vibe")
     const items = await diagnostics("src/module.vibe")
@@ -728,6 +752,11 @@ try {
   await check("completion: members of an imported Effect module in .vibe", async () => {
     const labels = await completionLabels("src/main.vibe", "Console.log", { offset: 8 })
     assert(labels.includes("log") && labels.includes("error"), `labels ${JSON.stringify(labels.slice(0, 20))}`)
+  })
+
+  await check("completion: a data type's variants after its name", async () => {
+    const labels = await completionLabels("src/data.vibe", "Delivery.Sent({", { offset: 9 })
+    for (const variant of ["Waiting", "Sent", "Rejected"]) assert(labels.includes(variant), `labels ${JSON.stringify(labels)}`)
   })
 
   await check("hover: a method of an Effect data type names the function it calls", async () => {

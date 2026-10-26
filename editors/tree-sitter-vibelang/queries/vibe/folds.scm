@@ -5,6 +5,7 @@
   (service_declaration)
   (control_declaration)
   (schema_declaration)
+  (data_declaration)
   (layer_declaration)
   (provide_statement)
   (handle_clause)
