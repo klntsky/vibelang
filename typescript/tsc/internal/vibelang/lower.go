@@ -29,14 +29,20 @@ import (
 //	}
 type lowering struct {
 	transformers.Transformer
-	plan     *plan
-	effect   *ast.IdentifierNode // local name for effect's Effect module, imported on first use
-	runtime  *ast.IdentifierNode // local name for vibelang-runtime, imported on first use
-	inEffect bool                // visiting code that runs inside a lowered generator
-	frame    *frame              // the generator being emitted while inEffect
-	plain    bool                // visiting the body of a .vibe function that compiles to plain JavaScript
-	imports  []namedImport       // named imports the lowering adds, such as a @throws class
-	commonJS bool                // the file is emitted as CommonJS, which has no import.meta (entry.go) and reads imported plain variants from the module (plain_lower.go)
+	plan         *plan
+	effect       *ast.IdentifierNode // local name for effect's Effect module, imported on first use
+	runtime      *ast.IdentifierNode // local name for vibelang-runtime, imported on first use
+	inEffect     bool                // visiting code that runs inside a lowered generator
+	frame        *frame              // the generator being emitted while inEffect
+	eagerWeight  int                 // charge for the native frame whose cycle calls are being emitted
+	eagerCaches  []*ast.Node         // private, lazy cross-module native entries
+	eagerEscapes bool                // the native body must restore published state on exit
+	eagerBudget  *ast.Node           // remaining budget passed between native cycle members
+	rawPlain     bool                // the original JS body used across synchronous callback boundaries
+	rawCallbacks bool                // nested callbacks of a plain cycle retain their original JS recursion
+	plain        bool                // visiting the body of a .vibe function that compiles to plain JavaScript
+	imports      []namedImport       // named imports the lowering adds, such as a @throws class
+	commonJS     bool                // the file is emitted as CommonJS, which has no import.meta (entry.go) and reads imported plain variants from the module (plain_lower.go)
 
 	// scopes maps each Scope region's block to the name of its Scope (scopes_lower.go).
 	scopes map[*ast.Node]*ast.Node
@@ -72,10 +78,49 @@ func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *tra
 }
 
 func (tx *lowering) visit(node *ast.Node) *ast.Node {
-	if tx.frames.binders[node] {
+	if isFunctionBoundary(node) {
+		budget, escapes := tx.eagerBudget, tx.eagerEscapes
+		tx.eagerBudget, tx.eagerEscapes = nil, false
+		defer func() { tx.eagerBudget, tx.eagerEscapes = budget, escapes }()
+	}
+	if tx.frames.binders[node] && !tx.plan.cyclicDirects[node] {
 		return tx.hoistFrameReferences(node, tx.visitSource(node)) // super and arguments (frames_lower.go)
 	}
-	return tx.visitSource(node)
+	visited := tx.visitSource(node)
+	if tx.eagerBudget != nil && !tx.rawPlain && !tx.inEffect {
+		ref := tx.plan.cycleRefs[node]
+		if ref == nil {
+			ref = tx.plan.directRefs[node]
+		}
+		// Fast calls carry the budget explicitly. All other invocations
+		// publish it around evaluation of their receiver and arguments too.
+		escape := (isInvocation(node) || ast.IsNewExpression(node)) && (!ast.IsCallExpression(node) || ref == nil || !tx.plan.fastRefs[ref])
+		// A property read can run a getter. Leave call receivers intact;
+		// the enclosing invocation covers their evaluation.
+		if ast.IsPropertyAccessExpression(node) || ast.IsElementAccessExpression(node) {
+			escape = plainPropertyEscapes(node)
+		}
+		if ast.IsBinaryExpression(node) && ast.IsAssignmentOperator(node.AsBinaryExpression().OperatorToken.Kind) {
+			left := ast.SkipParentheses(node.AsBinaryExpression().Left)
+			escape = ast.IsPropertyAccessExpression(left) || ast.IsElementAccessExpression(left)
+		}
+		if ast.IsPrefixUnaryExpression(node) || ast.IsPostfixUnaryExpression(node) || node.Kind == ast.KindDeleteExpression {
+			var operand *ast.Node
+			switch {
+			case ast.IsPrefixUnaryExpression(node):
+				operand = node.AsPrefixUnaryExpression().Operand
+			case ast.IsPostfixUnaryExpression(node):
+				operand = node.AsPostfixUnaryExpression().Operand
+			default:
+				operand = node.Expression()
+			}
+			escape = ast.IsPropertyAccessExpression(operand) || ast.IsElementAccessExpression(operand)
+		}
+		if escape {
+			return tx.publishPlainBudget(visited)
+		}
+	}
+	return visited
 }
 
 // visitSource lowers node, a node of the .vibe file or one the lowering made.
@@ -85,6 +130,9 @@ func (tx *lowering) visitSource(node *ast.Node) *ast.Node {
 	}
 	if tx.plan.conversionOf(node) == convertByName {
 		return tx.byNameProgram(node)
+	}
+	if ref := tx.plan.cycleRefs[node]; ref != nil && !tx.inEffect {
+		return tx.visitDirectReference(node, ref)
 	}
 	if ref := tx.plan.directRefs[node]; ref != nil {
 		return tx.visitDirectReference(node, ref)
@@ -201,6 +249,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitPlainCatchClause(node)
 	case node.Kind == ast.KindFunctionDeclaration && tx.plan.directs[node]:
 		return tx.visitPlainFunctionDeclaration(node)
+	case node.Kind == ast.KindFunctionDeclaration && tx.plan.cyclicDirects[node]:
+		return tx.visitCyclicPlainFunctionDeclaration(node)
 	case node.Kind == ast.KindCallExpression && tx.plan.wireOrders[node] != nil:
 		return tx.visitWireCall(node)
 	case tx.plan.producers[node]:
@@ -214,6 +264,11 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 	case tx.plan.isProgram(node):
 		return tx.lowerProgram(node)
 	case isFunctionBoundary(node):
+		savedRaw := tx.rawPlain
+		if tx.rawCallbacks {
+			tx.rawPlain = true
+		}
+		defer func() { tx.rawPlain = savedRaw }()
 		saved, savedPlain := tx.inEffect, tx.plain
 		tx.inEffect = false
 		tx.plain = isLowerable(node) || isPlainGenerator(node) // a .vibe function that is not an Effect, or a plain generator (D296)
@@ -249,6 +304,9 @@ func (tx *lowering) visitSourceFile(file *ast.SourceFile) *ast.Node {
 		for i, declaration := range imports {
 			imports[i] = requireNamedImports(&tx.Factory().NodeFactory, declaration)
 		}
+	}
+	if len(tx.eagerCaches) != 0 {
+		imports = append(imports, tx.Factory().NewVariableStatement(nil, tx.Factory().NewVariableDeclarationList(tx.Factory().NewNodeList(tx.eagerCaches), ast.NodeFlagsNone)))
 	}
 	// The list keeps the source range, from whose end the printer emits the
 	// comments after the last statement.

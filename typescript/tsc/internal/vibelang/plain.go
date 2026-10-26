@@ -21,8 +21,9 @@ import (
 //
 // Eligibility is a greatest fixpoint over the call graph (D56): a group of
 // functions that call one another compiles to plain JavaScript when each
-// would with the calls inside the group counted as plain, so pure recursion
-// runs on the JavaScript stack.
+// would with the calls inside the group counted as plain. Their calls of one
+// another run eagerly up to the shared budget, then on heap frames
+// (plain_cycles.go).
 
 type plainState uint8
 
@@ -328,7 +329,12 @@ func (a *analyzer) programEffectInterface() *checker.Type {
 
 // plainPlan records what the lowering does with plain functions in one file.
 type plainPlan struct {
+	budgetDirects   map[*ast.Node]bool             // acyclic helpers with a private budget-forwarding entry
 	directs         map[*ast.Node]bool             // function declarations split into a $direct variant and an Effect wrapper
+	cyclicDirects   map[*ast.Node]bool             // plain functions on a cycle, split into an Effect generator and a $direct variant that runs it (plain_cycles.go)
+	fastRefs        map[*directReference]bool      // cycle entries that can forward a hidden eager budget
+	rawRefs         map[*directReference]bool      // references to cycle members with an original JS body
+	cycleRefs       map[*ast.Node]*directReference // cycle calls: direct in the eager body, yield* in the heap body
 	directRefs      map[*ast.Node]*directReference // calls and function values that reach a $direct variant
 	directImports   map[*ast.Node][]*ast.Node      // import declarations, and the specifiers whose $direct variants they bring in
 	directExports   map[*ast.Node][]*ast.Node      // named export declarations, and their plain-function specifiers
@@ -337,7 +343,7 @@ type plainPlan struct {
 }
 
 func newPlainPlan() plainPlan {
-	return plainPlan{directs: map[*ast.Node]bool{}, directRefs: map[*ast.Node]*directReference{}, directImports: map[*ast.Node][]*ast.Node{}, directExports: map[*ast.Node][]*ast.Node{}, exportedImports: map[*ast.Node]*ast.Node{}, directDefaults: map[*ast.Node]*directReference{}}
+	return plainPlan{budgetDirects: map[*ast.Node]bool{}, directs: map[*ast.Node]bool{}, cyclicDirects: map[*ast.Node]bool{}, cycleRefs: map[*ast.Node]*directReference{}, rawRefs: map[*directReference]bool{}, fastRefs: map[*directReference]bool{}, directRefs: map[*ast.Node]*directReference{}, directImports: map[*ast.Node][]*ast.Node{}, directExports: map[*ast.Node][]*ast.Node{}, exportedImports: map[*ast.Node]*ast.Node{}, directDefaults: map[*ast.Node]*directReference{}}
 }
 
 // planPlain records how the lowering treats node with respect to plain
@@ -351,10 +357,24 @@ func (p *plainPlan) planPlain(a *analyzer, node *ast.Node) {
 		p.planPlainDefault(a, node)
 	}
 	if a.isSplittable(node) && a.isPlainFunction(node) {
-		p.directs[node] = true
+		if a.onPlainCycle(node) {
+			p.cyclicDirects[node] = true
+		} else {
+			p.directs[node] = true
+			p.budgetDirects[node] = a.forwardsPlainBudget(node)
+		}
 	}
 	var ref *directReference
 	switch {
+	case isInvocation(node) && a.isCycleCall(node):
+		ref = a.directCallee(node)
+		if ref != nil {
+			p.cycleRefs[node] = ref
+			p.rawRefs[ref] = true
+			p.fastRefs[ref] = plainBudgetParameters(esFunctionOf(a.checker, ast.GetInvokedExpression(node)))
+			p.importVariant(ref.specifier)
+		}
+		return
 	case isInvocation(node):
 		ref = a.directCallee(node)
 	case a.finalConversion(node) == convertDirect:
@@ -364,6 +384,19 @@ func (p *plainPlan) planPlain(a *analyzer, node *ast.Node) {
 	}
 	if ref == nil {
 		return
+	}
+	subject := node
+	if isInvocation(node) {
+		subject = ast.GetInvokedExpression(node)
+	}
+	if fn := esFunctionOf(a.checker, subject); fn != nil && (a.onPlainCycle(fn) || a.forwardsPlainBudget(fn)) {
+		p.fastRefs[ref] = plainBudgetParameters(fn)
+		for owner := node.Parent; owner != nil; owner = owner.Parent {
+			if ast.IsFunctionLike(owner) && a.onPlainCycle(owner) {
+				p.rawRefs[ref] = fn == owner || a.plainReaches(fn, owner)
+				break
+			}
+		}
 	}
 	p.directRefs[node] = ref
 	p.importVariant(ref.specifier)

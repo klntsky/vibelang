@@ -1,0 +1,7 @@
+import * as B from "./receiver-b.vibe"
+export const value = 1
+export function f(this: { value: number }, n: number): Effect<number> {
+  if (n === 0) return this.value
+  if (n % 2 === 0) return B.g(n - 1)
+  return [n - 1].map(x => B.g(x))[0]
+}

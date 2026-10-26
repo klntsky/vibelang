@@ -576,3 +576,56 @@ describe("fast calls", () => {
     })
   })
 })
+
+test("$fast shares the native recursion reservation and releases it before suspension", async () => {
+  const { $eager } = await import("vibelang-runtime")
+  let entered = 0
+  const fast = $fast(function* () {
+    entered++
+    yield* Effect.yieldNow
+    return 42
+  })
+  const previous = $eager.depth
+  $eager.depth = $eager.limit
+  let pending: unknown
+  try {
+    pending = fast()
+    expect(entered).toBe(0)
+    expect($eager.depth).toBe($eager.limit)
+  } finally {
+    $eager.depth = previous
+  }
+  expect(await Effect.runPromise(pending as Effect.Effect<number>)).toBe(42)
+  expect($eager.depth).toBe(previous)
+  const a = fast(), b = fast()
+  expect($eager.depth).toBe(previous)
+  expect(await Effect.runPromise(Effect.all([a as Effect.Effect<number>, b as Effect.Effect<number>], { concurrency: "unbounded" }))).toEqual([42, 42])
+  expect($eager.depth).toBe(previous)
+})
+
+test("published native budget is balanced through nested calls, defects and fiber switches", async () => {
+  const { $eager } = await import("vibelang-runtime")
+  const initial = $eager.depth
+  const defect = new Error("bridge defect")
+  const fast = $fast(function* () {
+    expect($eager.depth).toBe($eager.limit - 32 + 16)
+    yield* Effect.yieldNow
+    expect($eager.depth).toBe(initial)
+    return 42
+  })
+  const pending = $eager.call(32, () => {
+    expect($eager.depth).toBe($eager.limit - 32)
+    expect(() => $eager.call(16, () => { throw defect })).toThrow(defect)
+    expect($eager.depth).toBe($eager.limit - 32)
+    const program = fast()
+    expect($eager.depth).toBe($eager.limit - 32)
+    return program
+  })
+  expect($eager.depth).toBe(initial)
+  expect(await Effect.runPromise(pending as Effect.Effect<number>)).toBe(42)
+  const a = $eager.call(32, () => fast())
+  const b = $eager.call(32, () => fast())
+  expect($eager.depth).toBe(initial)
+  expect(await Effect.runPromise(Effect.all([a as Effect.Effect<number>, b as Effect.Effect<number>], { concurrency: "unbounded" }))).toEqual([42, 42])
+  expect($eager.depth).toBe(initial)
+})

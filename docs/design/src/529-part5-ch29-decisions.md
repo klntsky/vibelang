@@ -39,7 +39,7 @@ D57 supplies decision 2's partial-annotation spelling: explicit `infer Name` slo
 | D7 | Program values are functions with no arguments | No new syntax; `() =>` already means "not yet" | 5, 13 |
 | D8 | No `\|>` in v0; the `pipe(program, …stages)` built-in stays. **Superseded by D154** | Calls run before a pipe sees them; Stage 2 since 2021; 1.1% and 2.6% of pipes keep two stages | 5 |
 | D9 | A function value where a plain function is expected passes its plain-JavaScript form, or EK4301 | Plain JavaScript callbacks need a direct calling convention | 13, 16 |
-| D10 | Plain JavaScript when a function performs no Effect operation and E is never; source order kept; pure recursion on the JavaScript stack | Preserves source order and JavaScript recursion for plain helpers | 15 |
+| D10 | Plain JavaScript when a function performs no Effect operation and E is never; source order kept; a function on a cycle of plain calls keeps its plain type, runs shallow recursion as fast JavaScript, then continues on heap frames without a recursion-depth limit | Preserves source order and fast JavaScript recursion for plain helpers; plain `countdown` overflowed at 20,000 calls (case `recursion-stack-safe`) | 15 |
 | D11 | Higher-order functions compile to frames in v0 | Higher-order calls need continuation frames until specialization | 15, 16 |
 | D12 | A callback type without a contract accepts any contract; unchanged by D57 | Settled decision 2 forbids reading it as `never` | 16 |
 | D13 | `catch` handles a cause only when it holds no defect and no interruption | Mixed failure and defect causes must propagate intact; K14a-K14c | 3, 17, 26 |
@@ -253,7 +253,7 @@ Proposed in the first draft as P1-P22; adopted by D29. A row marked **revised** 
 | P9 | Services always use in-place evidence. Control operations use prompt evidence, or in-place evidence when TypeScript supplies an implementation that always resumes; the checker treats them as fiber-bound either way | In-place and override tests; T8 | 4, 9, 16 |
 | P10 | Control operations cannot cross fibers. **Revised**: the runtime is the guarantee (`HandlerNotOnThisFiber`); the fiber-behavior table is the diagnostic (EK4201), and TypeScript functions with a control operation in R are rejected (EK4202) | T7b, T8, probes; `tests/runtime-boundaries.test.ts` | 9, 16 |
 | P11 | The frame invariant; source regions compile to Effect frames, never JavaScript `try`, in functions that compile to frames | F1-F3 | 26 |
-| P12 | **Revised** as D10: plain JavaScript only with no Effect operation and E = never; pure recursion on the JavaScript stack; `pure` permits inlining only | F9, T6a; `tests/runtime-boundaries.test.ts` | 15 |
+| P12 | **Revised** as D10: plain JavaScript only with no Effect operation and E = never; bounded eager pure recursion, then heap frames (D10); `pure` permits inlining only | F9, T6a; `tests/runtime-boundaries.test.ts` | 15 |
 | P13 | The kernel bounds synchronous wake-up depth | F10a, K10a, K10b | 24 |
 | P14 | A callback type without a contract is effect-polymorphic (D12); D57 leaves this rule intact | Settled decision 2 | 16 |
 | P15 | Effect 4 only | Research §10 | 10 |

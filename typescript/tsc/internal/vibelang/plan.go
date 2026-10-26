@@ -71,7 +71,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 		a := analyzerFor(c)
 		var visit func(node *ast.Node) bool
 		visit = func(node *ast.Node) bool {
-			if isLowerable(node) && a.isEffect(node) {
+			if isLowerable(node) && (a.isEffect(node) || a.onPlainCycle(node)) {
 				if isLambda(node) && a.finalForm(node) == formProgram {
 					p.programs[node] = true
 				} else {
@@ -80,7 +80,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 				p.planClause(c, node)
 				p.planProducer(c, node)
 				forEachCallInBody(node, func(call *ast.Node) bool {
-					if a.runs(call) {
+					if a.runs(call) || a.isCycleCall(call) {
 						p.runs[call] = true
 					}
 					if ast.IsCallExpression(call) {
@@ -228,8 +228,10 @@ type analyzer struct {
 	classifying      map[*ast.Node]bool          // values whose position is being classified (expressionType)
 
 	// Plain JavaScript functions (plain.go).
-	plain                 map[*ast.Node]plainState // function declarations that compile to plain JavaScript
-	programEffect         *checker.Type            // effect's Effect interface, found in the program's files
+	plain                 map[*ast.Node]plainState  // function declarations that compile to plain JavaScript
+	plainEdges            map[*ast.Node][]plainEdge // $direct calls in a function's own body (plain_cycles.go)
+	plainCycles           map[*ast.Node]bool        // plain functions on a cycle of $direct calls
+	programEffect         *checker.Type             // effect's Effect interface, found in the program's files
 	programEffectSearched bool
 
 	callbacks map[*ast.Node]*callbackContracts // functions with uncontracted callback parameters (callbackcontracts.go)
@@ -265,6 +267,8 @@ func analyzerFor(c *checker.Checker) *analyzer {
 			valueTyping:      map[*ast.Node]bool{},
 			classifying:      map[*ast.Node]bool{},
 			plain:            map[*ast.Node]plainState{},
+			plainEdges:       map[*ast.Node][]plainEdge{},
+			plainCycles:      map[*ast.Node]bool{},
 			callbacks:        map[*ast.Node]*callbackContracts{},
 		}
 	}).(*analyzer)

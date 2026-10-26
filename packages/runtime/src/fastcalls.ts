@@ -219,7 +219,47 @@ export function $settle<Eff extends Effect.Effect<any, any, any>, A>(
 // after a RangeError: the body may already have run side effects. A deeper
 // recursion costs the same with any bound, because every level then suspends.
 const maxEagerDepth = 100
-let eagerDepth = 0
+// Shared by generated plain entries and $fast. A plain entry uses 1/16
+// of a generator entry's budget (one small JS frame instead of a generator,
+// iterator and adapter). Native calls forward remaining budget privately,
+// publishing it at opaque boundaries; heap entry reserves the full budget.
+// Publications and reservations restore their incoming state in finally;
+// no reservation survives suspension or a fiber switch.
+type EagerFunction = (...args: Array<any>) => any
+const heapFactories = new WeakMap<EagerFunction, EagerFunction>()
+const eagerEntries = new WeakMap<EagerFunction, { stack: EagerFunction; recur?: EagerFunction }>()
+
+// Keep generated metadata outside function objects: freezing a public
+// Effect or its direct entry must not disable deep recursion.
+export const $eager = {
+  depth: 0,
+  limit: maxEagerDepth * 16,
+  call<A>(remaining: number, body: () => A): A {
+    const previous = $eager.depth
+    $eager.depth = $eager.limit - remaining
+    try {
+      return body()
+    } finally {
+      $eager.depth = previous
+    }
+  },
+  getHeap(fn: EagerFunction): EagerFunction | undefined {
+    return heapFactories.get(fn)
+  },
+  setHeap(fn: EagerFunction, factory: EagerFunction): EagerFunction {
+    heapFactories.set(fn, factory)
+    return factory
+  },
+  register(direct: EagerFunction, stack: EagerFunction, recur?: EagerFunction): void {
+    eagerEntries.set(direct, { stack, recur })
+  },
+  recur(direct: EagerFunction): EagerFunction | undefined {
+    return eagerEntries.get(direct)?.recur
+  },
+  stack(direct: EagerFunction): EagerFunction {
+    return eagerEntries.get(direct)?.stack ?? direct
+  }
+}
 
 /**
  * The fast entry that bounds eager nesting: `const f$fast = $fast(f$body)`.
@@ -241,15 +281,15 @@ export function $fast<Args extends Array<any>, Eff extends Effect.Effect<any, an
 ): (...args: Args) => Fast<A, Eff> {
   const slow = Effect.fnUntraced(body as (...args: Args) => Generator<Eff, A, any>)
   return function(this: unknown, ...args: Args): Fast<A, Eff> {
-    if (eagerDepth >= maxEagerDepth) return slow.apply(this, args) as any
-    eagerDepth++
+    if ($eager.depth >= $eager.limit) return slow.apply(this, args) as any
+    $eager.depth += 16
     try {
       const it = body.apply(this, args)
       return $settle(it, it.next())
     } catch (defect) {
       return Exit.die(defect)
     } finally {
-      eagerDepth--
+      $eager.depth -= 16
     }
   }
 }

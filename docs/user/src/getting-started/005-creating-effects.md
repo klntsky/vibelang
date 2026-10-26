@@ -185,7 +185,7 @@ function checkedQuantity(n: number) {
 // Output: 3
 ```
 
-Suspending recursion uses runtime frames, not JavaScript stack frames. Pure recursion without Effect operations uses the JavaScript stack and can overflow. Returns and throws also unify success and failure channels across branches without an extra suspension wrapper.
+Plain call cycles use fast JavaScript for shallow recursion, then continue on runtime frames at the eager depth limit. Functions that suspend use runtime frames. A function with a plain return type, or recursion through a synchronous callback, retains JavaScript's stack limit. Returns and throws also unify success and failure channels across branches without an extra suspension wrapper.
 
 ## Coming from Effect
 

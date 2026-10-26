@@ -4,7 +4,7 @@ import "./version.js"
 export const $freeze = Object.freeze
 export const $defineProperty = Object.defineProperty
 export * from "./calls.js"
-export { $direct, $done, $fast, $isRun, $settle } from "./fastcalls.js"
+export { $direct, $done, $eager, $fast, $isRun, $settle } from "./fastcalls.js"
 export type { Fast } from "./fastcalls.js"
 export * from "./regions.js"
 export * from "./fork.js"

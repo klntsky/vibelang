@@ -1,0 +1,51 @@
+import { odd } from "./odd.vibe"
+
+export default function down(n: number): Effect<number> {
+  return n === 0 ? 0 : down(n - 1)
+}
+export function even(n: number): Effect<boolean> {
+  return n === 0 ? true : odd(n - 1)
+}
+export function tree(n: number): Effect<number> {
+  if (n === 0) return 1
+  if (n % 2 === 0) return tree(n - 1)
+  return [n - 1].map(x => tree(x))[0]
+}
+export function guarded(n: number): Effect<number> {
+  try {
+    if (n === 0) return JSON.parse("7")
+    return guarded(n - 1)
+  } catch (e) {
+    return -1
+  }
+}
+error Stop { value: number }
+export function caught(n: number): Effect<number> {
+  try {
+    if (n === 0) throw new Stop({ value: 7 })
+    return caught(n - 1)
+  } catch (e) {
+    return 7
+  }
+}
+export function typed(n: number): Effect<number, Stop> {
+  if (n === 0) throw new Stop({ value: 9 })
+  return typed(n - 1)
+}
+export function catchTyped(n: number) {
+  try { return typed(n) } catch (e) { return e.value }
+}
+export function boom(n: number): Effect<number> {
+  if (n === 0) return (null as any).x
+  return boom(n - 1)
+}
+let defaults = 0
+function nextDefault(): number { defaults++; return 3 }
+export function complex(n: number, { value } = { value: nextDefault() }, ...rest: number[]): Effect<number> {
+  return n === 0 ? value + rest.length : complex(n - 1, { value }, ...rest)
+}
+export function defaultCount(): number { return defaults }
+export function args(n: number, ...rest: number[]): Effect<number> {
+  if (n === 0) return arguments.length + rest.length
+  return args(n - 1, ...rest)
+}
