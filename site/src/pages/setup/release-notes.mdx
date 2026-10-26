@@ -9,6 +9,31 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
+## 0.0.10 (unreleased)
+
+This release has no breaking changes. Everything that compiles on 0.0.9
+compiles the same.
+
+- The terse contract syntax is back as an alias of `Effect<A, E, R>`, and
+  the guides, the skill and the starter use it again:
+
+  | Terse | Means |
+  | --- | --- |
+  | `User!NotFound!Db` | `Effect<User, NotFound, Db>` |
+  | `User!NotFound!` | `Effect<User, NotFound>`: needs nothing |
+  | `User!!Db` | `Effect<User, never, Db>`: cannot fail |
+  | `User!!` | `Effect<User>`: cannot fail and needs nothing |
+  | `User!NotFound` on a function with a body | `Effect<User, NotFound, infer R>` |
+
+  Both spellings are valid and can be mixed in one file. `Effect<User>`
+  keeps the meaning it has had since 0.0.8, `Effect<User, never, never>`.
+- Code written for 0.0.6 with the shorthand compiles again without changes.
+  The error EK1014 is retired, and `vibelang --fix` no longer rewrites the
+  shorthand.
+- EK4833 still reports only `Effect.Effect<A, E, R>`; its quick fix and
+  `vibelang --fix` write the terse form. Hovers, messages and quick fixes
+  show Effect types in the terse form again.
+
 ## 0.0.9
 
 This release has no breaking changes.
