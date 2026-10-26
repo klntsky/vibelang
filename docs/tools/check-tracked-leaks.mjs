@@ -5,6 +5,7 @@ import { lstatSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { leaks } from "./leaks.ts"
+import { publicHygiene } from "./public-hygiene.mjs"
 
 export function upstreamFixture(path) {
   if (!path.startsWith("typescript/")) return false
@@ -25,7 +26,8 @@ export function trackedLeaks(root) {
     if (!lstatSync(path).isFile()) continue // do not follow a tracked symlink outside the tree
     const bytes = readFileSync(path)
     if (bytes.includes(0)) continue // binary assets are not text
-    const found = leaks(bytes.toString("utf8"), { repository: true })
+    const text = bytes.toString("utf8")
+    const found = [...leaks(text, { repository: true }), ...publicHygiene(file, text)]
     for (const problem of found) problems.push(file + ": " + problem)
   }
   return problems

@@ -69,7 +69,6 @@ test("the codemod tells an extension from a property, and keeps names we do not 
     ["https://effeck.dev/setup/formatting.html", "docs/redirect/index.js", "https://effeck.dev/setup/formatting.html"],
     ["https://smithers.sh/effeck/effeck/blob/main/typescript/EFFECK.md", "x.md", "https://smithers.sh/effeck/effeck/blob/main/typescript/VIBELANG.md"],
     ['"/nonexistent/effeck/effeck" and scripts/build-effeck.sh', "x.ts", '"/nonexistent/vibelang/vibelang" and scripts/build-vibelang.sh'],
-    ["image: registry/smithers/effeck-converter-worker", "x.yaml", "image: registry/smithers/effeck-converter-worker"],
   ]
   for (const [line, rel, expected] of cases) assert.equal(rewriteLine(line, rel).line, expected, line)
 })

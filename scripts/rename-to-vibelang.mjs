@@ -94,10 +94,6 @@ export const KEEP = [
     pattern: /smithers\.sh\/effeck\/effeck(?![\w-])|(?<![\w.-]\/)(?<![\w-])effeck\\?\/effeck(?![\w-])/g,
   },
   {
-    why: "the converter worker's deployed Kubernetes and Artifact Registry names",
-    pattern: /effeck-converter-worker/g,
-  },
-  {
     why: "paths in the Smithers-Ops vault, which renames its own files",
     pattern: /Smithers-Ops\/[^\s)`'"]*/g,
   },
@@ -325,8 +321,8 @@ function decisionText(number) {
       `Source files end in \`.${EXTENSION}\`, the editor language id and the Neovim filetype are \`${LANGUAGE_ID}\`, ` +
       `the configuration key is \`compilerOptions.${BRAND_LOWER}\`, the trust tag is \`@${BRAND_LOWER} trusted\`, ` +
       `and the editor extension is \`${BRAND_LOWER}.${BRAND_LOWER}\`. Diagnostic codes keep the prefix \`EK\`. ` +
-      "The single docs site is vibelang.sh. The issue tracker `effeck/effeck` on smithers.sh, and the converter worker's deployment " +
-      "effeck-converter-worker keep their names until they move. `node scripts/rename-to-vibelang.mjs` applies the rename to any tree, " +
+      "The single docs site is vibelang.sh. The issue tracker `effeck/effeck` on smithers.sh keeps its name until it moves. " +
+      "`node scripts/rename-to-vibelang.mjs` applies the rename to any tree, " +
       "and `scripts/brand-gate.mjs` fails on a retired spelling.",
     "",
   ].join("\n")

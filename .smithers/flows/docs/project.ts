@@ -32,7 +32,7 @@ export const layout: readonly (readonly [path: string, responsibility: string])[
   ["`packages/runtime/`", "`vibelang-runtime`: the continuation kernel and generated-code helpers"],
   ["`packages/create-vibelang/`, `templates/app/`", "The starter generator and the starter app"],
   ["`packages/vite/`, `packages/unplugin/`", "Vite, webpack, Rspack and other bundler integrations"],
-  ["`packages/ts-mapper/`, `packages/converter-worker/`", "TypeScript mapping utilities and the converter's compile service"],
+  ["`packages/ts-mapper/`", "TypeScript mapping utilities"],
   ["`editors/`", "VS Code and Cursor extension, Neovim and Zed setup, tree-sitter grammar"],
   ["`examples/`", "Runnable example projects"],
   ["`docs/user/`, `docs/design/`", "User guides, the specification and the decision log"],

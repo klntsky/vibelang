@@ -4,7 +4,7 @@
   "vibelangVersion": "0.0.1",
   "receipt": {
     "kind": "hand-checked",
-    "note": "Hand-written pair, compiled by packages/converter-worker on the Linux build host. Replaced by the convert flow's signed receipt once it exists.",
+    "note": "Hand-written pair, compiled with VibeLang. Replaced by the convert flow's signed receipt once it exists.",
     "inputSha": "sha256:9fc713164cc38b63241eb065ab6589b6952c672c1c3840ea6eef7ca76934ea17",
     "outputSha": "sha256:7284f84180cefc71aa948915f6db18df49644bc74386b72e6c3047b4d64118c2",
     "compilerDigest": "sha256:b2563e8962b0420c5c3f0beadeb1e52803888e63e4bf210f3a745819bcbaaf9d",

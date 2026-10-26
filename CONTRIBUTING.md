@@ -38,7 +38,7 @@ The compiler cases and the doc snippet check also need the pinned packages in `e
 | `packages/runtime/` | `vibelang-runtime`: the continuation kernel and generated-code helpers |
 | `packages/create-vibelang/`, `templates/app/` | The starter generator and the starter app |
 | `packages/vite/`, `packages/unplugin/` | Vite, webpack, Rspack and other bundler integrations |
-| `packages/ts-mapper/`, `packages/converter-worker/` | TypeScript mapping utilities and the converter's compile service |
+| `packages/ts-mapper/` | TypeScript mapping utilities |
 | `editors/` | VS Code and Cursor extension, Neovim and Zed setup, tree-sitter grammar |
 | `examples/` | Runnable example projects |
 | `docs/user/`, `docs/design/` | User guides, the specification and the decision log |
@@ -88,4 +88,4 @@ Start with [good first issues](https://github.com/smithersai/vibelang/issues?q=i
 
 Ask with the [question form](https://github.com/smithersai/vibelang/issues/new?template=question.yml). Report a vulnerability privately, never in an issue: see [SECURITY.md](.github/SECURITY.md).
 
-<sub>2,203 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
+<sub>2,190 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
