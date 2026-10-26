@@ -37,6 +37,9 @@ func checkAnyCallResult(c *checker.Checker, fn *ast.Node, value *ast.Node) {
 		return
 	}
 	callee := value.Expression()
+	if missingCallPipe(c, callee) != nil {
+		return // EK4502 explains the missing member, rather than an untyped call.
+	}
 	if t := c.GetTypeAtLocation(callee); t == nil || t.Flags()&checker.TypeFlagsAny == 0 {
 		return
 	}

@@ -353,3 +353,4 @@ Library debugging concepts still apply; VibeLang's call execution, service decla
 | Code | Meaning and fix |
 | --- | --- |
 | EK1015 | Calls already run in VibeLang. Remove `yield*` from `const value = yield* load()`. Generators keep their own yield syntax. |
+| EK4502 | A call already ran; its value has no `pipe` method. Write `f(s) \|> retry(%, policy)` or `retry(f(s), policy)`. |
