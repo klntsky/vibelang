@@ -6,9 +6,9 @@ VibeLang is a language for Effect programs in TypeScript syntax. These steps set
 
 Run `node --version` and expect `v26.0.0` or later. With Bun, run `bun --version` and expect `1.4.0` or later.
 
-Version 0.0.8 publishes native packages for macOS and Linux on arm64 and x64. Native Windows binaries are not available yet. Use WSL and follow the Linux instructions. The end-to-end npm and Bun rehearsal runs on Linux x64.
+Version 0.0.9 publishes native packages for macOS and Linux on arm64 and x64. Native Windows binaries are not available yet. Use WSL and follow the Linux instructions. The end-to-end npm and Bun rehearsal runs on Linux x64.
 
-Run `npm view vibelang@0.0.8 version` and expect `0.0.8`. `E404` means the configured registry lacks that version: report the registry and error before continuing.
+Run `npm view vibelang@0.0.9 version` and expect `0.0.9`. `E404` means the configured registry lacks that version: report the registry and error before continuing.
 
 ## 2. Detect the project
 
@@ -46,7 +46,7 @@ Follow each matching page, in this order: project, build or framework, editor.
 | Zed | [Zed](setup/zed.md) |
 | Another editor with an LSP client | [Other editors](setup/other-editors.md) |
 
-For webpack, Rspack, Rollup, Rolldown, esbuild, and `bun build`, version 0.0.8 includes `vibelang-unplugin`: install `vibelang@0.0.8` and `vibelang-unplugin@0.0.8` as dev dependencies and follow the [plugin configuration](https://www.npmjs.com/package/vibelang-unplugin#configure) for the bundler. Vite and Vitest use `vibelang-vite`.
+For webpack, Rspack, Rollup, Rolldown, esbuild, and `bun build`, version 0.0.9 includes `vibelang-unplugin`: install `vibelang@0.0.9` and `vibelang-unplugin@0.0.9` as dev dependencies and follow the [plugin configuration](https://www.npmjs.com/package/vibelang-unplugin#configure) for the bundler. Vite and Vitest use `vibelang-vite`.
 
 ## 4. Verify the setup
 
@@ -57,4 +57,4 @@ npx vibelang --version
 npx vibelang --noEmit
 ```
 
-The first prints `VibeLang 0.0.8 (TypeScript 7.1.0-dev)`; the second prints nothing and exits with status 0. Then run the project's `build` and `test` scripts; each must exit with status 0. Report the pages you followed and each command's output to the user.
+The first prints `VibeLang 0.0.9 (TypeScript 7.1.0-dev)`; the second prints nothing and exits with status 0. Then run the project's `build` and `test` scripts; each must exit with status 0. Report the pages you followed and each command's output to the user.

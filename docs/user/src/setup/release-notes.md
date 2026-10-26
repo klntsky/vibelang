@@ -4,6 +4,23 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
+## 0.0.9
+
+This release has no breaking changes.
+
+- `vibelang --fix` writes only the project's own files. It leaves workspace
+  dependencies and referenced projects unchanged, while still reporting their
+  diagnostics.
+- When a round of fixes would add an error, `--fix` narrows down the refused
+  fixes without rechecking the whole project once per file. Stopping it with
+  SIGTERM exits cleanly, reports the interruption and writes no changes.
+- Emitted declaration files import prelude names used in `typeof` queries
+  and in inferred types copied from libraries. TypeScript consumers now
+  resolve those names and retain their types.
+- The register loader works with tools that read inline source maps, including
+  Playwright's stack-trace support. They no longer mistake the loader's
+  source map template for its own map.
+
 ## 0.0.8
 
 0.0.7 was not published: 0.0.8 replaces it, and these notes include its changes.
