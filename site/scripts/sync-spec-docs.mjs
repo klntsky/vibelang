@@ -6,7 +6,7 @@ import { loadSpec } from './spec-docs.mjs'
 
 const [source, flag, factsFile, ...rest] = process.argv.slice(2)
 if (!source || flag !== '--facts' || !factsFile || rest.length) {
-  console.error('usage: node scripts/sync-spec-docs.mjs <effectscript>/docs --facts <file.json>')
+  console.error('usage: node scripts/sync-spec-docs.mjs <repo>/docs --facts <file.json>')
   process.exit(2)
 }
 try {

@@ -44,3 +44,7 @@ test("review provenance checks handle capitalization without rejecting ordinary 
   }
   assert.deepEqual(publicHygiene(file, "The runtime will preserve the continuation."), [])
 })
+
+test("contributor commands use portable checkout paths and plain setup instructions", () => {
+  assert.deepEqual(findings.filter(p => p.endsWith("a private checkout default") || p.endsWith("an internal setup instruction")), [])
+})

@@ -9,8 +9,7 @@
 # Environment:
 #   VIBELANG_BINARY        a native vibelang compiler; skips the Go build
 #   EFFECT_NODE_MODULES  a node_modules directory that holds effect 4.0.5
-#                        (default: experiments/node_modules, else the main
-#                        checkout's ~/effectscript/experiments/node_modules)
+#                        (default: experiments/node_modules)
 set -eu
 
 package=$(cd "$(dirname "$0")/.." && pwd)
@@ -25,7 +24,6 @@ fi
 export VIBELANG_BINARY
 
 effect_modules=${EFFECT_NODE_MODULES:-$repo/experiments/node_modules}
-[ -d "$effect_modules/effect" ] || effect_modules=$HOME/effectscript/experiments/node_modules
 effect=$(cd "$effect_modules/effect" && pwd -P)
 
 # The runtime's dist/ is not checked in. Build it with this compiler against

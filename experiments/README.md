@@ -1,6 +1,6 @@
-# EffectScript experiments
+# VibeLang experiments
 
-Disposable, one-command experiments behind `docs/design/effectscript-design.md`. They test two different things, and the tags in the design keep them apart:
+Disposable, one-command experiments behind `docs/design/src/`. They test two different things, and the tags in the design keep them apart:
 
 - **Effect facts** (`F*`): behavior of the unmodified `effect@4.0.5` runtime.
 - **Kernel laws** (`T*`, `K*`): the proposed language machine. The kernel adds prompt frames, one-shot capture, resumption, abandonment, and ownership to Effect's real fiber stack.

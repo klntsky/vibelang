@@ -1,6 +1,6 @@
 // Runtime regression probe: does P22 ("a resume in tail position drops its clause's
 // owner frame") hold when the clause is a generator, as Chapter 24's for...of
-// lowering (design.md lines 2408-2421) and every compiled EffectScript function
+// lowering (design.md lines 2408-2421) and every compiled VibeLang function
 // (Effect.fnUntraced) would be?
 //
 // T17 proves constant stack with a flatMap clause. This probe runs the same
@@ -55,7 +55,7 @@ test("Chapter 24's generator clause (`return yield* resume(k, undefined)`) does 
   expect(depth).toBeGreaterThan(1000)
 })
 
-test("an Effect.fnUntraced clause (what a compiled EffectScript clause would be) also grows", async () => {
+test("an Effect.fnUntraced clause (what a compiled VibeLang clause would be) also grows", async () => {
   const clauseFn = Effect.fnUntraced(function*(_line: number, k: Continuation) {
     return yield* resume(k, undefined)
   })

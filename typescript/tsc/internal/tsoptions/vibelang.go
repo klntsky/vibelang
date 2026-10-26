@@ -27,11 +27,11 @@ import (
 // cases in options_generated.go; and core.CompilerOptions.VibeLang.
 
 var (
-	// effectScriptAdjustableCodes are the EK codes whose category a project may
+	// vibeLangAdjustableCodes are the EK codes whose category a project may
 	// change. Every other EK diagnostic keeps its category.
-	effectScriptAdjustableCodes = core.VibeLangAdjustableCodes
-	effectScriptCategories      = []string{"error", "warning", "off"}
-	effectScriptTracing         = []string{"none", "exported", "all"}
+	vibeLangAdjustableCodes = core.VibeLangAdjustableCodes
+	vibeLangCategories      = []string{"error", "warning", "off"}
+	vibeLangTracing         = []string{"none", "exported", "all"}
 )
 
 // parseVibeLangOptions reads a compilerOptions.vibelang value that
@@ -44,7 +44,7 @@ func parseVibeLangOptions(value any) *core.VibeLangOptions {
 	options := &core.VibeLangOptions{}
 	if codes, ok := object.GetOrZero("diagnostics").(*collections.OrderedMap[string, any]); ok {
 		for code, category := range codes.Entries() {
-			if category, ok := category.(string); ok && slices.Contains(effectScriptAdjustableCodes, code) && slices.Contains(effectScriptCategories, category) {
+			if category, ok := category.(string); ok && slices.Contains(vibeLangAdjustableCodes, code) && slices.Contains(vibeLangCategories, category) {
 				if options.Diagnostics == nil {
 					options.Diagnostics = make(map[string]string)
 				}
@@ -52,7 +52,7 @@ func parseVibeLangOptions(value any) *core.VibeLangOptions {
 			}
 		}
 	}
-	if tracing, ok := object.GetOrZero("tracing").(string); ok && slices.Contains(effectScriptTracing, tracing) {
+	if tracing, ok := object.GetOrZero("tracing").(string); ok && slices.Contains(vibeLangTracing, tracing) {
 		options.Tracing = tracing
 	}
 	if packages, ok := object.GetOrZero("trustedPackages").([]any); ok {
@@ -91,18 +91,18 @@ func validateVibeLangOptions(value any, valueExpression *ast.Expression, sourceF
 			}
 			for code, category := range codes.Entries() {
 				codeProperty := jsonProperty(jsonInitializer(property), code)
-				if !slices.Contains(effectScriptAdjustableCodes, code) {
+				if !slices.Contains(vibeLangAdjustableCodes, code) {
 					// Keep the option path and location, but explain the policy
 					// instead of calling an EK code an unknown compiler option.
 					d := report(jsonName(codeProperty), diagnostics.Unknown_compiler_option_0, "vibelang.diagnostics."+code)
 					d = ast.NewExternalDiagnostic(d.File(), d.Loc(), "", d.Category(), d.Code(), "vibelang.diagnostics."+code+" is not adjustable; its diagnostic category cannot be configured.")
 					errors[len(errors)-1] = d
 					d.AddMessageChain(ast.NewExternalDiagnostic(nil, core.TextRange{}, "", diagnostics.CategoryMessage, 0,
-						"Only these EK codes can be configured: "+strings.Join(effectScriptAdjustableCodes, ", ")+"."))
+						"Only these EK codes can be configured: "+strings.Join(vibeLangAdjustableCodes, ", ")+"."))
 					continue
 				}
-				if category, ok := category.(string); !ok || !slices.Contains(effectScriptCategories, category) {
-					report(jsonInitializer(codeProperty), diagnostics.Argument_for_0_option_must_be_Colon_1, "vibelang.diagnostics."+code, quoteList(effectScriptCategories))
+				if category, ok := category.(string); !ok || !slices.Contains(vibeLangCategories, category) {
+					report(jsonInitializer(codeProperty), diagnostics.Argument_for_0_option_must_be_Colon_1, "vibelang.diagnostics."+code, quoteList(vibeLangCategories))
 				}
 			}
 		case "trustedPackages":
@@ -128,8 +128,8 @@ func validateVibeLangOptions(value any, valueExpression *ast.Expression, sourceF
 				}
 			}
 		case "tracing":
-			if tracing, ok := v.(string); !ok || !slices.Contains(effectScriptTracing, tracing) {
-				report(jsonInitializer(property), diagnostics.Argument_for_0_option_must_be_Colon_1, "vibelang.tracing", quoteList(effectScriptTracing))
+			if tracing, ok := v.(string); !ok || !slices.Contains(vibeLangTracing, tracing) {
+				report(jsonInitializer(property), diagnostics.Argument_for_0_option_must_be_Colon_1, "vibelang.tracing", quoteList(vibeLangTracing))
 			}
 		default:
 			report(jsonName(property), diagnostics.Unknown_compiler_option_0, "vibelang."+key)

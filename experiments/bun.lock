@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "effectscript-experiments",
+      "name": "vibelang-experiments",
       "dependencies": {
         "effect": "4.0.5",
       },

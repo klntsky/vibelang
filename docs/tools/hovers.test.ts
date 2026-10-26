@@ -28,8 +28,8 @@ test("splits VibeLang's notes from the JSDoc at the server's rule", () => {
 })
 
 test("strips local links and paths", () => {
-  const raw = "Like [`String`](file:///Users/someone/effectscript/packages/runtime/node_modules/effect/src/Config.ts#1439,17-1439,23) " +
-    "from /Users/someone/effectscript/packages/runtime/node_modules/effect/dist/Config.d.ts in /private/var/folders/x/T/vibelang-hovers-1/3/block-1.vibe"
+  const raw = "Like [`String`](file:///Users/someone/vibelang/packages/runtime/node_modules/effect/src/Config.ts#1439,17-1439,23) " +
+    "from /Users/someone/vibelang/packages/runtime/node_modules/effect/dist/Config.d.ts in /private/var/folders/x/T/vibelang-hovers-1/3/block-1.vibe"
   expect(leaks(raw)).not.toEqual([])
   const clean = sanitize(raw, ["/private/var/folders/x/T/vibelang-hovers-1/3"])
   expect(clean).toBe("Like `String` from effect/dist/Config.d.ts in ./block-1.vibe")

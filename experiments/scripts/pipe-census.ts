@@ -18,7 +18,7 @@ const walk = (dir: string) => {
 }
 for (const root of process.argv.slice(2)) walk(root)
 
-// Effect stages grouped by what EffectScript turns them into.
+// Effect stages grouped by what VibeLang turns them into.
 const STATEMENT = {
   sequencing: ["map", "flatMap", "andThen", "tap", "as", "asVoid", "asSome", "zipRight", "zipLeft", "flatten", "let", "bind", "bindTo", "tapBoth", "when", "whenEffect", "unless", "zipWith"],
   errors: ["catchTag", "catchTags", "catchAll", "catch", "catchIf", "catchSome", "orElse", "orElseSucceed", "orElseFail", "mapError", "tapError", "tapErrorTag", "filterOrFail", "filterOrElse", "mapBoth", "flip"],

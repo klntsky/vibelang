@@ -24,7 +24,7 @@ if [ -f "$root/packages/runtime/package.json" ]; then
   echo "setup: pack runtime"
   (cd "$root/packages/runtime" && bun pm pack --quiet --filename "$root/packages/runtime/vibelang-runtime.tgz" >/dev/null)
 else
-  echo "setup: WARNING: packages/runtime is absent. The compiler is ready; projects need the runtime lane before they can install." >&2
+  echo "setup: WARNING: packages/runtime is absent. The compiler is ready; projects need packages/runtime before they can install." >&2
 fi
 
 node "$root/scripts/install-template.mjs"
@@ -67,7 +67,7 @@ esac
 if [ -f "$root/editors/vscode/package.json" ]; then
   echo "setup: build VS Code extension"
   (cd "$root/editors/vscode" && bun install && bun run build)
-  # Prefer the package's own packaging script when provided by the editor lane.
+  # Prefer the package's own packaging script when available.
   if node --input-type=module -e 'import fs from "node:fs"; process.exit(JSON.parse(fs.readFileSync(process.argv[1])).scripts?.package ? 0 : 1)' "$root/editors/vscode/package.json"; then
     (cd "$root/editors/vscode" && bun run package)
   else
@@ -75,7 +75,7 @@ if [ -f "$root/editors/vscode/package.json" ]; then
   fi
   find "$root/editors/vscode" -maxdepth 1 -name '*.vsix' -exec sh -c 'printf "Editor: code --install-extension \"%s\"\nCursor: cursor --install-extension \"%s\"\n" "$1" "$1"' sh {} \;
 else
-  echo "setup: editors/vscode is absent; rerun setup after the editor lane lands to build its .vsix."
+  echo "setup: editors/vscode is absent; rerun setup after adding editors/vscode to build its .vsix."
 fi
 
 echo "setup: local file dependencies point to $root; keep this checkout available."

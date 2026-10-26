@@ -6,8 +6,7 @@
 #
 # Environment:
 #   EFFECT_NODE_MODULES    a node_modules directory that holds effect 4.0.5
-#                          (default: ../experiments/node_modules, else the main
-#                          checkout's ~/effectscript/experiments/node_modules)
+#                          (default: ../experiments/node_modules)
 #   VIBELANG_RUNTIME   the vibelang-runtime package directory
 #                          (default: ../packages/runtime, built here with vibelang)
 set -eu
@@ -18,7 +17,6 @@ fixture="$root/vibelang/lsp-fixture"
 effect_modules=${EFFECT_NODE_MODULES:-}
 if [ -z "$effect_modules" ]; then
 	effect_modules="$root/../experiments/node_modules"
-	[ -d "$effect_modules/effect" ] || effect_modules="$HOME/effectscript/experiments/node_modules"
 fi
 runtime=${VIBELANG_RUNTIME:-$root/../packages/runtime}
 runtime=$(cd "$runtime" && pwd)

@@ -49,7 +49,7 @@ A case with a file named `pending` is pending. The file's first word names the l
 
 A case's sources are also inputs outside the smoke suite: the (B) projector's forms table and its Go tests read them. A commit that edits a case also runs `bash scripts/check-forms-table.sh` and `sh packages/ts-mapper/test/parity/run.sh <edited cases>` from the repository root, the second keeping the type column (b) at 0, and `go test ./internal/vibelangmapper/...` from `typescript/tsc`. A decision that moves in the forms table is expected after a case edit, but `scripts/check-forms-table.sh --write` regenerates the snapshot only after `tsc/internal/vibelangmapper/forms_decisions_approved.txt` names each move, one line with the site, the move and why it is right.
 
-Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_MODULES` (default `../experiments/node_modules`, else the main checkout's `~/effectscript/experiments/node_modules`), and `vibelang-runtime`, from `$VIBELANG_RUNTIME` (default `../packages/runtime`). `smoke.sh` builds the runtime's `dist/` from source with the fork's `tsc`, so a commit that changes the compiler and the runtime is tested as one. It links `effect` into the runtime's own `node_modules` when that directory has none, so a case loads one copy of `effect`.
+Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_MODULES` (default `../experiments/node_modules`), and `vibelang-runtime`, from `$VIBELANG_RUNTIME` (default `../packages/runtime`). `smoke.sh` builds the runtime's `dist/` from source with the fork's `tsc`, so a commit that changes the compiler and the runtime is tested as one. It links `effect` into the runtime's own `node_modules` when that directory has none, so a case loads one copy of `effect`.
 
 | Case | Proves |
 | --- | --- |
@@ -1425,12 +1425,14 @@ Upstream code needed four fixes for `.vibe` files in the server: auto-import pan
 Run the benchmarks on the build host, which is quieter and larger than a laptop; other suites running there at the same time add noise, so the tables report medians:
 
 ```sh
-# Upstream tsgo for the baseline: build the import commit's compiler once.
-jj workspace add ~/es-ws/upstream --name upstream -r 0c804b2f
-(cd ~/es-ws/upstream && sh ~/effectscript/scripts/remote.sh sh -c 'cd typescript/tsc && go build -o ../built/local/tsc ./cmd/tsc')
+# Run from the repository root, using a sibling upstream workspace.
+jj workspace add ../upstream --name upstream -r 0c804b2f
+(cd ../upstream/typescript/tsc && go build -o ../built/local/tsc ./cmd/tsc)
 # The compiler benchmark, then the language server benchmark.
-scripts/remote.sh sh -c 'cd typescript/tsc && go build -o ../built/local/tsc ./cmd/tsc && cd ../.. && sh scripts/bench/compiler.sh --upstream $HOME/es-remote/upstream/typescript/built/local/tsc --runs 5'
-scripts/remote.sh sh -c 'node scripts/bench/gen-synthetic.mjs /tmp/lsp 400 && node scripts/bench/lsp.mjs typescript/built/local/tsc /tmp/lsp/vibelang'
+(cd typescript/tsc && go build -o ../built/local/tsc ./cmd/tsc)
+sh scripts/bench/compiler.sh --upstream ../upstream/typescript/built/local/tsc --runs 5
+node scripts/bench/gen-synthetic.mjs .cache/lsp 400
+node scripts/bench/lsp.mjs typescript/built/local/tsc .cache/lsp/vibelang
 ```
 
 `scripts/bench/gen-synthetic.mjs` writes the same N modules twice, in VibeLang and in hand-written Effect 4 TypeScript. Each module declares two errors, a schema, a service and its layer, a plain helper, and functions that call into the previous module, catch with `match`, fork and join two fibers, provide the layer, and pipe the result. Its shapes are `chain` (small contracts), `dense` (each module's `deep` function also loads four earlier modules' services and calls the previous `deep`, so requirement and error unions grow with depth), and `single` (every module in one file). `compiler.sh` compiles the synthetic projects, the examples, the template, and the docs snippet corpus as one program with `--extendedDiagnostics`, and measures wall time and peak RSS with `scripts/bench/measure.py`.

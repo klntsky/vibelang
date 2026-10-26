@@ -1,6 +1,6 @@
 // T1: suspension and resumption through nested calls, with Context and Scope.
 //
-// EffectScript source this test hand-lowers (operation spelling illustrative):
+// VibeLang source this test hand-lowers (operation spelling illustrative):
 //
 //   function checkout(cartId: string) {
 //     scope {
@@ -77,7 +77,7 @@ const describeContext = (context: Context.Context<never>) =>
   contextLabels(context, (key, value) => {
     if (key === "app/Logger") return `Logger=${value.name}`
     if (key === "effect/Scope") return `Scope(${value.state._tag})`
-    if (key.startsWith("effectscript/operation/")) return `${key.slice(23)}->${value._tag}`
+    if (key.startsWith("vibelang/operation/")) return `${key.slice(19)}->${value._tag}`
     return undefined
   }).join(", ")
 

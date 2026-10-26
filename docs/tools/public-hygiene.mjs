@@ -19,5 +19,13 @@ export function publicHygiene(file, text) {
       /review probe R\d|(?:prototype )?finding \d+|VibeLang language lead|review, (?:finding|must-fix) \d/i.test(text))) {
     problems.push("internal decision or review provenance")
   }
+  const history = file.startsWith("docs/research/") || file === "docs/design/DECISIONS.md" ||
+    /(?:^|\/)(?:CHANGELOG|KERNEL-CHANGES)\.md$/.test(file)
+  if (!history && /(?:~|\$HOME|\$\{HOME\})\/effectscript\//i.test(text)) {
+    problems.push("a private checkout default")
+  }
+  if (file === "scripts/setup.sh" && /(?:runtime|editor) lane/.test(text)) {
+    problems.push("an internal setup instruction")
+  }
   return problems
 }

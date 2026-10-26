@@ -30,8 +30,7 @@
 #   TS7_VERSION          stock TypeScript version (default: devDependencies.typescript in
 #                        packages/ts-mapper/package.json, as e2e.sh)
 #   TS7_DIR              a directory whose node_modules/.bin/tsc is that version, instead of the cache
-#   EFFECT_NODE_MODULES  a node_modules that holds effect 4.0.5 (default ../experiments/node_modules,
-#                        else ~/effectscript/experiments/node_modules, as smoke.sh)
+#   EFFECT_NODE_MODULES  a node_modules that holds effect 4.0.5 (default experiments/node_modules)
 #   PARITY_REVISION      revision label for the report (default current jj revision)
 set -euo pipefail
 
@@ -67,7 +66,6 @@ bun -e 'console.log(JSON.stringify({ Replace: { [process.argv[1]]: process.argv[
 effect_modules="${EFFECT_NODE_MODULES:-}"
 if [ -z "$effect_modules" ]; then
   effect_modules="$root/experiments/node_modules"
-  [ -d "$effect_modules/effect" ] || effect_modules="$HOME/effectscript/experiments/node_modules"
 fi
 [ -f "$effect_modules/effect/package.json" ] || { echo "parity: no effect in $effect_modules; set EFFECT_NODE_MODULES" >&2; exit 2; }
 effect_real="$(cd "$effect_modules/effect" && pwd -P)"
