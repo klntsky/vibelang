@@ -60,6 +60,6 @@ for (const [dir, pkg] of [...dependencies].sort(([, a], [, b]) => (a.name + "@" 
 writeFileSync(join(root, "ThirdPartyNotices.txt"), sections.join("\n\n---------------------------------------------------------\n\n") + "\n")
 
 const license = readFileSync(join(root, "../../LICENSE"), "utf8")
-const mitStart = license.indexOf("\nMIT License\n")
+const mitStart = license.search(/^MIT License\r?$/m)
 if (mitStart < 0) throw new Error("LICENSE: missing standalone MIT License heading")
-writeFileSync(join(root, "LICENSE"), license.slice(mitStart + 1))
+writeFileSync(join(root, "LICENSE"), license.slice(mitStart))

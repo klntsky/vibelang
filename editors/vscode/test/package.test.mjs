@@ -17,8 +17,10 @@ test("the VSIX ships the complete VibeLang MIT license", () => {
   const manifest = execFileSync("unzip", ["-p", join(root, "vibelang.vsix"), "extension.vsixmanifest"], { encoding: "utf8" })
   assert.match(manifest, /<License>extension\/LICENSE\.txt<\/License>/)
   assert.equal(license.split("\n")[0], "MIT License")
-  const expected = readFileSync(join(root, "../../LICENSE"), "utf8").split("\nMIT License\n")[1]
-  assert.equal(license, "MIT License\n" + expected)
+  const source = readFileSync(join(root, "../../LICENSE"), "utf8")
+  const heading = /^MIT License\r?$/m.exec(source)
+  assert.ok(heading, "source has a standalone MIT heading")
+  assert.equal(license, source.slice(heading.index))
 })
 
 test("the VSIX preserves the grammar and language configuration notices", () => {
