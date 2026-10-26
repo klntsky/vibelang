@@ -1,0 +1,51 @@
+// Callable resources have the same disposal and block/iteration lifetimes
+// as other JavaScript objects (D94, D95).
+module resources {
+  export function disposable(name: string, events: string[]): (() => void) & Disposable {
+    return Object.assign(() => {}, {
+      [Symbol.dispose]() { events.push(`dispose ${name}`) }
+    })
+  }
+
+  export function asyncDisposable(name: string, events: string[]): (() => void) & AsyncDisposable {
+    return Object.assign(() => {}, {
+      async [Symbol.asyncDispose]() {
+        events.push(`disposing ${name}`)
+        await Promise.resolve()
+        events.push(`disposed ${name}`)
+      }
+    })
+  }
+}
+import { disposable, asyncDisposable } from resources
+
+function block() {
+  const events: string[] = []
+  {
+    using syncResource = sync((e: string[]) => disposable("sync", e), events)
+    using asyncResource = sync((e: string[]) => asyncDisposable("async", e), events)
+    events.push("body")
+    yieldNow()
+  }
+  events.push("after")
+  return events
+}
+
+function loops() {
+  const events: string[] = []
+  for (using resource of sync((e: string[]) => [disposable("s1", e), disposable("s2", e)], events)) {
+    events.push("sync body")
+    yieldNow()
+  }
+  for (using resource of sync((e: string[]) => [asyncDisposable("a1", e), asyncDisposable("a2", e)], events)) {
+    events.push("async body")
+    yieldNow()
+  }
+  events.push("after")
+  return events
+}
+
+// expect-result: {"block":["body","disposing async","disposed async","dispose sync","after"],"loops":["sync body","dispose s1","sync body","dispose s2","async body","disposing a1","disposed a1","async body","disposing a2","disposed a2","after"]}
+export function main() {
+  return { block: block(), loops: loops() }
+}

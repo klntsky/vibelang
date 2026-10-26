@@ -1970,6 +1970,10 @@ typescript/vibelang/cases/scopes-using-async-dispose/main.vibe:23:12 lambda plai
 typescript/vibelang/cases/scopes-using-async-dispose/main.vibe:29:15 lambda plain table
 typescript/vibelang/cases/scopes-using-async-dispose/main.vibe:34:5 lambda program table
 typescript/vibelang/cases/scopes-using-async-dispose/main.vibe:35:5 lambda effectFn table
+typescript/vibelang/cases/scopes-using-callable/main.vibe:25:31 lambda plain table
+typescript/vibelang/cases/scopes-using-callable/main.vibe:26:32 lambda plain table
+typescript/vibelang/cases/scopes-using-callable/main.vibe:36:31 lambda plain table
+typescript/vibelang/cases/scopes-using-callable/main.vibe:40:31 lambda plain table
 typescript/vibelang/cases/scopes-using-for-head/main.vibe:24:24 lambda program table
 typescript/vibelang/cases/scopes-using-for-head/main.vibe:36:24 lambda program table
 typescript/vibelang/cases/scopes-using-for-head/main.vibe:56:34 byname program table
