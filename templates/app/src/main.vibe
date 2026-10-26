@@ -5,7 +5,9 @@ service Greeter {
 }
 
 const GreeterLive = Layer.succeed(Greeter, {
-  greet(name: string) { return greeting(name) }
+  greet(name: string) {
+    return greeting(name)
+  },
 })
 
 export function main() {
