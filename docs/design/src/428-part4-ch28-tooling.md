@@ -299,6 +299,7 @@ coverage. Repairs are suggestions, not shipped code actions:
 | EK4408 | A module declaration that is nested, exported, or declared twice; `module` used for a namespace in a `.vibe` file; a module body that uses `export =` or `import = require()` (D283); or a module name shared with a value binding of the file (warning, D303) | Keep module declarations at the top level and unexported, write namespaces with `namespace`, use ES module syntax in the body, and choose distinct module and value names | 10 |
 | EK4409 | Warning: what an Effect function or a program returns is a call of a value of type `any`, so a program the callee returns never runs (D24) | Give the callee a function type: one that returns `A!E!R` runs the program | 10 |
 | EK4502 | .pipe on a call whose success value has no pipe member | Write call() \|> retry(%, policy), or pass the call by name to retry | 13 |
+| EK4503 | A service implementation member read on its key | Read S().member; S.method(args) directly calls an implementation method | 13 |
 | EK4501 | A method of an Effect data type named without a call, as in `const f = stream.filter` (D153) | Call it, or pass `Stream.filter` itself | 13 |
 | EK4601 | `await` before a call that already runs (D226) | Remove `await`; to run the call concurrently, fork it and join the fiber | 7 |
 | EK4602 | `await` on a promise in VibeLang code (D226) | Wrap it in a hatch: `try(async () => …)` | 7 |

@@ -1,0 +1,14 @@
+// expect: EK4503
+service Users { region: string; find(id: string): string!! }
+export function main() {
+  const region = Users.region
+  const find = Users.find
+  return [region, find]
+}
+
+export function direct() { return Users.find("id") }
+export function implementation() { return Users().region }
+export const keyMember = Users.key
+
+export const topLevelRegion = Users.region
+export const topLevelFind = Users.find
