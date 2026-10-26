@@ -818,6 +818,15 @@ try {
     for (const label of ["lookup", "name", "NotFound", "findName"]) assert(labels.includes(label), `no ${label} in completions`)
   })
 
+  await check("completion: a match arm offers no name the compiler writes, such as the const that holds its subject", async () => {
+    for (const [needle, names] of [["tracking;", ["tracking", "delivery"]], ["tracking}`;", ["tracking", "deliveries"]]]) {
+      const labels = await completionLabels("src/data.vibe", needle, { offset: 0 })
+      assert(names.every((name) => labels.includes(name)), `${needle}: no ${names.join(" or ")} in ${JSON.stringify(labels.slice(0, 30))}`)
+      const written = labels.filter((label) => label.startsWith("$"))
+      assert(written.length === 0, `${needle}: compiler names in completions: ${JSON.stringify(written)}`)
+    }
+  })
+
   open("src/services.vibe", "vibe")
   open("src/report.ts", "typescript")
 

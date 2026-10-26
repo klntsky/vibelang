@@ -7292,7 +7292,7 @@ func (c *Checker) reportUnusedVariable(location *ast.Node, diagnostic *ast.Diagn
 }
 
 func (c *Checker) reportUnused(location *ast.Node, kind UnusedKind, diagnostic *ast.Diagnostic) {
-	if location.Flags&(ast.NodeFlagsAmbient|ast.NodeFlagsThisNodeOrAnySubNodesHasError) == 0 {
+	if location.Flags&(ast.NodeFlagsAmbient|ast.NodeFlagsThisNodeOrAnySubNodesHasError) == 0 && !isVibeLangWrittenDeclaration(location) { // VibeLang (extensions_match.go)
 		isError := c.unusedIsError(kind)
 		if isError {
 			c.addDiagnostic(diagnostic)

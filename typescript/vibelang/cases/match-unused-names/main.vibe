@@ -1,0 +1,13 @@
+// expect-result: 1
+// The parser writes names of its own, such as the const that holds a match's
+// subject. None is reported unused (TS6133), under noUnusedLocals and
+// noUnusedParameters too.
+function next(): number {
+  return 7
+}
+
+export function main() {
+  return match (next()) {
+    default: 1;
+  }
+}

@@ -14,3 +14,10 @@ export function describe(delivery: Delivery) {
 }
 
 export const sent = Delivery.Sent({ tracking: "parcel-8" })
+
+export function latest(deliveries: ReadonlyArray<Delivery>): string {
+  return match (deliveries.at(-1)) {
+    when Delivery.Sent { let tracking }: `latest ${tracking}`;
+    default: "none";
+  }
+}

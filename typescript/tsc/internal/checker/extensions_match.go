@@ -1,6 +1,22 @@
 package checker
 
-import "github.com/microsoft/TypeScript/tsc/internal/ast"
+import (
+	"strings"
+
+	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/tspath"
+)
+
+// isVibeLangWrittenDeclaration reports whether declaration declares a name
+// that the VibeLang parser writes in a .vibe file, such as the const $match1
+// that holds a match's subject (parser/vibelang_match.go): a synthesized
+// identifier that starts with $. People neither write nor read such a name,
+// so it is never reported unused.
+func isVibeLangWrittenDeclaration(declaration *ast.Node) bool {
+	name := declaration.Name()
+	return name != nil && ast.IsIdentifier(name) && name.Flags&ast.NodeFlagsReparsed != 0 && strings.HasPrefix(name.Text(), "$") &&
+		ast.GetSourceFileOfNode(declaration).FileName().ExtensionIs(tspath.ExtensionVibe)
+}
 
 // isVibeLangClassPattern reports whether call is the test the parser writes
 // for a class pattern of a .vibe file, `when NotFound:` or `e is NotFound`

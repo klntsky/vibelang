@@ -126,6 +126,25 @@ var completionScopeHooks []CompletionScopeHook
 // RegisterCompletionScopeHook adds hook to every completion request. Call it
 // only from the init function of an in-tree package that tsc/cmd/tsc
 // imports; registration is not synchronized.
+// isVibeLangWrittenName reports whether symbol is a name that the VibeLang
+// parser writes in a .vibe file, such as the const $match1 that holds a
+// match's subject or $extracted2 that holds an extractor's values: each of
+// its declarations is named by a synthesized identifier that starts with $.
+// People never write those names, so completions leave them out.
+func isVibeLangWrittenName(symbol *ast.Symbol) bool {
+	declarations := symbol.Declarations()
+	if !strings.HasPrefix(symbol.Name(), "$") || len(declarations) == 0 {
+		return false
+	}
+	for _, declaration := range declarations {
+		name := declaration.Name()
+		if name == nil || name.Flags&ast.NodeFlagsReparsed == 0 || !ast.GetSourceFileOfNode(declaration).FileName().ExtensionIs(tspath.ExtensionVibe) {
+			return false
+		}
+	}
+	return true
+}
+
 func RegisterCompletionScopeHook(hook CompletionScopeHook) {
 	completionScopeHooks = append(completionScopeHooks, hook)
 }
