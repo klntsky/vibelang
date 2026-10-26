@@ -1988,7 +1988,7 @@ func (l *LanguageService) getCompletionEntriesFromSymbols(
 			data.completionKind,
 			data.isJsxIdentifierExpected,
 		)
-		if name == "" ||
+		if name == "" || name == "~vibelang/service" ||
 			uniques[name] && (origin == nil || !originIsObjectLiteralMethod(origin)) ||
 			data.completionKind == CompletionKindGlobal &&
 				!shouldIncludeSymbol(symbol, data, closestSymbolDeclaration, file, typeChecker, compilerOptions) {

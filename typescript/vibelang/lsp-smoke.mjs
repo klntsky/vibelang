@@ -995,6 +995,12 @@ try {
     for (const label of ["pipe", "of", "key"]) assert(!labels.includes(label), `the key's own member ${label} in completions`)
   })
 
+  await check("completion: service members hide the synthetic typing brand", async () => {
+    const labels = await completionLabels("src/services.vibe", "Greeter.greet", { offset: 8 })
+    assert(labels.includes("greet"), `labels ${JSON.stringify(labels)}`)
+    assert(!labels.some(label => label.includes("~vibelang")), `synthetic member in ${JSON.stringify(labels)}`)
+  })
+
   await check("hover: a plain .vibe function shows the signature VibeLang calls", async () => {
     const shown = await hover("src/services.vibe", "double(n")
     assert(shown.includes("function double(n: number): number"), `got ${JSON.stringify(shown)}`)

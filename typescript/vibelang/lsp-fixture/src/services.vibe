@@ -18,3 +18,6 @@ export function greet(id: number) {
   const name = Users.find(id)
   return `${name} scored ${double(id)}`
 }
+
+service Greeter { greet(name: string): Effect<string> }
+export function serviceGreeting() { return Greeter.greet("Ada") }
