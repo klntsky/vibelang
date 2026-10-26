@@ -50,3 +50,9 @@ test("3: prerequisites, output and starter descriptions agree", () => {
   assert.doesNotMatch(read("docs/user/src/vibelang-features/114-vibelang-for-effect-users.md"), /0\.0\.6 starter/)
   for (const path of ["packages/compiler/README.md", "packages/compiler/package.json"]) assert.doesNotMatch(read(path), /compiles to TypeScript/)
 })
+
+test("4: the token headline leads with the corpus and discloses longer pairs", () => {
+  const text = read("README.md")
+  assert.match(text, /\*\*\d+\.\d+% fewer tokens across \d+ cheat-sheet pairs; VibeLang is longer in \d+ pairs\.\*\*/)
+  assert.ok(text.indexOf("cheat-sheet pairs") < text.indexOf("The example above uses **"))
+})

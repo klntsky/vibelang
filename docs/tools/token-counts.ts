@@ -75,6 +75,18 @@ export function cheatSheetPairs(markdown: string): Pair[] {
   return entries.filter(e => e.effect.length && e.vibe.length).map(({ label, effect, vibe }) => ({ label, effect, vibe }))
 }
 
+export function measurePairs(markdown: string) {
+  const pairs = cheatSheetPairs(markdown).map(p => ({
+    label: p.label,
+    effect: p.effect.reduce((t, c) => t + count(program(c)), 0),
+    vibe: p.vibe.reduce((t, c) => t + count(program(c)), 0)
+  }))
+  const effect = pairs.reduce((t, p) => t + p.effect, 0)
+  const vibe = pairs.reduce((t, p) => t + p.vibe, 0)
+  return { pairs, effect, vibe, longer: pairs.filter(p => p.vibe > p.effect).length,
+    saving: (100 * (1 - vibe / effect)).toFixed(1) }
+}
+
 const percentFewer = (effect: number, vibe: number) => `${(100 * (1 - vibe / effect)).toFixed(1)}%`
 const read = (path: string) => readFileSync(resolve(repo, path), "utf8")
 const link = (from: string, to: string) => relative(resolve(from, ".."), to).replaceAll("\\", "/")
@@ -110,16 +122,14 @@ export function generate(): string {
     `| The decision log, \`docs/design/DECISIONS.md\` | ${decisions.toLocaleString("en-US")} |`,
     ""
   )
-  const pairs = cheatSheetPairs(readFileSync(fileOf(CHEAT_SHEET), "utf8"))
-  const pairCounts = pairs.map(p => ({
-    label: p.label,
-    effect: p.effect.reduce((t, c) => t + count(c), 0),
-    vibe: p.vibe.reduce((t, c) => t + count(program(c)), 0)
-  }))
-  const effectTotal = pairCounts.reduce((t, p) => t + p.effect, 0)
-  const vibeTotal = pairCounts.reduce((t, p) => t + p.vibe, 0)
+  const measured = measurePairs(readFileSync(fileOf(CHEAT_SHEET), "utf8"))
+  const pairCounts = measured.pairs
+  const effectTotal = measured.effect
+  const vibeTotal = measured.vibe
   out.push(
     "## Effect TypeScript beside VibeLang",
+    "",
+    measured.saving + "% fewer tokens across " + pairCounts.length + " pairs in total; VibeLang is longer in " + measured.longer + " pairs. This is the saving over the combined source tokens, not the arithmetic mean of the percentages below.",
     "",
     `Each row is one [cheat sheet](${link(pagePath, fileOf(CHEAT_SHEET))}) entry: its Effect TypeScript blocks against its VibeLang blocks. A negative saving means the VibeLang snippet is longer.`,
     "",
@@ -165,6 +175,35 @@ function splice(page: string, generated: string): string {
   return `${page.slice(0, start + BEGIN.length)}\n\n${generated}\n\n${page.slice(end)}`
 }
 
+export function measuredClaims() {
+  const measured = measurePairs(read("docs/user/src/" + CHEAT_SHEET))
+  const heroVibe = count(read(".smithers/token-compare/users.vibe"))
+  const heroEffect = count(read(".smithers/token-compare/users.ts"))
+  const summary = measured.saving + "% fewer tokens across " + measured.pairs.length + " cheat-sheet pairs; VibeLang is longer in " + measured.longer + " pairs."
+  return {
+    "README.md": "**" + summary + "** The example above uses **" + heroVibe + " vs " + heroEffect + " tokens (" + percentFewer(heroEffect, heroVibe) + " fewer)**.",
+    "site/src/pages/index.mdx": "- **People can review what agents write.** [" + measured.saving + "% fewer tokens across the " + measured.pairs.length + " cheat-sheet pairs](/vibelang-features/117-token-counts); VibeLang is longer in " + measured.longer + " pairs."
+  }
+}
+
+function updateClaims(write: boolean): boolean {
+  let fresh = true
+  for (const [path, claim] of Object.entries(measuredClaims())) {
+    const current = read(path)
+    const marker = /(?:<!-- token-headline:start -->|\{\/\* token-headline:start \*\/\})[\s\S]*?(?:<!-- token-headline:end -->|\{\/\* token-headline:end \*\/\})/
+    if (!marker.test(current)) throw new Error(path + ": missing token-headline markers")
+    const next = current.replace(marker, () => path.endsWith(".mdx")
+      ? "{/* token-headline:start */}\n\n" + claim + "\n\n{/* token-headline:end */}"
+      : "<!-- token-headline:start -->\n\n" + claim + "\n\n<!-- token-headline:end -->")
+    if (next !== current) {
+      fresh = false
+      if (write) writeFileSync(resolve(repo, path), next)
+      else console.error("token-counts: stale claim in " + path)
+    }
+  }
+  return fresh
+}
+
 if (import.meta.main) {
   const args = process.argv.slice(2)
   const { src } = pageKeys(repo)
@@ -172,11 +211,13 @@ if (import.meta.main) {
   if (args[0] === "--files") {
     for (const path of args.slice(1)) console.log(`${count(readFileSync(path, "utf8"))}\t${path}`)
   } else if (args[0] === "--write") {
+    updateClaims(true)
     writeFileSync(pagePath, splice(readFileSync(pagePath, "utf8"), generate()))
     console.log(`token-counts: wrote ${relative(repo, pagePath)} (${TOKENIZER})`)
   } else if (args[0] === "--check" || args.length === 0) {
     const page = readFileSync(pagePath, "utf8")
-    if (splice(page, generate()) !== page) {
+    const claimsFresh = updateClaims(false)
+    if (splice(page, generate()) !== page || !claimsFresh) {
       console.error(`token-counts: ${relative(repo, pagePath)} differs from the measured counts; run bun docs/tools/token-counts.ts --write`)
       process.exit(1)
     }

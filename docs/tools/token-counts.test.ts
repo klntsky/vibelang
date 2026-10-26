@@ -60,7 +60,7 @@ test("counts exact text with the o200k_base encoding", () => {
 test("the homepage size claim matches the measured cheat-sheet pairs and links the method", () => {
   const root = resolve(import.meta.dir, "../..")
   const pairs = cheatSheetPairs(readFileSync(resolve(root, "docs/user/src/vibelang-features/115-cheat-sheet.md"), "utf8"))
-  const effect = pairs.reduce((total, pair) => total + pair.effect.reduce((n, code) => n + count(code), 0), 0)
+  const effect = pairs.reduce((total, pair) => total + pair.effect.reduce((n, code) => n + count(program(code)), 0), 0)
   const vibe = pairs.reduce((total, pair) => total + pair.vibe.reduce((n, code) => n + count(program(code)), 0), 0)
   const saving = (100 * (1 - vibe / effect)).toFixed(1)
   const home = readFileSync(resolve(root, "site/src/pages/index.mdx"), "utf8")
@@ -68,4 +68,17 @@ test("the homepage size claim matches the measured cheat-sheet pairs and links t
   expect(home).toContain(pairs.length + " cheat-sheet pairs")
   expect(home).toContain("](/vibelang-features/117-token-counts)")
   expect(home).not.toContain("about half the size")
+})
+
+test("corpus claims count longer pairs, weight combined tokens and ignore directives on both sides", async () => {
+  const { measurePairs, measuredClaims } = await import("./token-counts")
+  const markdown = [
+    "**Shorter**", fence("ts effect", "const answer = 1"), fence("vibe", "1"),
+    "**Longer**", fence("ts effect", "1"), fence("vibe", "const answer = 1")
+  ].join("\n")
+  const measured = measurePairs(markdown)
+  expect(measured).toMatchObject({ longer: 1, saving: "0.0" })
+  expect(measurePairs(markdown.replace("const answer = 1", "// fragment\nconst answer = 1"))).toEqual(measured)
+  const claims = measuredClaims()
+  expect(readFileSync(resolve(import.meta.dir, "../../README.md"), "utf8")).toContain(claims["README.md"])
 })
