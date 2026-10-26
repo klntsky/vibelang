@@ -110,7 +110,8 @@ registerHooks({
     const inline = Buffer.from(JSON.stringify(map)).toString("base64")
     return {
       format: "module",
-      source: `${code}\n//# sourceMappingURL=data:application/json;base64,${inline}\n`,
+      // Split, so tools that read this file for its own source map skip the template.
+      source: `${code}\n//# sourceMapping${"URL"}=data:application/json;base64,${inline}\n`,
       shortCircuit: true
     }
   }

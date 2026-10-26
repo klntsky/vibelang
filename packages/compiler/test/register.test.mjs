@@ -218,3 +218,14 @@ test("stack traces name .vibe lines without --enable-source-maps", { skip }, (t)
   assert.match(result.stdout, /boom\.vibe:4:\d+\)?$/m)
 })
 
+
+test("the published modules hold no line that reads as their own inline source map", () => {
+  // source-map-support, which Playwright loads, takes the last match of this
+  // pattern in a module's text as that module's own source map.
+  const comment = /(?:\/\/[@#][\s]*sourceMappingURL=([^\s'"]+)[\s]*$)|(?:\/\*[@#][\s]*sourceMappingURL=([^\s*'"]+)[\s]*(?:\*\/)[\s]*$)/m
+  const manifest = JSON.parse(readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"))
+  for (const name of manifest.files.filter((file) => file.endsWith(".mjs"))) {
+    const text = readFileSync(fileURLToPath(new URL(`../${name}`, import.meta.url)), "utf8")
+    assert.doesNotMatch(text, comment, name)
+  }
+})
