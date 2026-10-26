@@ -35,11 +35,11 @@ Service declarations
 ================================================================================
 
 service Users {
-  find(id: string): Effect<User, NotFound>
+  find(id: string): User!NotFound
   region: string
 }
 export service class Legacy {
-  load(): Effect<string>
+  load(): string!!
 }
 
 --------------------------------------------------------------------------------
@@ -56,11 +56,9 @@ export service class Legacy {
             type: (type_annotation
               (predefined_type))))
         return_type: (type_annotation
-          (generic_type
-            name: (type_identifier)
-            type_arguments: (type_arguments
-              (type_identifier)
-              (type_identifier)))))
+          (effect_type
+            success: (type_identifier)
+            error: (type_identifier))))
       (public_field_definition
         name: (property_identifier)
         type: (type_annotation
@@ -73,10 +71,8 @@ export service class Legacy {
           name: (property_identifier)
           parameters: (formal_parameters)
           return_type: (type_annotation
-            (generic_type
-              name: (type_identifier)
-              type_arguments: (type_arguments
-                (predefined_type)))))))))
+            (effect_type
+              success: (predefined_type))))))))
 
 ================================================================================
 Service declarations of any shape
@@ -86,7 +82,7 @@ service Prefix: string
 export service Search: SearchApi {
   static readonly layer = live
 }
-service Format: (value: string) => Effect<string>
+service Format: (value: string) => string!!
 
 --------------------------------------------------------------------------------
 
@@ -110,17 +106,15 @@ service Format: (value: string) => Effect<string>
           pattern: (identifier)
           type: (type_annotation
             (predefined_type))))
-      return_type: (generic_type
-        name: (type_identifier)
-        type_arguments: (type_arguments
-          (predefined_type))))))
+      return_type: (effect_type
+        success: (predefined_type)))))
 
 ================================================================================
 Control declarations
 ================================================================================
 
 control Approval {
-  approve(request: string): Effect<boolean>
+  approve(request: string): boolean!!
 }
 
 --------------------------------------------------------------------------------
@@ -137,10 +131,8 @@ control Approval {
             type: (type_annotation
               (predefined_type))))
         return_type: (type_annotation
-          (generic_type
-            name: (type_identifier)
-            type_arguments: (type_arguments
-              (predefined_type))))))))
+          (effect_type
+            success: (predefined_type)))))))
 
 ================================================================================
 Schema declarations

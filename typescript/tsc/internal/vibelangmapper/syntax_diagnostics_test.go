@@ -89,7 +89,7 @@ func TestSyntaxEK1004(t *testing.T) {
 }
 
 // TestSyntaxEK2003 accepts Effect types with type arguments left out, which
-// mean never as in TypeScript (D308).
+// mean never as in TypeScript (D308, D309).
 func TestSyntaxEK2003(t *testing.T) {
 	for _, valid := range []string{
 		`function f(): Effect<string> { return "" }`,
@@ -120,7 +120,7 @@ func TestSyntaxEK2101(t *testing.T) {
 	checkSyntaxFixture(t, "ch12-rates-bare-return", 2101, 1)
 	checkSyntaxFixture(t, "decl-service-contract", 2101, 1)
 	for _, source := range []string{`service Rates { lookup(currency: string): number }`, `abstract class Rates { abstract lookup(currency: string): number }`} {
-		checkSyntaxDiagnostic(t, 2101, source, "number", "Rates.lookup has no body to infer from, so its contract must be written as an Effect type.", `service Rates { lookup(currency: string): Effect<number> }`)
+		checkSyntaxDiagnostic(t, 2101, source, "number", "Rates.lookup has no body to infer from, so its contract must be written as an Effect type.", `service Rates { lookup(currency: string): number!! }`)
 	}
 	checkSyntaxDiagnostic(t, 2101, `service Rates { lookup() }`, "lookup", "Rates.lookup has no body to infer from, so its contract must be written as an Effect type.", `class Rates { lookup(): number { return 1 } }`)
 }

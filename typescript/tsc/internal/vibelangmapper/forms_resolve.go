@@ -31,8 +31,8 @@ package vibelangmapper
 //     takes the fallback, with a Choice where its body pauses (rule 8).
 //     Overload order never decides.
 //  3. Lambda form (formsFormFor). The class picks the form. Where the call
-//     gives no class, the lambda's own return annotation does: an Effect
-//     type makes it an Effect function, any other type plain.
+//     gives no class, the lambda's own return annotation does: an Effect or
+//     a contract (A!E) makes it an Effect function, any other type plain.
 //     Where both a plain function and an Effect form fit (D39), or nothing
 //     is known, the body decides: a call outside tail position, a throw, an
 //     VibeLang statement, or a using declaration make it an Effect function.
@@ -256,7 +256,7 @@ type Choice struct {
 	// dual for a parameterless lambda.
 	Forms []Form
 	// Plain and Effect are the repairs, written with the lambda's own
-	// parameters: "(fiber): T =>" and "(fiber): Effect<T> =>".
+	// parameters: "(fiber): T =>" and "(fiber): T!! =>".
 	Plain, Effect string
 	// Reason says why the position has no form.
 	Reason string
@@ -267,7 +267,7 @@ type Choice struct {
 //	Cannot tell whether the lambda at argument 1 of xs.map is a plain
 //	function or an Effect function: the receiver of map is a value whose
 //	type this file does not name. Write `(x): T =>` for a plain function or
-//	`(x): Effect<T> =>` for an Effect function.
+//	`(x): T!! =>` for an Effect function.
 func (c *Choice) Message() string {
 	where := "this lambda"
 	switch {
@@ -551,12 +551,12 @@ func (r *Resolver) choiceText(d Decision, reason string) *Choice {
 	params := r.parameterText(fn)
 	switch {
 	case d.Block:
-		c.Plain, c.Effect = "(): T => { … }", "(): Effect<T> => { … }"
+		c.Plain, c.Effect = "(): T => { … }", "(): T!! => { … }"
 	case fn.Kind == ast.KindMethodDeclaration:
 		name, _ := formsPropertyName(fn)
-		c.Plain, c.Effect = name+params+": T { … }", name+params+": Effect<T> { … }"
+		c.Plain, c.Effect = name+params+": T { … }", name+params+": T!! { … }"
 	default:
-		c.Plain, c.Effect = params+": T =>", params+": Effect<T> =>"
+		c.Plain, c.Effect = params+": T =>", params+": T!! =>"
 	}
 	if d.Call != nil {
 		c.Callee = r.snippet(d.Call.Expression())
@@ -2085,7 +2085,7 @@ func (r *Resolver) memberClass(ret *ast.Node) Class {
 }
 
 // isEffectTypeNode reports whether written type t is effect's Effect: an
-// retired A!E!R (EK1014), Effect.Effect<…> through an import of effect or
+// VibeLang contract (A!E!R), Effect.Effect<…> through an import of effect or
 // effect/Effect or through the prelude, or the prelude's Effect<…> (D4).
 func (r *Resolver) isEffectTypeNode(t *ast.Node, depth int) bool {
 	t = formsUnwrapType(t)
@@ -2211,7 +2211,7 @@ func (r *Resolver) wellKnownSymbolKey(fn *ast.Node) (string, bool) {
 // annotatedMember decides a lambda or method that is a member of an object
 // literal whose type is written: the initializer of an annotated variable
 // (const file: LineFile = { readLine: () => … }) or the result of a function
-// with a written return type (make(): Effect<Banner, never, Settings> { return { … } }).
+// with a written return type (make(): Banner!!Settings { return { … } }).
 // The member's written type in this file's interface, type literal, or
 // service gives the class: an Effect function when it returns an Effect.
 func (r *Resolver) annotatedMember(fn *ast.Node) (Class, string, bool) {
@@ -2231,7 +2231,7 @@ func (r *Resolver) annotatedMember(fn *ast.Node) (Class, string, bool) {
 		return 0, "", false
 	}
 	if t := formsUnwrapType(written); t != nil && t.Kind == ast.KindTypeReference && t.AsTypeReferenceNode().TypeName.Kind == ast.KindQualifiedName && t.AsTypeReferenceNode().TypeName.Flags&ast.NodeFlagsReparsed != 0 && len(t.TypeArguments()) == 3 {
-		written = t.TypeArguments()[0] // a retired A!E!R types its value A
+		written = t.TypeArguments()[0] // a contract A!E!R types its value A
 	}
 	t := formsUnwrapType(written)
 	if t == nil {

@@ -2,7 +2,7 @@
 error Missing { id: string }
 error Late
 
-function lookupUser(id: string): Effect<string, Missing | Late> {
+function lookupUser(id: string): string!Missing | Late! {
   if (id === "") throw new Missing({ id })
   if (id === "late") throw new Late()
   return id

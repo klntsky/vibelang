@@ -21,10 +21,10 @@ var update = flag.Bool("update", false, "rewrite the golden files of TestFormatG
 // forms holds one source per VibeLang form, written as an author might, so
 // a test sees each form's TypeScript form and its round trip.
 var forms = map[string]string{
-	"effect types": `type Find = (id: string) => Effect<User, NotFound>
-type Release = (version: string) => Effect<string, never, Approval>
-type Load = () => Effect<string>
-function hello(id: string): Effect<string, NotFound, infer R> {
+	"effect types": `type Find = (id: string) => User!NotFound
+type Release = (version: string) => string!!Approval
+type Load = () => string!!
+function hello(id: string): string!NotFound!Users {
   return getUser(id).name
 }
 `,
@@ -36,17 +36,17 @@ error Wrapped<T> {
   mutable attempts: number
 }
 service Users {
-  find(id: string): Effect<User, NotFound>
+  find(id: string): User!NotFound
   region: string
 }
 control Approval {
-  approve(request: string): Effect<boolean>
+  approve(request: string): boolean!!
 }
 export service Search: SearchApi {
   static readonly layer = Layer.succeed(Search, searchApi)
 }
 service Prefix: string
-service Format: (value: string) => Effect<string>
+service Format: (value: string) => string!!
 schema Account {
   id: string
   nickname?: string
@@ -200,7 +200,7 @@ function program() {
     return Users.find("1")
   }
 }
-function roll(): Effect<number> {
+function roll(): number!! {
   provide Logger.layer([]), Random = seeded {
     return Random.nextInt()
   }
@@ -245,7 +245,6 @@ function logAll(ids: string[]) {
 service class Accounts {
   find(id: string): Account!NotFound
 }
-type Retired = (id: string) => (User!NotFound)!!Users
 function f(jobs: Queue.Queue<string>) {
   with UsersLive {
     select {
@@ -300,7 +299,7 @@ import setup
 import * as settings from config
 export { clean as tidy } from text
 export * from config
-function cleaned(value: string): Effect<string> {
+function cleaned(value: string): string!! {
   return sync(() => clean(value)) |> % + settings.level
 }
 `,

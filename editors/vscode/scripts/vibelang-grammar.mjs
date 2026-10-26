@@ -7,11 +7,12 @@
 //   error Missing extends NotFound { path: string; describe(): string { ... } }
 //   schema error FsError { method: string }
 //   data Delivery { Waiting; Sent { tracking: string } }   (D307, read as an enum)
-//   service Users { find(id: string): Effect<User, NotFound> }
+//   service Users { find(id: string): User!NotFound }
 //   control Approval { approve(request: string): boolean }
 //   layer UsersLive: Users { find(id) { ... } }   (the old spelling, D221)
 //   try { ... } handle Approval.approve(request) { ... }
 //   getUser(id) catch (e) => match (e) { when NotFound: guest; }
+//   function find(id: string): User!NotFound!Db { ... }
 //   module text { ...TypeScript... }       import { clean } from text
 
 const name = "[_$[:alpha:]][_$[:alnum:]]*"
@@ -222,5 +223,8 @@ export function addVibeLangSyntax(grammar) {
   const vibelangExpressions = ["#vibelang-await-operation", "#vibelang-fork", "#vibelang-join", "#vibelang-match", "#vibelang-catch-expression"]
   const expressions = repository.expression.patterns.filter((pattern) => !vibelangExpressions.includes(pattern.include))
   repository.expression.patterns = [...vibelangExpressions.map((include) => ({ include })), ...expressions]
+  // `!` separates the slots of an Effect type: Result!Error!Dependencies.
+  const effectSlot = { name: "keyword.operator.type.effect.ts", match: "!" }
+  repository.type.patterns = [effectSlot, ...repository.type.patterns.filter((pattern) => pattern.name !== effectSlot.name)]
   return grammar
 }

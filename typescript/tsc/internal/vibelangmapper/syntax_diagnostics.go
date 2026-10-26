@@ -21,7 +21,7 @@ func (p *projector) syntaxToken(node *ast.Node, code int32, message string) {
 // (EK2006), D1's bodiless service contracts (EK2101), D129's setup order
 // (EK2104), and D229's lexical hatch captures (EK4405). Alias/type identity
 // and unresolved types remain native. A type argument left out of an Effect
-// type means what it means in TypeScript (D308), so Effect<A> is complete.
+// type means what it means in TypeScript (D308, D309), so Effect<A> is complete.
 func (p *projector) checkSyntaxDiagnostics() {
 	p.checkThrowExpressionPrecedence()
 	var visit func(*ast.Node) bool

@@ -1,5 +1,5 @@
 // await on a fiber and on a Deferred: EK4609 and EK4610, each with a quick fix (D226).
-function count(): Effect<number> {
+function count(): number!! {
   return 1
 }
 

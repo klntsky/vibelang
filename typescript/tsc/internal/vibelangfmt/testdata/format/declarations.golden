@@ -5,17 +5,17 @@ export error NotFound { id: string }
 error Timeout
 export error Wrapped<T> { cause: T; mutable attempts: number }
 service Users {
-  find(id: string): Effect<User, NotFound>
+  find(id: string): User!NotFound
   region: string
 }
 control Approval {
-  approve(request: string): Effect<boolean>
+  approve(request: string): boolean!!
 }
 export service Search: SearchApi {
   static readonly layer = Layer.succeed(Search, searchApi)
 }
 service Prefix: string
-service Format: (value: string) => Effect<string>
+service Format: (value: string) => string!!
 schema Account { id: string; nickname?: string; role: "admin" | "member" }
 export schema Code = "root_missing" | "read_failed"
 schema Point = { x: number; y?: number }
@@ -24,8 +24,13 @@ interface Cart {
   mutable items: Array<string>
   mutable [key: string]: unknown
 }
-type Find = (id: string) => Effect<User, NotFound>
-type Load = () => Effect<string, never, Users>
+type Find = (id: string) => User!NotFound
+type Load = () => string!!Users
+service Accounts {
+  find(id: string): Effect<User, NotFound>
+  count(): number!!
+}
+type Spelled = (id: string) => Effect<User, NotFound, Users>
 export error Failure {
   _tag: string
   code: string

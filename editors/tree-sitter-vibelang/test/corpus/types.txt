@@ -1,106 +1,135 @@
 ================================================================================
-Effect types, with TypeScript's defaults
+Effect types with every slot
 ================================================================================
 
-type Find = (id: string) => Effect<User, NotFound>
-type Release = (version: string) => Effect<string, never, Approval>
-type Load = () => Effect<string>
-type Full = Effect<User, NotFound, Db>
+type Find = (id: string) => User!NotFound
+type Release = (version: string) => string!!Approval
+type Load = () => string!!
+type Full = User!NotFound!Db
+type Open = User!NotFound!
 
 --------------------------------------------------------------------------------
 
 (program
   (type_alias_declaration
-    (type_identifier)
-    (function_type
-      (formal_parameters
+    name: (type_identifier)
+    value: (function_type
+      parameters: (formal_parameters
         (required_parameter
-          (identifier)
-          (type_annotation
+          pattern: (identifier)
+          type: (type_annotation
             (predefined_type))))
-      (generic_type
-        (type_identifier)
-        (type_arguments
+      return_type: (effect_type
+        success: (type_identifier)
+        error: (type_identifier))))
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (function_type
+      parameters: (formal_parameters
+        (required_parameter
+          pattern: (identifier)
+          type: (type_annotation
+            (predefined_type))))
+      return_type: (effect_type
+        success: (predefined_type)
+        requirements: (type_identifier))))
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (function_type
+      parameters: (formal_parameters)
+      return_type: (effect_type
+        success: (predefined_type))))
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (effect_type
+      success: (type_identifier)
+      error: (type_identifier)
+      requirements: (type_identifier)))
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (effect_type
+      success: (type_identifier)
+      error: (type_identifier))))
+
+================================================================================
+A union in a slot, and the success's union
+================================================================================
+
+function find(id: string): string!NotFound | Timeout! {
+  return id
+}
+type Either = A | B!E
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type))))
+    return_type: (type_annotation
+      (effect_type
+        success: (predefined_type)
+        error: (union_type
           (type_identifier)
-          (type_identifier)))))
+          (type_identifier))))
+    body: (statement_block
+      (return_statement
+        (identifier))))
   (type_alias_declaration
-    (type_identifier)
-    (function_type
-      (formal_parameters
-        (required_parameter
-          (identifier)
-          (type_annotation
-            (predefined_type))))
-      (generic_type
+    name: (type_identifier)
+    value: (effect_type
+      success: (union_type
         (type_identifier)
-        (type_arguments
-          (predefined_type)
-          (predefined_type)
-          (type_identifier)))))
+        (type_identifier))
+      error: (type_identifier))))
+
+================================================================================
+Effect types with generic, qualified, and array slots
+================================================================================
+
+type Fetched = Array<User>!Http.Error | Cause.UnknownError!HttpClient.HttpClient
+type Many = User[]!NotFound[]
+
+--------------------------------------------------------------------------------
+
+(program
   (type_alias_declaration
-    (type_identifier)
-    (function_type
-      (formal_parameters)
-      (generic_type
-        (type_identifier)
-        (type_arguments
-          (predefined_type)))))
+    name: (type_identifier)
+    value: (effect_type
+      success: (generic_type
+        name: (type_identifier)
+        type_arguments: (type_arguments
+          (type_identifier)))
+      error: (union_type
+        (nested_type_identifier
+          module: (identifier)
+          name: (type_identifier))
+        (nested_type_identifier
+          module: (identifier)
+          name: (type_identifier)))
+      requirements: (nested_type_identifier
+        module: (identifier)
+        name: (type_identifier))))
   (type_alias_declaration
-    (type_identifier)
-    (generic_type
-      (type_identifier)
-      (type_arguments
-        (type_identifier)
-        (type_identifier)
+    name: (type_identifier)
+    value: (effect_type
+      success: (array_type
+        (type_identifier))
+      error: (array_type
         (type_identifier)))))
 
 ================================================================================
-Effect types with union, qualified, and array arguments
+A slot does not take the body's brace
 ================================================================================
 
-type Fetched = Effect<Array<User>, Http.Error | Cause.UnknownError, HttpClient.HttpClient>
-type Many = Effect<User[], NotFound[]>
-
---------------------------------------------------------------------------------
-
-(program
-  (type_alias_declaration
-    (type_identifier)
-    (generic_type
-      (type_identifier)
-      (type_arguments
-        (generic_type
-          (type_identifier)
-          (type_arguments
-            (type_identifier)))
-        (union_type
-          (nested_type_identifier
-            (identifier)
-            (type_identifier))
-          (nested_type_identifier
-            (identifier)
-            (type_identifier)))
-        (nested_type_identifier
-          (identifier)
-          (type_identifier)))))
-  (type_alias_declaration
-    (type_identifier)
-    (generic_type
-      (type_identifier)
-      (type_arguments
-        (array_type
-          (type_identifier))
-        (array_type
-          (type_identifier))))))
-
-================================================================================
-Channels written infer in a return annotation
-================================================================================
-
-function getOrders(id: string): Effect<number> {
+function getOrders(id: string): number!! {
   return id.length
 }
-const inferred = (input: { mutable value: number }): Effect<number, infer E, infer R> => {
+const inferred = (input: { mutable value: number }): number!infer E!infer R => {
   return input.value
 }
 
@@ -108,49 +137,45 @@ const inferred = (input: { mutable value: number }): Effect<number, infer E, inf
 
 (program
   (function_declaration
-    (identifier)
-    (formal_parameters
+    name: (identifier)
+    parameters: (formal_parameters
       (required_parameter
-        (identifier)
-        (type_annotation
+        pattern: (identifier)
+        type: (type_annotation
           (predefined_type))))
-    (type_annotation
-      (generic_type
-        (type_identifier)
-        (type_arguments
-          (predefined_type))))
-    (statement_block
+    return_type: (type_annotation
+      (effect_type
+        success: (predefined_type)))
+    body: (statement_block
       (return_statement
         (member_expression
-          (identifier)
-          (property_identifier)))))
+          object: (identifier)
+          property: (property_identifier)))))
   (lexical_declaration
     (variable_declarator
-      (identifier)
-      (arrow_function
-        (formal_parameters
+      name: (identifier)
+      value: (arrow_function
+        parameters: (formal_parameters
           (required_parameter
-            (identifier)
-            (type_annotation
+            pattern: (identifier)
+            type: (type_annotation
               (object_type
                 (property_signature
-                  (property_identifier)
-                  (type_annotation
+                  name: (property_identifier)
+                  type: (type_annotation
                     (predefined_type)))))))
-        (type_annotation
-          (generic_type
-            (type_identifier)
-            (type_arguments
-              (predefined_type)
-              (infer_type
-                (type_identifier))
-              (infer_type
-                (type_identifier)))))
-        (statement_block
+        return_type: (type_annotation
+          (effect_type
+            success: (predefined_type)
+            error: (infer_type
+              (type_identifier))
+            requirements: (infer_type
+              (type_identifier))))
+        body: (statement_block
           (return_statement
             (member_expression
-              (identifier)
-              (property_identifier))))))))
+              object: (identifier)
+              property: (property_identifier))))))))
 
 ================================================================================
 Mutable members
@@ -200,3 +225,42 @@ interface Flags { mutable: boolean }
         name: (property_identifier)
         type: (type_annotation
           (predefined_type))))))
+
+================================================================================
+Both spellings of a contract
+================================================================================
+
+function f(): Effect<User, NotFound, Users> { return g() }
+function h(): User!NotFound!Users { return g() }
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    return_type: (type_annotation
+      (generic_type
+        name: (type_identifier)
+        type_arguments: (type_arguments
+          (type_identifier)
+          (type_identifier)
+          (type_identifier))))
+    body: (statement_block
+      (return_statement
+        (call_expression
+          function: (identifier)
+          arguments: (arguments)))))
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    return_type: (type_annotation
+      (effect_type
+        success: (type_identifier)
+        error: (type_identifier)
+        requirements: (type_identifier)))
+    body: (statement_block
+      (return_statement
+        (call_expression
+          function: (identifier)
+          arguments: (arguments))))))

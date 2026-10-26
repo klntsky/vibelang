@@ -20,7 +20,7 @@ dofile(vim.fn.expand("<vibelang checkout>/editors/nvim/vibelang.lua")).setup()
 
 `.vibe` files then get the `vibe` filetype, highlighting, and `vibelang --lsp --stdio` as their language server. The server is the project's `node_modules/.bin/vibelang`, else `vibelang` on `PATH`; `setup({ cmd = "/path/to/vibelang" })` names another. Neovim's built-in LSP client shows diagnostics, and its defaults give hover on `K`, go to definition on `<C-]>` (through 'tagfunc'), and completion on `<C-x><C-o>` (through 'omnifunc').
 
-Highlighting uses the `vibe` parser once installed, else tree-sitter's TypeScript parser, else Vim's TypeScript syntax. The TypeScript parser reads VibeLang's forms, such as `match`, `provide`, and `x catch fallback`, as errors. With [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) (its `master` branch, for Neovim 0.10), `setup()` registers the grammar, so this command compiles it with your C compiler and installs it:
+Highlighting uses the `vibe` parser once installed, else tree-sitter's TypeScript parser, else Vim's TypeScript syntax. The TypeScript parser reads VibeLang's forms, such as `A!E!R`, `match`, and `provide`, as errors. With [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) (its `master` branch, for Neovim 0.10), `setup()` registers the grammar, so this command compiles it with your C compiler and installs it:
 
 ```vim
 :TSInstall vibe

@@ -58,7 +58,7 @@ export { clean as tidy } from text
 
 error Unclean { reason: string }
 
-export function cleaned(input: string): Effect<Cleaned, Unclean, infer R> {
+export function cleaned(input: string): Cleaned!Unclean {
   return try((input) => clean(input), (error) => new Unclean({ reason: String(error) + suffix }), input)
 }
 

@@ -22,9 +22,16 @@ module.exports = grammar(TypeScript, {
     // precedence both readings continue (see conflicts).
     (list) => list.map((rule) => rule.name).join() !== 'call_expression,_type_query_call_expression',
   ).concat([
+    // An Effect type's slots hold unions, and a function type returns an
+    // Effect type: () => A!E | F!R is () => A!(E | F)!R.
+    [$.union_type, $.effect_type, $.function_type],
+    [$.readonly_type, $.effect_type],
+    // A!E.F and A!E<T> continue the slot's type.
+    ['member', 'call', $._effect_slot_primary],
     // In a type, x is T stays a type predicate.
     [$.type_predicate, $.primary_type],
     [$.type_predicate, $.asserts],
+    [$.effect_type, $.type_predicate],
     // catch binds looser than || and tighter than ?: (vibelang_catch.go); a
     // pipe binds looser than ?: and tighter than assignment (vibelang_pipes.go).
     // ?? shares ?:'s level here, so a ?? b catch c groups as a ?? (b catch c),
@@ -128,6 +135,60 @@ module.exports = grammar(TypeScript, {
 
     // ------------------------------------------------------------ Types
 
+    type: ($, previous) => choice(previous, $.effect_type),
+
+    // Result!Error!Dependencies (D127, vibelang.go): User!NotFound, number!!,
+    // string!!Approval. An empty slot is never; a slot does not start with {,
+    // which opens a body.
+    effect_type: $ => prec.right(seq(
+      field('success', $.type),
+      '!',
+      optional(field('error', $._effect_slot)),
+      optional(seq('!', optional(field('requirements', $._effect_slot)))),
+    )),
+
+    // A slot is a type that cannot start with {, so that a function's body
+    // can follow: unions, intersections, and arrays of the types below.
+    _effect_slot: $ => choice(
+      $._effect_slot_operand,
+      alias($.effect_slot_union, $.union_type),
+    ),
+
+    effect_slot_union: $ => prec.left(1, seq(
+      choice($._effect_slot_operand, alias($.effect_slot_union, $.union_type)),
+      '|',
+      $._effect_slot_operand,
+    )),
+
+    _effect_slot_operand: $ => choice(
+      $._effect_slot_primary,
+      alias($.effect_slot_intersection, $.intersection_type),
+    ),
+
+    effect_slot_intersection: $ => prec.left(1, seq(
+      choice($._effect_slot_primary, alias($.effect_slot_intersection, $.intersection_type)),
+      '&',
+      $._effect_slot_primary,
+    )),
+
+    _effect_slot_primary: $ => choice(
+      $.parenthesized_type,
+      $.predefined_type,
+      $._type_identifier,
+      $.nested_type_identifier,
+      $.generic_type,
+      alias($.effect_slot_array, $.array_type),
+      $.tuple_type,
+      $.type_query,
+      $.index_type_query,
+      alias($.this, $.this_type),
+      $.literal_type,
+      $.template_literal_type,
+      $.infer_type,
+    ),
+
+    effect_slot_array: $ => prec(1, seq($._effect_slot_primary, '[', ']')),
+
     // Members are readonly unless written mutable (D134, vibelang.go).
     property_signature: ($, previous) => seq(optional('mutable'), previous),
 
@@ -165,7 +226,7 @@ module.exports = grammar(TypeScript, {
     // An error's field may be written mutable (D134).
     public_field_definition: ($, previous) => seq(optional('mutable'), previous),
 
-    // service Users { find(id: string): Effect<User, NotFound> } (D128, D223), the
+    // service Users { find(id: string): User!NotFound } (D128, D223), the
     // older spelling service class Users { ... } (D220), and a service of any
     // shape, service Prefix: string or service Search: SearchApi { static
     // members } (D281), whose body is optional.
@@ -180,7 +241,7 @@ module.exports = grammar(TypeScript, {
       ),
     )),
 
-    // control Approval { approve(request: string): Effect<boolean> } (D128, D223).
+    // control Approval { approve(request: string): boolean!! } (D128, D223).
     control_declaration: $ => seq(
       'control',
       optional('class'),

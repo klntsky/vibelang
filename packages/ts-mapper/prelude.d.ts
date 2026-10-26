@@ -315,7 +315,7 @@ type Pin<Written, Inferred> = [Written] extends [$Infer] ? Inferred : Written
 
 /**
  * A written contract with an `infer` channel (D57):
- * `function f(): Effect<A, infer E, R> { body }` projects to
+ * `function f(): A!infer E!R { body }` projects to
  * `function f() { return $contract<A, $Infer, R>()($gen(function* () { body })) }`.
  * The written channels are checked and pinned; the inferred ones come from the body.
  */

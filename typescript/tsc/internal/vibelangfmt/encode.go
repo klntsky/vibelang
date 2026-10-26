@@ -8,7 +8,7 @@
 // The TypeScript form of each VibeLang form is chosen so that the formatter
 // lays it out as the form should look:
 //
-//	retired A!E!R, mutable x, try, %, a pattern  an identifier of the same width
+//	A!E!R, mutable x, try, %, a pattern    an identifier of the same width
 //	f(args) { ... }, do { ... }, fork { }  f(args)(($v) => { ... })
 //	match (x) { when P: v; default: w; }   ({ $v1: x, $v2: v, default: w })
 //	x catch y                              x.$v3(y)
@@ -19,7 +19,7 @@
 //	error E { f: T }, schema S { f: T }    type $v7 = { f: T }
 //	schema S = T                           type $v7 = T
 //	data D { A; B { f: T } }               type $v7 = { A; B: { f: T } }
-//	service S { m(): Effect<A> }           class $v8 { m(): Effect<A> }
+//	service S { m(): A!E }                 class $v8 { m(): $v9 }
 //	service S: T, service S: T { static }  class $v8 {}, class $v8 { static }
 //	for concurrent(n) (const x of xs)      for (const x of xs)
 //	finally (exit) { }                     finally { }
@@ -85,7 +85,7 @@ type placeholder struct {
 	// type literal writes with a colon before the fields.
 	data bool
 	// nested marks a placeholder whose edit an opaque edit swallowed, such as
-	// a retired Effect type in the shape of service Format: (s: string) => string!!:
+	// an Effect type in the shape of service Format: (s: string) => string!!:
 	// the enclosing placeholder keeps its text, so decoding never sees it.
 	nested bool
 }

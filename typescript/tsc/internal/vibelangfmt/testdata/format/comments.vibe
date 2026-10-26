@@ -1,7 +1,7 @@
 // A file whose comments sit around and inside VibeLang forms.
 
 /** Finds a user. */
-export function find(id: string): Effect<User, NotFound, infer R> /* the failure */ {
+export function find(id: string): User!NotFound /* the failure */ {
   // before the block
   return withSpan("find") {
     // inside the block

@@ -6,7 +6,7 @@ export class Tally {
   readonly count: number = 0
 }
 
-export function total(n: number): Effect<number, RangeError, Tally> {
+export function total(n: number): number!RangeError!Tally {
   if (n < 0) throw new RangeError("negative")
   return n
 }

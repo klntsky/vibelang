@@ -4207,6 +4207,10 @@
 		"type": {
 			"patterns": [
 				{
+					"name": "keyword.operator.type.effect.ts",
+					"match": "!"
+				},
+				{
 					"include": "#comment"
 				},
 				{
