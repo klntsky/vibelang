@@ -394,6 +394,7 @@ func (r *retiredCatch) rewrite(c *checker.Checker, file *ast.SourceFile) (string
 // matchForm returns the chain as `return match (e) { ... }` when every
 // clause is one return of a value and names the same variable.
 func (r *retiredCatch) matchForm(text, main string, patterns []string, base, unit string) (string, bool) {
+	inner := base + unit + unit
 	arms := make([]string, len(r.clauses))
 	for i, clause := range r.clauses {
 		if clause.name != nil && clause.name.Text() != main {
@@ -408,11 +409,17 @@ func (r *retiredCatch) matchForm(text, main string, patterns []string, base, uni
 		} else {
 			arms[i] = "when " + patterns[i] + ": " + value + ";"
 		}
+		statement := clause.statements[0]
+		leading := strings.TrimSpace(text[clause.open+1 : scanner.SkipTrivia(text, statement.Pos())])
+		if leading != "" {
+			arms[i] = reindent(leading, unit) + "\n" + inner + arms[i]
+		}
+		trailing := strings.TrimRight(text[statement.End():clause.end-1], " \t\r\n")
+		arms[i] += reindent(trailing, unit)
 	}
 	if patterns[len(patterns)-1] != "" {
 		arms = append(arms, "default: throw "+main+";")
 	}
-	inner := base + unit + unit
 	return "catch (" + main + ") {\n" + base + unit + "return match (" + main + ") {\n" + inner + strings.Join(arms, "\n"+inner) + "\n" + base + unit + "}\n" + base + "}", true
 }
 
@@ -454,7 +461,12 @@ func singleReturn(text string, statements []*ast.Node) (string, bool) {
 	if expression == nil {
 		return "", false
 	}
-	return text[scanner.SkipTrivia(text, expression.Pos()):expression.End()], true
+	value := strings.TrimSpace(text[expression.Pos():expression.End()])
+	suffix := strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(text[expression.End():statements[0].End()]), ";"))
+	if suffix != "" {
+		value += " " + suffix
+	}
+	return value, true
 }
 
 // indentationAt returns the leading white space of the line holding pos.
