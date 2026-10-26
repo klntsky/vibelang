@@ -88,8 +88,11 @@ the project does not compile (the message holds the diagnostics), and
 ### The compile cache
 
 A project's compile is cached on disk, so the next process that imports the same
-project reuses it instead of compiling again: a warm start costs a few
-milliseconds per project, against hundreds for a compile. `vibelang/register`,
+project reuses it instead of compiling again. Cache lookup takes milliseconds;
+it does not include loading Effect or the rest of process startup. One Linux x64
+review run measured about 0.5 s for a warm Node start, including loading Effect,
+with 38 ms spent reading the cache, versus 1.3 s with the cache disabled. These
+are single-machine observations. `vibelang/register`,
 `vibelang/bun`, `vibelang-vite`, and `vibelang-unplugin` share the cache. A
 cached compile is reused only while all of these are unchanged:
 
@@ -181,7 +184,8 @@ The package ships an agent skill for writing VibeLang, `node_modules/vibelang/sk
 
 ## Format .vibe files with dprint
 
-The package ships a [dprint](https://dprint.dev) plugin for `.vibe` files. Add
+The package ships a [dprint](https://dprint.dev) plugin for `.vibe` files. Use
+dprint 0.64.3 or later for `npm:` plugin resolution. Add
 it beside dprint's TypeScript plugin, and add `vibe` to `includes`:
 
 ```json

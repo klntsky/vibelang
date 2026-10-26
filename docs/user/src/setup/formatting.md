@@ -4,8 +4,10 @@
 
 ## 1. Install dprint
 
+Use dprint 0.64.3 or later, the minimum supported version for this configuration. dprint 0.50.2 cannot resolve `npm:vibelang/dprint-plugin.json`. The alpha review verified it with 0.64.3.
+
 ```sh
-npm install --save-dev dprint
+npm install --save-dev dprint@0.64.3
 ```
 
 ## 2. Configure dprint.json

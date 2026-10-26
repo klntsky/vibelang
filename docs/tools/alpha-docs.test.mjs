@@ -88,3 +88,15 @@ test("7: Effect users can find tracing limits, a debugging recipe and measured c
   const effects = read("docs/user/src/vibelang-features/114-vibelang-for-effect-users.md")
   for (const term of ["single-machine", "2.9", "Effect.fn", "catch 0", "Effect.orElseSucceed", "200,000", "1,000,000", "Clock.currentTimeMillis"]) assert.ok(effects.includes(term), term)
 })
+
+test("8: cache startup and formatter requirements state their measured limits", () => {
+  const compiler = read("packages/compiler/README.md")
+  assert.doesNotMatch(compiler, /warm start costs a few\s+milliseconds/)
+  assert.match(compiler, /0\.5 s/)
+  assert.match(compiler, /loading Effect/)
+  assert.match(compiler, /0\.64\.3/)
+  const formatting = read("docs/user/src/setup/formatting.md")
+  assert.match(formatting, /0\.64\.3 or later/)
+  assert.match(formatting, /0\.50\.2/)
+  assert.match(formatting, /npm:vibelang\/dprint-plugin\.json/)
+})
