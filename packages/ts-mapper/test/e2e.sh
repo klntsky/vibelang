@@ -22,7 +22,11 @@
 #      adds a TS2322 there.
 #   5. The stock language server must answer hovers and diagnostics at
 #      .vibe positions (test/lsp-hover.mjs).
-#   6. Without effect beside the prelude, the sentinel on each projected
+#   6. A project whose .vibe files compile to .js (test/emit-fixture:
+#      outputExtensions { ".vibe": ".js" } and rewriteRelativeImportExtensions):
+#      stock tsc must emit main.js importing ./hello.js and hello.d.ts,
+#      vibelang-mapper --emit writes hello.js, and node must run main.js.
+#   7. Without effect beside the prelude, the sentinel on each projected
 #      file's first line must report TS1360 at line 1, naming the fix.
 #
 # Environment:
@@ -93,6 +97,24 @@ step "tsc --lsp --stdio: hover and diagnostics at .vibe positions"
 # bin/tsc is a Node launcher; the language server is the native binary it starts.
 native="$(node -e 'const r=require("node:module").createRequire(process.argv[1]);const p=`@typescript/typescript-${process.platform}-${process.arch}`;console.log(require("node:path").join(require("node:path").dirname(r.resolve(p+"/package.json")),"lib","tsc"))' "$cache/node_modules/typescript/package.json")"
 node "$here/lsp-hover.mjs" "$native" "$work"
+
+step "a .vibe file emitted as .js: stock tsc, vibelang-mapper --emit, node"
+# Inside $work, so the project resolves this package, effect and the runtime
+# from $work/node_modules.
+emit="$work/emit"
+mkdir -p "$emit"
+cp -R "$here/emit-fixture/." "$emit/"
+(cd "$emit" && "$tsc" -p . --pretty false --runExternalCode)
+if ! grep -q 'from "./hello.js"' "$emit/out/main.js"; then
+  cat "$emit/out/main.js"; echo "e2e: main.js does not import ./hello.js; outputExtensions had no effect" >&2; exit 1
+fi
+if [ ! -f "$emit/out/hello.d.ts" ]; then
+  ls "$emit/out"; echo "e2e: tsc wrote no hello.d.ts; outputExtensions had no effect" >&2; exit 1
+fi
+"$package/bin/vibelang-mapper" --emit "$emit/src/hello.vibe" --out "$emit/out/hello.js"
+ran="$(node "$emit/out/main.js")"
+if [ "$ran" != "Hello, Ada!" ]; then echo "e2e: node out/main.js printed: $ran" >&2; exit 1; fi
+echo "ok   main.js imports ./hello.js, tsc wrote hello.d.ts, and node prints Hello, Ada!"
 
 step "the prelude sentinel: no effect beside the prelude fails at line 1"
 # skipLibCheck hides prelude.d.ts's own failed imports, which would turn every
