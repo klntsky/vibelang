@@ -81,6 +81,9 @@ func checkExhaustive(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
 			declaredText, leftText = names.typeText(c, declared), names.unionText(c, left)
 		}
 	}
+	if nested := nestedMatchRemainder(c, call, left); nested != "" {
+		leftText = nested
+	}
 	d := reportAt(c, file, call.Expression().Loc, EK4701, declaredText, leftText)
 	note(d, "Add an arm for each case that is left, or a default arm.")
 }

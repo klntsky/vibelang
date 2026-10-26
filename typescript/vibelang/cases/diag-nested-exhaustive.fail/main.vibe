@@ -1,0 +1,26 @@
+// expect: EK4701
+data Shape { Circle { r: number }; Rect { w: number }; Tri { a: number } }
+data Wrap { Of { s: Shape } }
+export function inspect(value: Wrap) {
+  return match (value) {
+    when Wrap.Of { s: Shape.Circle }: 1;
+    when Wrap.Of { s: Shape.Rect }: 2;
+  }
+}
+
+data Choice { One; Two }
+data Inner { Box { a: Choice } }
+data Outer { Hold { v: Inner } }
+export function deep(value: Outer) {
+  return match (value) {
+    when Outer.Hold { v: Inner.Box { a: Choice.One } }: 1;
+  }
+}
+
+error Missing
+export function mixed(value: Wrap | Missing) {
+  return match (value) {
+    when Wrap.Of { s: Shape.Circle }: 1;
+    when Wrap.Of { s: Shape.Rect }: 2;
+  }
+}

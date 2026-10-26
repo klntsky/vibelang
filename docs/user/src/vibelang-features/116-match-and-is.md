@@ -223,7 +223,9 @@ Elsewhere, an `is` with bindings is EK4703.
 
 ## Exhaustiveness
 
-`match` is exhaustive. A match without a `default` arm whose value is a finite union must handle every case: literals, `null`, `undefined`, a data type's variants, `error` classes, `Option`, `Exit`, `Result`, and other objects with a literal `_tag`. A missing case is a compile error, EK4701, `This match does not handle every case of {type}: {cases} is left.`:
+`match` is exhaustive. A match without a `default` arm whose value is a finite union must handle every case: literals, `null`, `undefined`, a data type's variants, `error` classes, `Option`, `Exit`, `Result`, and other objects with a literal `_tag`. For nested data-variant patterns, the diagnostic names the missing nested pattern, such as `Wrap.Of { s: Shape.Tri }`. Guards and patterns whose finite product cannot be described keep the remaining type.
+
+A missing case is a compile error, EK4701, `This match does not handle every case of {type}: {cases} is left.`:
 
 ```vibe
 // expect-error: EK4701
