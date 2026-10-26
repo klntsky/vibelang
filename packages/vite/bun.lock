@@ -12,7 +12,7 @@
         "vitest": "5.0.5",
       },
       "peerDependencies": {
-        "vibelang": "0.0.6",
+        "vibelang": "0.0.7",
         "vite": ">=7 <9",
       },
     },
@@ -159,16 +159,6 @@
     "tinyglobby": ["tinyglobby@0.2.17", "", { "dependencies": { "fdir": "^6.5.0", "picomatch": "^4.0.4" } }, "sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g=="],
 
     "tinyrainbow": ["tinyrainbow@3.2.0", "", {}, "sha512-LgO3D9yZJjApUiuUfl9iFAwrtaX4+lok3wJIqttGoKCHlWUqHqbQpnxCf82L8FjgKsh4iGo78hqJwgL8F6To2A=="],
-
-    "vibelang": ["vibelang@0.0.6", "", { "optionalDependencies": { "vibelang-darwin-arm64": "0.0.6", "vibelang-darwin-x64": "0.0.6", "vibelang-linux-arm64": "0.0.6", "vibelang-linux-x64": "0.0.6" }, "bin": { "vibelang": "bin/vibelang" } }, "sha512-JmleCu9VuG85poatUNLvQ7Zn0LFb5or4Rf48KIeBQ2aNFkT7iSFwJL44Kr3NcKtrmGfuIV6KnxyeqnqRFHUe8w=="],
-
-    "vibelang-darwin-arm64": ["vibelang-darwin-arm64@0.0.6", "", { "os": "darwin", "cpu": "arm64" }, "sha512-HgGkZa1c6oIMOIBWjeFVXkBVwad3IYlz/q7C3C7Qc6tjlfd1zPSep2Eeb150+yS9j26w8QbpoDCOiMZAhDu9ug=="],
-
-    "vibelang-darwin-x64": ["vibelang-darwin-x64@0.0.6", "", { "os": "darwin", "cpu": "x64" }, "sha512-nzKpUHLodWdqOCviXojxIKSecyHQ/Nv3r6m7XE+uzkiLxl5hx605XARiJ/jB+hojfhx/29GDNQvdElcI+P3eig=="],
-
-    "vibelang-linux-arm64": ["vibelang-linux-arm64@0.0.6", "", { "os": "linux", "cpu": "arm64" }, "sha512-AdiA0+Z6nVNU3AeQWfGHY732nBcErbTRM804xDfGdk0i9Sy1Sgptsf0YQAEall53rkOSOVaudqbmTuEcLO76Hg=="],
-
-    "vibelang-linux-x64": ["vibelang-linux-x64@0.0.6", "", { "os": "linux", "cpu": "x64" }, "sha512-2aQi3z8R29e2i9tAsy6nkvST3WMD4Va6wgDosVabGDG7IjC46Fs4h2wkFBx1ORMQVLLtKE37ybucpE6g+3ixFw=="],
 
     "vite": ["vite@8.3.5", "", { "dependencies": { "lightningcss": "^1.33.0", "picomatch": "^4.0.7", "postcss": "^8.5.30", "rolldown": "~1.2.14", "tinyglobby": "^0.2.17" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.7.1 || ^0.8.0", "esbuild": "^0.27.0 || ^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-z1YpjieJ9g0ebTmQpLBv/oq9E3F9EIlOe+7LahW8SrE3LTiG3udBRUXQOlYXP9b+IC2q2phHeVxj9xGlw34OEQ=="],
 

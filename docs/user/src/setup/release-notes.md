@@ -4,6 +4,104 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
+## 0.0.7
+
+### Changes that can break code since 0.0.6
+
+- The starter treats EK3205 as an error: an entry module's `main` that
+  needs services without providers stops the build and emits no JavaScript.
+  Provide those services before running the entry program.
+- Members returned by `Layer.effect(Service) { ... }` must fit the
+  service's contract, as in `Layer.succeed`. EK3101 rejects a member that
+  looks up services its contract does not allow at call time; failures
+  outside the member's contract are EK2001.
+- A recursive call whose contract leaves failures or requirements inferred
+  uses the written success type in an operand or initializer. Where typing
+  the call needs the whole contract, including an argument, a logical
+  operand or a generic self-call, EK2102 asks for every channel instead of
+  recursing through inference or reporting a circular return type.
+- A `for...of` whose body runs an Effect calls its iterator's `return()`
+  when the body fails or is interrupted, as it does on `break` or
+  `return`. Iterator cleanup that was previously skipped now runs.
+- EK4201 also rejects unhandled control operations passed by name across a
+  fork, an await operation or a concurrent loop. Install the handler inside
+  the new fiber, or run the operation on the current fiber.
+- A comma between fields of an `error`, `schema error`, `service` or
+  `control` declaration is EK1013. Separate fields with semicolons or new
+  lines.
+
+### Compiler
+
+- CommonJS output binds the names a file takes from the prelude, including
+  `TaggedError`, bare Effect functions, `pipe` and `flow`. These names
+  could previously fail with a `ReferenceError` when the module ran.
+- Invalid jumps without a target, a Stream loop without a binding and
+  incomplete Effect type arguments report diagnostics instead of crashing
+  the compiler.
+- A handler's tail `resume` inside a `for concurrent` body no longer
+  reports EK4606.
+- Hovering over a by-name argument no longer leaves the call inferred as
+  `unknown`. The language server identifies itself as `vibelang`.
+
+### New diagnostics
+
+- EK1013 names the field separator error, and its quick fix replaces the
+  comma with a semicolon. Misspelled names in a `.vibe` file can suggest
+  names from the prelude.
+- EK1001 identifies the plain JavaScript context that cannot run a program,
+  including class initializers, constructors, accessors, static blocks and
+  default parameter values. EK4301's hatch suggestion includes the callback
+  parameter where the call needs it.
+- EK3201 explains that a program typed `any` has unknown service
+  requirements. EK4401 suggests a `try` call that passes inputs into the
+  hatch and the `trusted()` wrapper, and EK2003 explains that an exception inside a hatch
+  becomes a defect with `sync` or an expected failure with `try`.
+- With `--pretty`, a file with both TypeScript and VibeLang errors is
+  counted once in the error summary.
+
+### Starter and packages
+
+- The starter builds standalone TypeScript sources, checks their errors and
+  keeps source tests out of build output. New apps start at version
+  `0.0.0`, and their README describes an installed app.
+- The starter pins `@effect/platform-node-shared` to `4.0.5` so its
+  transitive peer dependency agrees with Effect. Example projects install
+  the published VibeLang packages and use the same platform override.
+- `vibelang-vite` preserves fractional compile start timestamps when it
+  compares file changes and provides compile and invalidation traces through
+  `VIBELANG_VITE_DEBUG=1`.
+- The release publisher skips an existing registry version only when its
+  tarball checksum matches the local tarball. The internal TypeScript mapper
+  is marked private.
+
+### Docs
+
+- Setup describes npm and Bun separately, makes Bun optional for npm users
+  and links TypeScript 7's removed-option migration notes. The Vite guide
+  explains source checking and import extensions.
+- The guides teach the current `trusted()` wrapper, the starter's provider
+  check and Effect 4 APIs. They name `Cause.UnknownError`, explain that
+  plain JavaScript recursion can overflow the stack, and link known
+  limitations and the pending-interruption resource workaround.
+- Examples omit harness directives and unexplained decision references.
+  Token comparisons state the measured corpus, and agent setup starts with
+  the packaged skill.
+- GitHub is available from the site's top navigation on every page.
+
+### Known limitations
+
+- Stock `tsc`, `vue-tsc` and `svelte-check` do not check `.vibe` imports.
+  The TypeScript 7.1 content mapper is experimental and unpublished; see
+  [the current mapper limitation](known-limitations.md).
+- Native Windows binaries are not available; Windows needs WSL.
+- Effect remains pinned to `4.0.5` exactly. Effect `4.0.6` changes cleanup
+  failure handling in a way VibeLang does not yet support; see
+  [the pin's explanation](existing-project.md).
+- A JavaScript Disposable acquired at the end of a masked `using`
+  initializer can leak if interruption is pending before its release is
+  registered. Use `Effect.acquireRelease` with protected acquisition; see
+  [the safe pattern](../resource-management/030-scope.md#known-limitation-pending-interruption-and-javascript-disposables).
+
 ## 0.0.6
 
 0.0.5 was not published: 0.0.6 replaces it, and these notes include its

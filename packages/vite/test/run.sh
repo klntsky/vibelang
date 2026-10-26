@@ -34,7 +34,8 @@ ln -s "$effect" "$runtime/node_modules/effect"
 echo "build: vibelang -p packages/runtime/tsconfig.json"
 "$VIBELANG_BINARY" -p "$runtime/tsconfig.json"
 
-(cd "$package" && bun install --frozen-lockfile --no-cache)
+# The compiler peer may not be published yet. Fixtures link this checkout below.
+(cd "$package" && bun install --frozen-lockfile --no-cache --omit peer)
 
 # Fixtures resolve effect and the runtime from test/.fixtures/node_modules. The
 # plugin's compile backend, vibelang/project, is the vibelang package beside it.

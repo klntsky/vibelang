@@ -5,7 +5,7 @@ export const PINNED_EFFECT_VERSION = "4.0.5"
 
 if (effectPackage.version !== PINNED_EFFECT_VERSION) {
   throw new Error(
-    `vibelang-runtime@0.0.6 requires effect@${PINNED_EFFECT_VERSION}; found effect@${effectPackage.version}. ` +
+    `vibelang-runtime@0.0.7 requires effect@${PINNED_EFFECT_VERSION}; found effect@${effectPackage.version}. ` +
     `Install the supported version with: npm install effect@${PINNED_EFFECT_VERSION}`
   )
 }
