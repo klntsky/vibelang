@@ -3,7 +3,7 @@
 -- Load this file from the VibeLang repository, so it finds the tree-sitter
 -- grammar in editors/tree-sitter-vibelang next to it:
 --
---   dofile("/path/to/effectscript/editors/nvim/vibelang.lua").setup()
+--   dofile("/path/to/vibelang/editors/nvim/vibelang.lua").setup()
 --
 -- .vibe files then get the vibe filetype, highlighting, and
 -- `vibelang --lsp --stdio` as their language server: the project's

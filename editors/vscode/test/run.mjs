@@ -10,7 +10,7 @@
 //   VIBELANG                  the vibelang binary (default: ../../typescript/built/local/vibelang)
 //   EFFECT_NODE_MODULES  a node_modules directory that holds effect 4.0.5
 //                        (default: ../../experiments/node_modules, else
-//                        ~/effectscript/experiments/node_modules)
+//                        ~/vibelang/experiments/node_modules)
 //   VIBELANG_RUNTIME the built vibelang-runtime package directory
 //                        (default: ../../packages/runtime)
 //   VSCODE_EXECUTABLE    an installed VS Code to test with, such as

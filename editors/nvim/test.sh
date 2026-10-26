@@ -12,7 +12,7 @@
 #   VIBELANG                    the vibelang binary (default: ../../typescript/built/local/vibelang)
 #   EFFECT_NODE_MODULES    a node_modules directory that holds effect 4.0.5
 #                          (default: ../../experiments/node_modules, else
-#                          ~/effectscript/experiments/node_modules)
+#                          ~/vibelang/experiments/node_modules)
 #   VIBELANG_RUNTIME   the built vibelang-runtime package directory
 #                          (default: ../../packages/runtime)
 #   NVIM_TREESITTER        an nvim-treesitter checkout (master branch), whose
@@ -27,7 +27,7 @@ repo=$(cd "$here/../.." && pwd)
 nvim=${NVIM:-nvim}
 vibelang=${VIBELANG:-$repo/typescript/built/local/vibelang}
 effect_modules=${EFFECT_NODE_MODULES:-$repo/experiments/node_modules}
-[ -d "$effect_modules/effect" ] || effect_modules="$HOME/effectscript/experiments/node_modules"
+[ -d "$effect_modules/effect" ] || effect_modules="$HOME/vibelang/experiments/node_modules"
 runtime=${VIBELANG_RUNTIME:-$repo/packages/runtime}
 nvim_treesitter=${NVIM_TREESITTER-${XDG_DATA_HOME:-$HOME/.local/share}/nvim/lazy/nvim-treesitter}
 [ -d "$nvim_treesitter/lua/nvim-treesitter" ] || nvim_treesitter=
