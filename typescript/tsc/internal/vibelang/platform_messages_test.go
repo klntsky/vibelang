@@ -28,7 +28,7 @@ const (
 	importCrypto        = `Import it with   import { Crypto } from "effect/Crypto"`
 	provideCrypto       = `Provide it in main with NodeServices.layer from "@effect/platform-node", BunServices.layer from "@effect/platform-bun", or BrowserCrypto.layer from "@effect/platform-browser".`
 	noServiceYet        = "Effect, VibeLang's standard library, has no service for it yet."
-	allowEK4403         = `To allow it, set "EK4403": "warning" or "off" in compilerOptions.vibelang.diagnostics.`
+	allowEK4403         = `To allow it, set "EK4403": "warning" or "off" in "vibelang": { "diagnostics": { ... } } at the top level of tsconfig.json.`
 )
 
 // EK4402 and EK4403 name the Effect API that replaces a platform API, the

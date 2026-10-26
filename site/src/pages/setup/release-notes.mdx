@@ -45,6 +45,10 @@ compiles the same.
   `crypto.randomUUID()` maps to `Crypto.randomUUIDv4()` with its import and
   layer; a test controls it with `TestCrypto.layer(seed)`, not a seeded
   `Random`.
+- EK4403 says to lower it in the top-level `vibelang.diagnostics` of
+  `tsconfig.json`. Its old advice, `compilerOptions.vibelang.diagnostics`, had
+  no effect where a top-level `vibelang` object follows `compilerOptions`, as
+  in the starter: the later object replaces the earlier one.
 
 ## 0.0.9
 

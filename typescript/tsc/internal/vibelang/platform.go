@@ -766,5 +766,5 @@ func checkClockRead(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
 		noteService(d, s)
 	}
 	note(d, read.test)
-	note(d, "To allow it, set \"EK4403\": \"warning\" or \"off\" in compilerOptions.vibelang.diagnostics.")
+	note(d, "To allow it, set \"EK4403\": \"warning\" or \"off\" in \"vibelang\": { \"diagnostics\": { ... } } at the top level of tsconfig.json.")
 }

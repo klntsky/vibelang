@@ -9,3 +9,4 @@ Import it with   import { Crypto } from "effect/Crypto"
 In a test, provide TestCrypto.layer(seed) from "effect/testing"; a seeded Random does not reach Crypto.
 Use Number(Clock.monotonicTimeNanos()) / 1e6: Clock.monotonicTimeNanos() is a bigint of nanoseconds, and performance.now() a number of milliseconds.
 Use String(DateTime.nowAsDate()), since Date() returns a string.
+To allow it, set "EK4403": "warning" or "off" in "vibelang": { "diagnostics": { ... } } at the top level of tsconfig.json.
