@@ -10,6 +10,18 @@ Write [Effect](https://effect.website) programs in TypeScript syntax, with typed
 > [!WARNING]
 > VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
+<!-- compatibility:start -->
+> **Compatibility.** Use exactly `effect@4.0.5`; keep `@effect/platform-node` and `@effect/vitest` at `4.0.5` when used.
+>
+> Existing projects need an `@effect/platform-node-shared` override. The starter includes the pins and override.
+>
+> Use `vibelang` to check mixed source: stock `tsc` and `vue-tsc` cannot resolve `.vibe` imports.
+>
+> For mixed editing in VS Code, let the VibeLang server own TypeScript files: disable the built-in TypeScript and JavaScript Language Features extension for this workspace.
+>
+> [Setup details](https://vibelang.sh/setup/existing-project) · [Editor setup](https://vibelang.sh/getting-started/012-devtools)
+<!-- compatibility:end -->
+
 ## Why VibeLang
 
 Effect gives you typed failures, dependency injection, concurrency and resource management. VibeLang gives those programs direct syntax: a call returns its value, and its errors and required services stay in its type.
@@ -151,4 +163,4 @@ Report a bug with a minimal reproduction, or propose an idea, in [Issues](https:
 
 [MIT](LICENSE), except the TypeScript fork in [`typescript/`](typescript/) and the compiler packages built from it, `vibelang` and `vibelang-<platform>`, which use the [Apache License 2.0](typescript/LICENSE.txt) and keep its [notices](typescript/NOTICE.txt).
 
-<sub>1,771 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
+<sub>1,949 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>

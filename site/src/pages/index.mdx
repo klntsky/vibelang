@@ -50,6 +50,20 @@ import { CopyPromptButton } from '../components/CopyPromptButton'
 
       </div>
 
+      {/* compatibility:start */}
+
+> **Compatibility.** Use exactly `effect@4.0.5`; keep `@effect/platform-node` and `@effect/vitest` at `4.0.5` when used.
+>
+> Existing projects need an `@effect/platform-node-shared` override. The starter includes the pins and override.
+>
+> Use `vibelang` to check mixed source: stock `tsc` and `vue-tsc` cannot resolve `.vibe` imports.
+>
+> For mixed editing in VS Code, let the VibeLang server own TypeScript files: disable the built-in TypeScript and JavaScript Language Features extension for this workspace.
+>
+> [Setup details](/setup/existing-project) · [Editor setup](/getting-started/012-devtools)
+
+{/* compatibility:end */}
+
       <div className="vibe-home__stats">
         <div className="vibe-stat">
           <span>stage</span>
@@ -229,7 +243,7 @@ Recovered from EmptyName
 
 ### TypeScript stays one step away
 
-VibeLang's compiler is TypeScript's compiler, extended. It checks `.vibe` and `.ts` files together and emits JavaScript and `.d.ts` files, so npm packages, your `.ts` files, and every Effect library work unchanged. TypeScript code calls VibeLang functions as ordinary Effect functions.
+VibeLang's compiler is TypeScript's compiler, extended. It checks `.vibe` and `.ts` files together and emits JavaScript and `.d.ts` files, so npm packages, your `.ts` files, and Effect libraries compatible with the supported Effect version work unchanged. TypeScript code calls VibeLang functions as ordinary Effect functions.
 
 When you need plain TypeScript, `sync`, `try`, and `callback` take a plain TypeScript function, and a `.ts` file can sit beside any `.vibe` file.
 

@@ -19,6 +19,25 @@ export function renderReleasePage(path, text, version, effect) {
     output = output.replace(new RegExp("(<strong>)" + semver + "(</strong>)", "g"), (_, prefix, suffix) => prefix + version + suffix)
   }
   if (effect) output = output.replace(new RegExp('("@effect/platform-node-shared": ")' + semver + '(")', "g"), (_, prefix, suffix) => prefix + effect + suffix)
+  if (effect) {
+    // These boxes are generated from packages/runtime/package.json, alongside
+    // release pins. Keep the version out of the hand-written copy.
+    const code = value => String.fromCharCode(96) + value + String.fromCharCode(96)
+    const compatibility = [
+      "**Compatibility.** Use exactly " + code("effect@" + effect) + "; keep " + code("@effect/platform-node") + " and " + code("@effect/vitest") + " at " + code(effect) + " when used.",
+      "Existing projects need an " + code("@effect/platform-node-shared") + " override. The starter includes the pins and override.",
+      "Use " + code("vibelang") + " to check mixed source: stock " + code("tsc") + " and " + code("vue-tsc") + " cannot resolve " + code(".vibe") + " imports.",
+      "For mixed editing in VS Code, let the VibeLang server own TypeScript files: disable the built-in TypeScript and JavaScript Language Features extension for this workspace.",
+    ]
+    const install = path === "site/src/pages/index.mdx"
+      ? "[Setup details](/setup/existing-project) · [Editor setup](/getting-started/012-devtools)"
+      : "[Setup details](https://vibelang.sh/setup/existing-project) · [Editor setup](https://vibelang.sh/getting-started/012-devtools)"
+    output = output.replace(/(<!-- compatibility:start -->)[\s\S]*?(<!-- compatibility:end -->)/,
+      (_, begin, end) => begin + "\n" + [...compatibility, install].map(line => "> " + line).join("\n>\n") + "\n" + end)
+    output = output.replace(/(\{\/\* compatibility:start \*\/\})[\s\S]*?(\{\/\* compatibility:end \*\/\})/,
+      (_, begin, end) => begin + "\n\n" + [...compatibility, install].map(line => "> " + line).join("\n>\n") + "\n\n" + end)
+    if (path === "packages/compiler/README.md") output = output.replace(/effect@\d+\.\d+\.\d+/g, "effect@" + effect)
+  }
   return output
 }
 

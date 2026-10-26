@@ -116,3 +116,17 @@ test("installation explains the exact Effect pin and the 4.0.6 cleanup incompati
     assert.match(text,/projects on 4\.0\.6 must use 4\.0\.5 for now/,path)
   }
 })
+
+test("compatibility boxes and package install pins follow the runtime manifest", () => {
+  const markdown = "<!-- compatibility:start -->old<!-- compatibility:end -->"
+  const mdx = "{/* compatibility:start */}old{/* compatibility:end */}"
+  for (const [path, text] of [["README.md", markdown], ["site/src/pages/index.mdx", mdx]]) {
+    const output = renderReleasePage(path, text, "9.8.7", "4.9.1")
+    assert.ok(output.includes("effect@4.9.1"))
+    assert.ok(output.includes("@effect/vitest"))
+    assert.ok(output.includes("vue-tsc"))
+    assert.ok(output.includes("TypeScript files"))
+    assert.equal(renderReleasePage(path, output, "9.8.7", "4.9.1"), output)
+  }
+  assert.equal(renderReleasePage("packages/compiler/README.md", "effect@4.0.5", "9.8.7", "4.9.1"), "effect@4.9.1")
+})
