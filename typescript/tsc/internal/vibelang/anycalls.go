@@ -18,8 +18,19 @@ func checkAnyCallResults(c *checker.Checker, file *ast.SourceFile) {
 	a := analyzerFor(c)
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
-		if isLowerable(node) && !isProducer(node) && a.isEffect(node) {
-			factoryReturns(node, func(value *ast.Node) { checkAnyCallResult(c, node, value) })
+		if isLowerable(node) && !isProducer(node) {
+			if a.isEffect(node) {
+				factoryReturns(node, func(value *ast.Node) { checkAnyCallResult(c, node, value) })
+			} else if a.hasContract(node) && requiresPrimitiveSuccess(c, node) {
+				// D10 can compile a named contracted function to plain code.
+				// Warn only when the erased local initializer proves that the
+				// returned call produces a program; ordinary any calls stay quiet.
+				factoryReturns(node, func(value *ast.Node) {
+					if knownErasedProgramCall(c, a, value) {
+						checkAnyCallResult(c, node, value)
+					}
+				})
+			}
 		}
 		return node.ForEachChild(visit)
 	}
@@ -49,4 +60,63 @@ func checkAnyCallResult(c *checker.Checker, fn *ast.Node, value *ast.Node) {
 		named = named.Expression() // (loader as any)() names loader
 	}
 	note(d, "Give {0} a type: a function type that returns A!E!R runs the program the call returns, and one that returns a value type keeps the value.", messageText(named, "the callee"))
+}
+
+// knownErasedProgramCall follows a local const, never a mutable binding or an
+// arbitrary any-valued API. Its initializer retains the Effect behavior that
+// the binding's any annotation erased.
+func knownErasedProgramCall(c *checker.Checker, a *analyzer, value *ast.Node) bool {
+	if value == nil {
+		return false
+	}
+	value = ast.SkipParentheses(value)
+	if !ast.IsCallExpression(value) {
+		return false
+	}
+	callee := value.Expression()
+	for ast.IsParenthesizedExpression(callee) || ast.IsAsExpression(callee) || ast.IsTypeAssertion(callee) || ast.IsSatisfiesExpression(callee) {
+		callee = callee.Expression()
+	}
+	if !ast.IsIdentifier(callee) {
+		return false
+	}
+	symbol := c.GetSymbolAtLocation(callee)
+	if symbol == nil {
+		return false
+	}
+	declaration := symbol.ValueDeclaration()
+	if declaration == nil || !ast.IsVariableDeclaration(declaration) || declaration.Parent == nil ||
+		declaration.Parent.Flags&ast.NodeFlagsConst == 0 || declaration.Initializer() == nil {
+		return false
+	}
+	initializer := ast.SkipParentheses(declaration.Initializer())
+	if isLowerable(initializer) && (hasEscapingThrow(initializer) || a.isEffect(initializer) || a.hasContract(initializer)) {
+		return true
+	}
+	for _, signature := range c.GetSignaturesOfType(c.GetTypeAtLocation(initializer), checker.SignatureKindCall) {
+		if isEffectType(c, c.GetReturnTypeOfSignature(signature)) {
+			return true
+		}
+	}
+	return false
+}
+
+// A permissive success type can intentionally keep a cold program as a value.
+// Limit the new pure-body check to contracts that definitely require a
+// primitive, so ordinary any use with unknown, object, or Effect success
+// values does not gain a warning.
+func requiresPrimitiveSuccess(c *checker.Checker, fn *ast.Node) bool {
+	success := successType(c, c.GetTypeFromTypeNode(fn.Type()))
+	if success == nil {
+		return false
+	}
+	const primitive = checker.TypeFlagsNumberLike | checker.TypeFlagsStringLike |
+		checker.TypeFlagsBooleanLike | checker.TypeFlagsBigIntLike | checker.TypeFlagsESSymbolLike |
+		checker.TypeFlagsNull | checker.TypeFlagsUndefined
+	for _, part := range members(success) {
+		if part.Flags()&primitive == 0 {
+			return false
+		}
+	}
+	return true
 }
