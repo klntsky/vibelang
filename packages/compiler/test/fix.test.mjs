@@ -102,3 +102,28 @@ test("--fix refuses --watch and --build", { skip }, (t) => {
   }
   assert.equal(readFileSync(join(root, "main.vibe"), "utf8"), source)
 })
+
+test("--fix writes only the project's own files, and leaves a dependency's source as it was", { skip }, (t) => {
+  // A workspace dependency whose package exports .vibe source, linked into
+  // node_modules: the project compiles it, and tsc would emit none of it.
+  const root = project(t, "")
+  const config = JSON.parse(readFileSync(join(root, "tsconfig.json"), "utf8"))
+  config.include = ["src"]
+  config.vibelang = { trustedPackages: ["@repro/*"] }
+  writeFileSync(join(root, "tsconfig.json"), JSON.stringify(config))
+  const dependency = "export const run: number!Error! = () => { return 1 }\n"
+  mkdirSync(join(root, "dependency"))
+  writeFileSync(join(root, "dependency/package.json"), '{"name":"@repro/dependency","type":"module","exports":"./index.vibe"}')
+  writeFileSync(join(root, "dependency/index.vibe"), dependency)
+  mkdirSync(join(root, "node_modules/@repro"))
+  symlinkSync("../../dependency", join(root, "node_modules/@repro/dependency"))
+  mkdirSync(join(root, "src"))
+  writeFileSync(join(root, "src/index.vibe"), 'import { run } from "@repro/dependency"\nexport const x = run\n')
+  writeFileSync(join(root, "src/own.vibe"), dependency)
+  const result = vibelang(root, "-p", "tsconfig.json", "--fix", "--pretty", "false")
+  assert.match(result.stdout, /^vibelang --fix: src\/own\.vibe: 1 fix \(EK1014 ×1\)$/m)
+  assert.match(result.stdout, /^vibelang --fix: 1 fix in 1 file\.$/m)
+  assert.equal(readFileSync(join(root, "dependency/index.vibe"), "utf8"), dependency)
+  assert.notEqual(readFileSync(join(root, "src/own.vibe"), "utf8"), dependency)
+  assert.match(result.stdout, /^dependency\/index\.vibe\(1,\d+\): \w+ EK1014/m, "the compilation still reports the dependency's diagnostic")
+})

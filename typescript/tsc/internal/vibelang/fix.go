@@ -269,12 +269,16 @@ func fixProgram(fs vfs.FS, libraryPath tspath.RootedDirectoryPath, config *tsopt
 	return compiler.NewProgram(compiler.ProgramOptions{Config: config, Host: compiler.NewCompilerHost(overlaid, libraryPath, nil, nil, nil)})
 }
 
-// fixableFiles returns the .vibe files of program's project, outside
-// node_modules.
+// fixableFiles returns the .vibe files of program's own project, the ones
+// tsc would emit for it: not a file that a package import reached, as a
+// workspace dependency's source linked into node_modules is, nor a
+// referenced project's source. Their diagnostics are still the
+// compilation's to report.
 func fixableFiles(program *compiler.Program) []*ast.SourceFile {
 	var files []*ast.SourceFile
 	for _, file := range program.SourceFiles() {
-		if isVibeLangFile(file) && !strings.Contains(file.FileName().AsString(), "/node_modules/") {
+		if isVibeLangFile(file) && !strings.Contains(file.FileName().AsString(), "/node_modules/") &&
+			!program.IsSourceFileFromExternalLibrary(file) && program.GetProjectReferenceFromSource(file.PathKey()) == nil {
 			files = append(files, file)
 		}
 	}
