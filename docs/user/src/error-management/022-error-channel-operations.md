@@ -23,7 +23,7 @@ function publicQuantity(value: number) {
     (error) => `Quantity must be positive: ${error.value}`
   )
 }
-// number!string!
+// Effect<number, string>
 
 function quantityMessage(value: number) {
   return Effect.mapBoth(() => quantity(value), {
@@ -31,7 +31,7 @@ function quantityMessage(value: number) {
     onSuccess: (count) => `${count} units`
   })
 }
-// string!string!
+// Effect<string, string>
 ```
 
 ```output
@@ -131,7 +131,7 @@ function inspectQuantity(value: number) {
 function quantityOrErrorValue(value: number) {
   return Effect.catch(() => quantity(value), (error) => error)
 }
-// number | InvalidQuantity!!
+// Effect<number | InvalidQuantity>
 ```
 
 ```output
@@ -150,7 +150,7 @@ InvalidQuantity
 function rejectedQuantity() {
   return Effect.flip(() => quantity(0))
 }
-// InvalidQuantity!number!
+// Effect<InvalidQuantity, number>
 ```
 
 ```output

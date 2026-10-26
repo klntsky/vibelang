@@ -45,7 +45,7 @@ Example first, then two to five sentences.
 - `Effect.gen(function* () { … })` becomes an ordinary function.
 ```
 
-VibeLang code uses the `vibe` fence. Real TypeScript uses the `ts` fence and starts with `// TypeScript (.ts)`; Effect TypeScript shown for comparison uses `ts effect`. Name a file in a first-line comment when it matters (`// main.vibe`, `// vite.config.ts`); its extension matches the fence. After a function, show the inferred contract as a comment when it teaches something: `// User!UserNotFound!Users`.
+VibeLang code uses the `vibe` fence. Real TypeScript uses the `ts` fence and starts with `// TypeScript (.ts)`; Effect TypeScript shown for comparison uses `ts effect`. Name a file in a first-line comment when it matters (`// main.vibe`, `// vite.config.ts`); its extension matches the fence. After a function, show the inferred contract as a comment when it teaches something: `// Effect<User, UserNotFound, Users>`.
 
 ## Tested output
 

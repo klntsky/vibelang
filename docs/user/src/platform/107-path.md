@@ -10,7 +10,7 @@ function pathSeparator() {
   const path = Effect.service(Path.Path)
   return path.sep
 }
-// string!!Path.Path
+// Effect<string, never, Path.Path>
 // Output: /
 ```
 

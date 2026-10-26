@@ -13,7 +13,7 @@ error StartupFailed {
 function makeStartupSignal() {
   return Deferred.make<string, StartupFailed>()
 }
-// Deferred.Deferred<string, StartupFailed>!!
+// Effect<Deferred.Deferred<string, StartupFailed>>
 // Output: false
 // Output: true
 ```

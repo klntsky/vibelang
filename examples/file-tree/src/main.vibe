@@ -4,7 +4,7 @@ import { PlatformError } from "effect/PlatformError"
 import { NodeServices } from "@effect/platform-node"
 
 // collectFiles is recursive, so its contract is written out.
-function collectFiles(directory: string, found: string[], visited: Set<string>): void!PlatformError!FileSystem | Path {
+function collectFiles(directory: string, found: string[], visited: Set<string>): Effect<void, PlatformError, FileSystem | Path> {
   const canonical = FileSystem.realPath(directory)
   if (visited.has(canonical)) return
   visited.add(canonical)

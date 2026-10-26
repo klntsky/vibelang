@@ -114,7 +114,7 @@ Prefer `decodeUnknownEffect`: it can pause, requires the codec's decoding servic
 function send(shipment: Shipment) {
   return Schema.encodeEffect(Shipment)(shipment)
 }
-// ShipmentWire!Schema.SchemaError!
+// Effect<ShipmentWire, Schema.SchemaError>
 
 function sendUntrusted(input: unknown) {
   return Schema.encodeUnknownEffect(Shipment)(input)
@@ -140,7 +140,7 @@ function receiveOrExplain(input: unknown) {
     return error.message
   }
 }
-// string!!
+// Effect<string>
 ```
 
 ```output

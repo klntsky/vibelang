@@ -16,7 +16,7 @@ const Settings = Schema.Struct({
 function readSettings(input: unknown) {
   return Schema.decodeUnknownEffect(Settings)(input)
 }
-// typeof Settings.Type!Schema.SchemaError!
+// Effect<typeof Settings.Type, Schema.SchemaError>
 ```
 
 ```output
@@ -82,7 +82,7 @@ function inspectBoundary(incoming: unknown, outgoing: unknown) {
   const text = Schema.encodeUnknownEffect(Schema.FiniteFromString)(outgoing)
   return { quantity, text }
 }
-// { quantity: number; text: string }!Schema.SchemaError!
+// Effect<{ quantity: number; text: string }, Schema.SchemaError>
 ```
 
 ```output

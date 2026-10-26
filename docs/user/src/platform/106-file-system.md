@@ -10,7 +10,7 @@ function readSettings() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./settings.json")
 }
-// string!PlatformError.PlatformError!FileSystem.FileSystem
+// Effect<string, PlatformError.PlatformError, FileSystem.FileSystem>
 // Output: {"theme":"dark"}
 ```
 

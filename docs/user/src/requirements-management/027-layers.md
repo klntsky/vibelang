@@ -12,16 +12,16 @@ service Settings {
   prefix: string
 }
 service Printer {
-  print(text: string): void!!
+  print(text: string): Effect<void>
 }
 service Reports {
-  render(title: string): string!!
+  render(title: string): Effect<string>
 }
 
 function report(title: string) {
   return Reports.render(title)
 }
-// string!!Reports
+// Effect<string, never, Reports>
 // Output: report/Inventory
 ```
 
@@ -131,7 +131,7 @@ function main() {
     return [first, second]
   }
 }
-// string[]!!
+// Effect<string[]>
 
 function withBuiltContext() {
   return Effect.scoped {
@@ -182,9 +182,9 @@ When a larger graph fails to initialize, acquired resources still release. Initi
 ```vibe
 // run: provide Banner.layer { Console.log(Banner.text("Orders")) }
 service Banner {
-  text(title: string): string!!
+  text(title: string): Effect<string>
 
-  static make(): Banner!!Settings {
+  static make(): Effect<Banner, never, Settings> {
     const settings = Settings()
     return { text: (title) => `${settings.prefix}: ${title}` }
   }

@@ -11,7 +11,7 @@ A `.vibe` file is TypeScript in which every function is an Effect. Read and writ
 
 - A call runs where it stands and gives its success value: `const user = Users.find(id)` is a `User`. There is no `Effect.gen`, `yield*`, `Effect.map` chain or `async`/`await`.
 - Where a parameter expects an Effect, a call is passed by name (D147): `retry(fetchUser(id), policy)` retries the call; `Effect.all([a(), b()])` gets two programs. A program of several statements is `() => { ... }` or a block param.
-- Contracts are inferred. `A!E!R` writes `Effect<A, E, R>` (D127): `User!NotFound!Users`. An empty slot is `never`: `User!!` cannot fail and needs nothing. `A!E` on a function with a body infers R. `Effect<A, infer E, R>` also works.
+- Contracts are inferred. Write one as Effect's own type, `Effect<A, E, R>` (D308): `Effect<User, NotFound, Users>`. A type argument left out is `never`, as in TypeScript: `Effect<User>` cannot fail and needs nothing. In a return annotation, `infer` infers a channel from the body: `Effect<User, NotFound, infer R>`. The retired shorthand `A!E!R` is EK1014; `vibelang --fix` rewrites it.
 - `throw` fails with an expected error, everywhere outside a hatch or a `module` body (D282). `catch` receives expected failures only, in plain functions too; defects, JavaScript exceptions included, and interruption pass through. `finally` always runs.
 - A function with no Effect operation, no expected failure and no wider written contract compiles to plain JavaScript; callers can't tell, but its recursion is JavaScript's and overflows the stack after roughly 10,000 calls, where an Effect function's does not.
 - Every export of `effect`'s root (`Console`, `Option`, `Schema`, `Layer`, `Stream`, `Schedule`, `Clock`, ...) is in scope without an import (D146), except where a JavaScript or shared web global of the same name wins (`Array`, `String`, `Request`, D264): import that module under another name. Bare Effect functions (D151, D179): `sleep log logDebug logInfo logWarning logError retry repeat timeout race all forEach die withSpan exit interrupt yieldNow`. Import subpaths (`effect/http`, `effect/testing`), platform packages and sibling modules, with the extension: `import { User } from "./user.vibe"`.
@@ -25,7 +25,7 @@ A `.vibe` file is TypeScript in which every function is an Effect. Read and writ
 | `class E extends Data.TaggedError("E")<{ readonly id: string }> {}` | `error E { id: string }`, `error Timeout` (D126) |
 | an error class with a constructor, methods or a subclass | `error E { id: string; constructor(raw: string) { super({ id: raw.trim() }) } }`, `error Sub extends Base { path: string }` (D278) |
 | `Schema.TaggedError` class | `schema error E { id: string }` (D279) |
-| `Context.Service<Users, {...}>()("app/Users")` | `service Users { find(id: string): User!NotFound; region: string }` (D128, D223) |
+| `Context.Service<Users, {...}>()("app/Users")` | `service Users { find(id: string): Effect<User, NotFound>; region: string }` (D128, D223) |
 | a service of another shape | `service Prefix: string`, `service Search: SearchApi { static members }` (D281); the type `Search` is the key, so type an implementation `SearchApi`; a shape cannot refer to its service key (EK2103) |
 | `Schema.Struct({...})` and its type | `schema User { id: string; nick?: string; role: "admin" \| "member"; home: Address }` (D133) |
 | `Schema.Literals([...])` and its type | `schema Code = "a" \| "b"` (D280) |
@@ -58,7 +58,7 @@ A `.vibe` file is TypeScript in which every function is an Effect. Read and writ
 | `Effect.try`, `Effect.tryPromise` | `try((t) => JSON.parse(t), (e) => new Bad({ e }), text)`, `try(async (url, signal) => fetch(url, { signal }), url)` |
 | `Effect.callback` | `callback((resume) => { const t = setTimeout(() => resume(7), 10); return () => clearTimeout(t) })` |
 | `NodeRuntime.runMain(main)` | `export function main() { ... }`: runs when Node starts the module, not on import (D135) |
-| none (VibeLang's own) | `control Approval { approve(r: string): boolean!! }`, then `try { ... } handle Approval.approve(r) { resume(true) }` (D132) |
+| none (VibeLang's own) | `control Approval { approve(r: string): Effect<boolean> }`, then `try { ... } handle Approval.approve(r) { resume(true) }` (D132) |
 | none (a TypeScript escape) | `module text { export function clean(s: string): string { ... } }`, `import { clean } from text` (D283) |
 
 
@@ -70,7 +70,7 @@ A `.vibe` file is TypeScript in which every function is an Effect. Read and writ
 2. Platform APIs (`console.log`, `fetch`, timers, `Date.now()`, `process`) don't run in VibeLang code (EK4402, clock EK4403). Use `Console`, `Clock`, `sleep`, `FileSystem`, `Path`, `HttpClient`, `Config`, `Random`. Importing or passing one as a value is fine.
 3. In code a fiber runs, a plain function from a `.ts` file or a package runs only through a hatch (EK4401) unless trusted (module initialization and its plain callbacks are exempt): Effect's own packages, `"vibelang": { "trustedPackages": ["@scope/*"] }` at the top level of `tsconfig.json` (D261, D275), or `trusted(impl, [Errors])` (import it with `import { trusted } from "vibelang-runtime"`), in a `.ts` or `.vibe` file, for its expected failures (D249).
 4. A hatch's first argument (`sync`, `try`, `callback`) is self-contained TypeScript. It may use its own parameters, globals, prelude names, imports, types and the file's `error` declarations; any other value of the `.vibe` file arrives as an input after it, filling its first parameters (EK4405, D229, D230). `try`'s mapper stays second (D231). `runPromise` and `runFork` lead back in from a hatch or a `.ts` file. No catch expression in a hatch (EK2114).
-5. Outside a hatch or a `module` body, `throw` is always a typed failure (D282). Constructors, accessors and static blocks run as plain JavaScript, as a module's top level does: a throw that can escape one is EK2003, and EK1001 at the top level. A function with a plain return annotation never fails and needs no service: a throw that can escape it, in a statement, a throw expression, a `match` arm or a `do` block, is EK2003, as is running an Effect; the quick fix writes the contract (`number!BadInput!`), or move the throw into a hatch. It may throw what its own `catch` handles. A plain callback that can fail is EK4301. Its calls of TypeScript code are JavaScript calls: their exceptions pass through its `catch` (EK2004 warns) and become defects at an effectful caller; a trusted call's listed failure is typed only inside the function's own `try`.
+5. Outside a hatch or a `module` body, `throw` is always a typed failure (D282). Constructors, accessors and static blocks run as plain JavaScript, as a module's top level does: a throw that can escape one is EK2003, and EK1001 at the top level. A function with a plain return annotation never fails and needs no service: a throw that can escape it, in a statement, a throw expression, a `match` arm or a `do` block, is EK2003, as is running an Effect; the quick fix writes the contract (`Effect<number, BadInput>`), or move the throw into a hatch. It may throw what its own `catch` handles. A plain callback that can fail is EK4301. Its calls of TypeScript code are JavaScript calls: their exceptions pass through its `catch` (EK2004 warns) and become defects at an effectful caller; a trusted call's listed failure is typed only inside the function's own `try`.
 6. A module's top level declares: running a program there is EK1001, except through a runner such as `NodeRuntime.runMain(...)`. A `const` declared with an Effect type holds a cold program (D262, D269).
 7. `match` is exhaustive: a `match` without `default` over a finite union (a data type's variants, errors, literals, `Option`, `Exit`, `Result`) must cover it, or EK4701 says `This match does not handle every case of Delivery: Delivery.Rejected is left.` A class pattern covers by class, and a covered match's last arm adds no untested branch (D294), so write no `default` there. `catch (e: E)` and `catch (cause: Cause)` are retired (EK2112, EK2113): catch, then `match` or `is`. `is` binds only in an `if` or `while` condition (EK4703). No regex or relational patterns (EK4704): guard with `when let n and if (n < 10):`.
 8. An `error` is a class (D278): `abstract`, `extends` another error, `implements`, a constructor that calls `super`, methods, accessors and static or private members mean what they mean in TypeScript. A field is a property with a type and no initializer; the constructor takes it. An error's tag is its bare class name, a subclass's its own: `catchTag("NotFound")` matches it, and `when NotFound` and `is NotFound` match by class. A family's base writes `_tag: string` so its subclasses' tags fit (EK2117; an `abstract error` needs none), and catching the base's own tag leaves the base in E (D304). A subclass with fields and no constructor takes its base's fields and its own as one object; when the base's constructor takes other arguments, write one (EK2118).
@@ -84,7 +84,7 @@ A `.vibe` file is TypeScript in which every function is an Effect. Read and writ
 16. A synchronous callback, such as `Array.map`'s, can't run an Effect or fail (EK4301): use `forEach` or a loop.
 17. A resource acquired without `using` belongs to the caller (`Scope` in R); don't `using` a resource a function or service hands out, or it closes first.
 18. A handler covers only its own fiber: a forked branch installs its own (EK4201).
-19. A factory declared with an Effect return type, `(input: In): A!E!R => { ...; return () => ... }`, runs plain code at the call, then returns a program on every path (EK2116); its outer body runs no Effect and never throws (EK2115, D269, D282): fail in the program, `return () => { throw e }`.
+19. A factory declared with an Effect return type, `(input: In): Effect<A, E, R> => { ...; return () => ... }`, runs plain code at the call, then returns a program on every path (EK2116); its outer body runs no Effect and never throws (EK2115, D269, D282): fail in the program, `return () => { throw e }`.
 
 ## Idioms
 
@@ -102,7 +102,7 @@ A `.vibe` file is TypeScript in which every function is an Effect. Read and writ
 error NotFound { id: string }
 
 service Users {
-  name(id: string): string!NotFound
+  name(id: string): Effect<string, NotFound>
 }
 
 const UsersLive = Layer.succeed(Users, {
@@ -112,7 +112,7 @@ const UsersLive = Layer.succeed(Users, {
   }
 })
 
-function nameOf(id: string): string!!Users {
+function nameOf(id: string): Effect<string, never, Users> {
   return Users.name(id)
     |> timeout(%, "1 second")
     |> retry(%, { times: 3, schedule: Schedule.exponential("100 millis") })

@@ -10,7 +10,7 @@ A control operation lets a handler decide how the caller continues. Use one when
 export error ReviewBusy { request: string }
 
 export control Approval {
-  approve(request: string): boolean!ReviewBusy
+  approve(request: string): Effect<boolean, ReviewBusy>
 }
 
 export function release(version: string) {
@@ -18,7 +18,7 @@ export function release(version: string) {
   if (!Approval.approve(`deploy ${version} to production`)) return "production declined"
   return `released ${version}`
 }
-// string!ReviewBusy!Approval
+// Effect<string, ReviewBusy, Approval>
 // Output: released v1
 ```
 

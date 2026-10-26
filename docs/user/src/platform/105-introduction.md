@@ -10,7 +10,7 @@ export function readGreeting() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./greeting.txt")
 }
-// string!PlatformError.PlatformError!FileSystem.FileSystem
+// Effect<string, PlatformError.PlatformError, FileSystem.FileSystem>
 // Output: Hello, VibeLang!
 ```
 

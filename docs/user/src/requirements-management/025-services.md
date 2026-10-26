@@ -9,11 +9,11 @@ A service is a named capability a program uses without passing an implementation
 ```vibe
 // run: provide Sequence = { next: () => 17 }, Reporter = { write: (message) => Console.log(message) } { Reporter.write(`ticket-${Sequence.next()}`) }
 service Sequence {
-  next(): number!!
+  next(): Effect<number>
 }
 
 service Reporter {
-  write(message: string): void!!
+  write(message: string): Effect<void>
 }
 // Output: ticket-17
 ```
@@ -27,7 +27,7 @@ Services are nominal: the compiler derives the key from package, module path, an
 ```vibe
 // run: provide Prefix = "> ", Search = { find: (query) => `hit:${query}` } { Console.log(lookup("vibe")) }
 interface SearchApi {
-  find(query: string): string!!
+  find(query: string): Effect<string>
 }
 
 service Search: SearchApi
@@ -48,20 +48,20 @@ function lookup(query: string) {
 function nextLabel() {
   return `ticket-${Sequence.next()}`
 }
-// string!!Sequence
+// Effect<string, never, Sequence>
 
 function fixedLabel() {
   return Effect.provideService(nextLabel(), Sequence, {
     next: () => 17
   })
 }
-// string!!
+// Effect<string>
 
 function readImplementation() {
   const sequence = Sequence()
   return sequence.next()
 }
-// number!!Sequence
+// Effect<number, never, Sequence>
 // Output: ticket-17
 // Output: ticket-23 23
 ```
@@ -77,7 +77,7 @@ service Settings {
 function endpoint(path: string) {
   return `${Settings().baseUrl}/${path}`
 }
-// string!!Settings
+// Effect<string, never, Settings>
 // Output: https://example.test/tickets
 ```
 
@@ -106,7 +106,7 @@ function announceTicket() {
   Reporter.write(`Created ${label}`)
   return label
 }
-// string!!Sequence | Reporter
+// Effect<string, never, Sequence | Reporter>
 
 const SequenceTest = Layer.succeed(Sequence, {
   next() { return 17 }
@@ -149,7 +149,7 @@ function optionalAnnouncement(message: string) {
   reporter.value.write(message)
   return true
 }
-// boolean!!
+// Effect<boolean>
 // Output: false
 // Output: hello
 // Output: true

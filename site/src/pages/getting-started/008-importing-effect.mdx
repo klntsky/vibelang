@@ -28,7 +28,7 @@ const backoff = Schedule.exponential("50 millis")
 // Output: true
 ```
 
-`Effect`, the `Effect<A, E, R>` type, `Schema`, `Layer`, `Scope`, `TaggedError`, and `Control` need no import; in a contract, `Scope` means Effect's `Scope.Scope`, as in `File!IOError!Scope`. The prelude also includes `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`; the boundary hatches `sync`, `try`, and `callback`; the runners `runPromise`, `runFork`, `runSync`, and `runCallback`; and the Effect module's most used functions without the `Effect.` prefix: `sleep`, `log`, `logDebug`, `logInfo`, `logWarning`, `logError`, `retry`, `repeat`, `timeout`, `all`, `forEach`, `race`, `withSpan`, and `die`. Other Effect functions keep the prefix, as in `Effect.result(work())`. `flow` and `identity` need no import either.
+`Effect`, the `Effect<A, E, R>` type, `Schema`, `Layer`, `Scope`, `TaggedError`, and `Control` need no import; in a contract, `Scope` means Effect's `Scope.Scope`, as in `Effect<File, IOError, Scope>`. The prelude also includes `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`; the boundary hatches `sync`, `try`, and `callback`; the runners `runPromise`, `runFork`, `runSync`, and `runCallback`; and the Effect module's most used functions without the `Effect.` prefix: `sleep`, `log`, `logDebug`, `logInfo`, `logWarning`, `logError`, `retry`, `repeat`, `timeout`, `all`, `forEach`, `race`, `withSpan`, and `die`. Other Effect functions keep the prefix, as in `Effect.result(work())`. `flow` and `identity` need no import either.
 
 JavaScript's own globals keep their names: `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so import Effect's modules of those names under another name:
 
@@ -50,7 +50,7 @@ function expirationWindow() {
   const short = Duration.seconds(15)
   return short.toMillis()
 }
-// number!!
+// Effect<number>
 // Output: 15000
 ```
 
@@ -65,7 +65,7 @@ VibeLang's global names are source conveniences: they refer to Effect and langua
 ## Reusable operators
 
 ```vibe
-function withinSecond<A, E, R>(program: () => A!E!R) {
+function withinSecond<A, E, R>(program: () => Effect<A, E, R>) {
   return timeout(program, "1 second")
 }
 

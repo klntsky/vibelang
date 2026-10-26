@@ -80,7 +80,7 @@ function consumeChecked() {
 error Offline
 
 service Sensor {
-  read(): number!Offline
+  read(): Effect<number, Offline>
 }
 
 const readings = Stream.fromEffect(() => Sensor.read()).retry(Schedule.recurs(3))

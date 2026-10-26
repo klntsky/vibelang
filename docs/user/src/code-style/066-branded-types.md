@@ -59,7 +59,7 @@ error InvalidAmount {
 function parseAmount(raw: number) {
   return Effect.fromResult(WholeCents.result(raw)) catch (cause) => throw new InvalidAmount({ cause })
 }
-// WholeCents!InvalidAmount!
+// Effect<WholeCents, InvalidAmount>
 ```
 
 ```output

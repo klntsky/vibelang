@@ -16,7 +16,7 @@ function price(sku: string) {
   if (sku !== "notebook") throw new UnknownProduct({ sku })
   return 12
 }
-// number!UnknownProduct!
+// Effect<number, UnknownProduct>
 
 function displayPrice(sku: string) {
   try {
@@ -48,7 +48,7 @@ function percentage(part: number, total: number) {
   }
   return part / total * 100
 }
-// number!!
+// Effect<number>
 ```
 
 ```output

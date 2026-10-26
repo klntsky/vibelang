@@ -30,13 +30,13 @@ function reportConfiguration() {
 
 ```vibe
 service CredentialsClient {
-  authenticate(token: string): boolean!!
+  authenticate(token: string): Effect<boolean>
 }
 
 function authenticate(token: Redacted.Redacted<string>) {
   return CredentialsClient.authenticate(Redacted.value(token))
 }
-// boolean!!CredentialsClient
+// Effect<boolean, never, CredentialsClient>
 ```
 
 ```text

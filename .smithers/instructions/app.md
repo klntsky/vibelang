@@ -37,8 +37,8 @@ Each row is one Effect form and the VibeLang that replaces it.
 | Effect 4 TypeScript | VibeLang |
 | --- | --- |
 | `class NotFound extends Data.TaggedError("NotFound")<{ readonly id: string }> {}` | `error NotFound { id: string }` |
-| `class Users extends Context.Service<Users, { find(id: string): Effect.Effect<User, NotFound> }>()("app/Users") {}` | `service Users { find(id: string): User!NotFound }` |
-| `Effect.Effect<User, NotFound, Users>` | `User!NotFound!Users` (empty slot: never) |
+| `class Users extends Context.Service<Users, { find(id: string): Effect.Effect<User, NotFound> }>()("app/Users") {}` | `service Users { find(id: string): Effect<User, NotFound> }` |
+| `Effect.Effect<User, NotFound, Users>` | `Effect<User, NotFound, Users>` (a type argument left out is `never`) |
 | `yield* Effect.fail(new NotFound({ id }))` | `throw new NotFound({ id })` |
 | `const user = yield* users.find(id)` | `const user = Users.find(id)` |
 | `x.pipe(Effect.orElseSucceed(() => "guest"))` | `x catch "guest"` |
@@ -56,7 +56,7 @@ interface User { id: string; name: string }
 error NotFound { id: string }
 
 service Users {
-  find(id: string): User!NotFound
+  find(id: string): Effect<User, NotFound>
 }
 
 const UsersLive = Layer.succeed(Users, {

@@ -1,7 +1,7 @@
 import { EmptyName, greeting } from "./greeting.vibe"
 
 service Greeter {
-  greet(name: string): string!EmptyName
+  greet(name: string): Effect<string, EmptyName>
 }
 
 const GreeterLive = Layer.succeed(Greeter, {

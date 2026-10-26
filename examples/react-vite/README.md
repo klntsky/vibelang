@@ -3,7 +3,7 @@
 A React component renders greetings that a VibeLang program computes.
 `src/users.vibe` declares a `User` schema, a `UserNotFound` error, and a
 `Users` service with the `UsersLive` layer. `greet` looks up a user and
-recovers `UserNotFound` with `try`/`catch`, so its contract is `string!!Users`:
+recovers `UserNotFound` with `try`/`catch`, so its contract is `Effect<string, never, Users>`:
 it cannot fail. `src/Greeting.tsx` runs `greet(id)` with a `ManagedRuntime`
 built from `UsersLive` and renders `Loading…` until the program completes.
 

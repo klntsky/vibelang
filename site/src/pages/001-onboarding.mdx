@@ -15,14 +15,14 @@ interface User { id: string; name: string }
 error UserNotFound { id: string }
 
 service Users {
-  find(id: string): User!UserNotFound
+  find(id: string): Effect<User, UserNotFound>
 }
 
 function greet(id: string) {
   const name = Users.find(id).name catch "guest"
   return `Hello, ${name}`
 }
-// string!!Users
+// Effect<string, never, Users>
 // Output: Hello, Ada
 ```
 
@@ -46,7 +46,7 @@ const greet = Effect.fn("greet")(function* (id: string) {
 
 :::
 
-A user service, a typed error, and a fallback in Effect and in VibeLang. The comment under `greet` is the type your editor shows: `string!!Users` means `Effect<string, never, Users>`. It returns a `string`, has no expected failures (defects and interruption remain possible), and needs the `Users` service. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type. The TypeScript example's `Effect.fn("greet")` adds a tracing span; the VibeLang function is untraced by default.
+A user service, a typed error, and a fallback in Effect and in VibeLang. The comment under `greet` is the type your editor shows, `Effect<string, never, Users>`: it returns a `string`, has no expected failures (defects and interruption remain possible), and needs the `Users` service. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type. The TypeScript example's `Effect.fn("greet")` adds a tracing span; the VibeLang function is untraced by default.
 
 VibeLang is v0: the language will change in major, breaking ways and is not ready for production use.
 
@@ -77,7 +77,7 @@ function getTodo(id: number) {
     return await response.text()
   }, (cause) => new TodoFailed({ cause }), id)
 }
-// string!TodoFailed!
+// Effect<string, TodoFailed>
 
 function todoOrFallback(id: number) {
   return retry(getTodo(id), Schedule.recurs(2)) catch "Todo unavailable"
@@ -92,7 +92,7 @@ VibeLang runs on Effect and its library modules; common operations have syntax:
 
 | Effect feature | VibeLang |
 | --- | --- |
-| Effect types | `User!NotFound!Users`: returns `User`, fails with `NotFound`, needs `Users` |
+| Effect types | `Effect<User, NotFound, Users>`: returns `User`, fails with `NotFound`, needs `Users` |
 | Typed errors | `error NotFound { id: string }`, `throw new NotFound({ id })`, `x catch fallback` |
 | Dependency injection | `service Users { ... }`, `provide UsersLive { ... }` |
 | Structured concurrency | `fork`, `join`, `await.all [a(), b()]`, `for concurrent(8) (const id of ids)` |
@@ -106,7 +106,7 @@ Streams, configuration, and Effect's HTTP, SQL, CLI, and AI packages have no syn
 
 ## Check application code
 
-The compiler tracks each function's expected failures and required services. A written failure slot rejects an added unhandled failure. A contract such as `A!E` still infers requirements from the body; write the requirements slot too, as in `A!E!` (no requirements) or `A!E!R`, to reject an added dependency outside that slot. Type checking does not establish behavior: run focused tests for it, including recovery, cancellation, and cleanup.
+The compiler tracks each function's expected failures and required services. A written contract checks every channel it writes: `Effect<A, E, R>` rejects an added unhandled failure outside `E` and an added dependency outside `R`, and `Effect<A, E>` means no dependencies, as in TypeScript. Write `infer R`, as in `Effect<A, E, infer R>`, to check the failures and infer the requirements from the body. Type checking does not establish behavior: run focused tests for it, including recovery, cancellation, and cleanup.
 
 ## Try it
 

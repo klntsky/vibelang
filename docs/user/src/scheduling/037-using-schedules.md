@@ -38,7 +38,7 @@ function waitForBuild() {
   }
   return { status, checks }
 }
-// { status: string; checks: number }!!
+// Effect<{ status: string; checks: number }>
 // Output: {"status":"ready","checks":4}
 ```
 
@@ -75,7 +75,7 @@ function reserveSlot() {
     return "reserved"
   }
 }
-// string!Busy!
+// Effect<string, Busy>
 // Output: reserved
 ```
 
@@ -88,7 +88,7 @@ function reserveSlot() {
 error SensorOffline
 
 service Sensor {
-  read(): number!SensorOffline
+  read(): Effect<number, SensorOffline>
 }
 
 function sampleContinuously() {

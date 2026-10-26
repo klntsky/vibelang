@@ -19,7 +19,7 @@ function exportRows(accepted: boolean) {
     Console.log("Export finished")
   }
 }
-// string!ExportRejected!
+// Effect<string, ExportRejected>
 // Output: Export started
 // Output: Export finished
 // Output: Export complete
@@ -94,8 +94,8 @@ interface Lease {
 }
 
 service LeaseStore {
-  acquire(): Lease!!
-  release(lease: Lease): void!!
+  acquire(): Effect<Lease>
+  release(lease: Lease): Effect<void>
 }
 
 function withLease() {
@@ -112,7 +112,7 @@ function withLease() {
     }
   )
 }
-// string!!LeaseStore
+// Effect<string, never, LeaseStore>
 // Output: Working with lease test-lease
 // Output: Releasing after Success
 // Output: Released test-lease
@@ -134,13 +134,13 @@ function acquireLease() {
     (lease) => store.release(lease)
   )
 }
-// Lease!!LeaseStore | Scope
+// Effect<Lease, never, LeaseStore | Scope>
 
 function leaseId() {
   using lease = acquireLease()
   return lease.id
 }
-// string!!LeaseStore
+// Effect<string, never, LeaseStore>
 
 const LeaseStoreTest = Layer.succeed(LeaseStore, {
   acquire() { return ({ id: "test-lease" }) },

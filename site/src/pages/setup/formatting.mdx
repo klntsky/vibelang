@@ -51,7 +51,7 @@ Everything dprint's TypeScript plugin changes in a `.ts` file: indentation, line
 
 | Form | Formatted as |
 | --- | --- |
-| `A!E!R`, `mutable`, patterns after `when` and `is` | As written; line breaks around them follow the surrounding code |
+| `mutable`, patterns after `when` and `is` | As written; line breaks around them follow the surrounding code |
 | `f(args) { ... }`, `do { ... }`, `fork { ... }` | The block as a function body, as TypeScript formats `f(args)(() => { ... })` |
 | `match (x) { when P: v; ... }` | Arms as object-literal properties: one line when written on one line and they fit, else one per line, each ending in `;` |
 | `provide X { ... }`, `uninterruptible { ... }` | The block as a block statement |

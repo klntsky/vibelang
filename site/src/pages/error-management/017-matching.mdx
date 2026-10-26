@@ -24,7 +24,7 @@ function countLabel(raw: number) {
     onSuccess: (count) => `${count} items`
   })
 }
-// string!!
+// Effect<string>
 ```
 
 ```text
@@ -95,7 +95,7 @@ Unavailable
 function ignoreRejectedCount() {
   Effect.ignore(itemCount(-2))
 }
-// void!!
+// Effect<void>
 
 function discardBoundaryOutcome() {
   Effect.ignoreCause(() => die(new Error("isolated task failed")))

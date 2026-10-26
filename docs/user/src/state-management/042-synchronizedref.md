@@ -44,7 +44,7 @@ function inspect() {
 error RefreshFailed
 
 service Versions {
-  loadAfter(version: number): number!RefreshFailed
+  loadAfter(version: number): Effect<number, RefreshFailed>
 }
 
 function refreshTwice() {
@@ -55,7 +55,7 @@ function refreshTwice() {
   }
   return all([refresh(), refresh()], { concurrency: 2 })
 }
-// [number, number]!RefreshFailed!Versions
+// Effect<[number, number], RefreshFailed, Versions>
 // Output: [1,2]
 // Output: RefreshFailed
 // Output: 1

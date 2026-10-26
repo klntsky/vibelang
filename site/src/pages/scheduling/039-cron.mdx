@@ -44,7 +44,7 @@ A named zone follows its local calendar, daylight saving changes included; `UTC`
 function validateRule(expression: string, timeZone: string) {
   return Effect.fromResult(Cron.parse(expression, timeZone))
 }
-// Cron.Cron!Cron.CronParseError!
+// Effect<Cron.Cron, Cron.CronParseError>
 // Output: true
 // Output: CronParseError
 // Output: CronParseError

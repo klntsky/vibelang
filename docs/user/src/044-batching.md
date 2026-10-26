@@ -64,7 +64,7 @@ Complete every entry, including requests for absent rows. Use `Request.succeed` 
 function findPart(code: string) {
   return Effect.request(FindPart({ code }), PartResolver)
 }
-// Part!PartMissing | CatalogUnavailable!
+// Effect<Part, PartMissing | CatalogUnavailable>
 
 function partLabel(code: string) {
   return findPart(code).label
@@ -119,11 +119,11 @@ For full control, `RequestResolver.makeWith` accepts `batchKey`, `delay`, `colle
 ```vibe
 // run: provide Layer.provide(Parts.layer, Layer.succeed(CatalogApi, { fetchMany: (codes) => new Map<string, Part>(codes.filter((code) => code !== "missing").map((code) => [code, { code, label: code.toUpperCase() }])) })) { const results = forEach(["ink", "missing"], (code) => Effect.result(() => Parts.find(code)), { concurrency: "unbounded" }); Console.log(JSON.stringify(results.map((result) => result.isSuccess() ? result.success.label : result.failure._tag))) }; provide Layer.provide(Parts.layer, Layer.succeed(CatalogApi, { fetchMany: () => { throw new CatalogUnavailable() } })) { const results = forEach(["ink", "blue"], (code) => Effect.result(() => Parts.find(code)), { concurrency: "unbounded" }); Console.log(JSON.stringify(results.map((result) => result.isFailure() ? result.failure._tag : "unexpected success"))) }
 service CatalogApi {
-  fetchMany(codes: ReadonlyArray<string>): ReadonlyMap<string, Part>!CatalogUnavailable
+  fetchMany(codes: ReadonlyArray<string>): Effect<ReadonlyMap<string, Part>, CatalogUnavailable>
 }
 
 service Parts {
-  find(code: string): Part!PartMissing | CatalogUnavailable
+  find(code: string): Effect<Part, PartMissing | CatalogUnavailable>
 
   static readonly layer = Layer.effect(Parts) {
     const api = CatalogApi()

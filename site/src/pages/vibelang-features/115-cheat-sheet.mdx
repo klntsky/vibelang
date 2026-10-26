@@ -12,18 +12,18 @@ error NotFound { id: string }
 
 interface User { id: string; name: string }
 
-function getUser(id: string): User!NotFound {
+function getUser(id: string): Effect<User, NotFound> {
   sleep("5 millis")
   if (id === "missing") throw new NotFound({ id })
   return { id, name: "Ada" }
 }
 
-function getOrders(id: string): number!! {
+function getOrders(id: string): Effect<number> {
   return id.length
 }
 
 control Approval {
-  approve(request: string): boolean!!
+  approve(request: string): Effect<boolean>
 }
 
 function release(version: string) {
@@ -34,15 +34,15 @@ function release(version: string) {
 
 ## Types
 
-**Effect types**. An empty slot is `never`. Omitted dependencies are inferred from a function's body, and are `never` elsewhere.
+**Effect types**. The prelude's `Effect` is effect's `Effect.Effect`. A type argument left out is `never`, as in TypeScript; `infer R` in a return annotation infers the dependencies from the body.
 
 :::code-group
 
 ```vibe [VibeLang]
-type Find = (id: string) => User!NotFound
-type Release = (version: string) => string!!Approval
-type Load = () => string!!
-function hello(id: string): string!NotFound {
+type Find = (id: string) => Effect<User, NotFound>
+type Release = (version: string) => Effect<string, never, Approval>
+type Load = () => Effect<string>
+function hello(id: string): Effect<string, NotFound> {
   return `Hello, ${getUser(id).name}`
 }
 // Output: Hello, Ada
@@ -132,7 +132,7 @@ class Stored extends Schema.TaggedError<Stored>()("Stored", { key: Schema.String
 
 ```vibe [VibeLang]
 service Users {
-  find(id: string): User!NotFound
+  find(id: string): Effect<User, NotFound>
   region: string
 }
 ```
@@ -152,7 +152,7 @@ class Users extends Context.Service<Users, {
 
 ```vibe [VibeLang]
 interface SearchApi {
-  find(query: string): string!!
+  find(query: string): Effect<string>
 }
 service Search: SearchApi
 service Prefix: string
@@ -174,7 +174,7 @@ class Prefix extends Context.Service<Prefix, string>()("app/Prefix") {}
 
 ```vibe [VibeLang]
 control Review {
-  approve(request: string): boolean!!
+  approve(request: string): Effect<boolean>
 }
 ```
 
@@ -366,7 +366,7 @@ const program = Effect.gen(function* () {
 ```vibe [VibeLang]
 const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
 
-function roll(): number!! {
+function roll(): Effect<number> {
   provide Logger.layer([]), Random = seeded {
     return Random.nextInt()
   }

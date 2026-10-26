@@ -63,7 +63,7 @@ export default defineConfig({
 
 ## 5. Add a VibeLang module
 
-Create `src/todos.vibe`. The `TodosLive` layer keeps the list in a `Map` that its setup creates once, when the layer builds. `completeTodo` recovers from `TodoNotFound`, and `loadBoard` declares the contract `Board!!Todos`, so the compiler rejects any error escaping it:
+Create `src/todos.vibe`. The `TodosLive` layer keeps the list in a `Map` that its setup creates once, when the layer builds. `completeTodo` recovers from `TodoNotFound`, and `loadBoard` declares the contract `Effect<Board, never, Todos>`, so the compiler rejects any error escaping it:
 
 ```vibe
 // src/todos.vibe
@@ -73,8 +73,8 @@ export schema Todo { id: number; title: string; done: boolean }
 export error TodoNotFound { id: number }
 
 export service Todos {
-  list(): ReadonlyArray<Todo>!!
-  complete(id: number): Todo!TodoNotFound
+  list(): Effect<ReadonlyArray<Todo>>
+  complete(id: number): Effect<Todo, TodoNotFound>
 }
 
 export const TodosLive = Layer.effect(Todos) {
@@ -109,7 +109,7 @@ export interface Board {
   messages: ReadonlyArray<string>
 }
 
-export function loadBoard(): Board!!Todos {
+export function loadBoard(): Effect<Board, never, Todos> {
   const messages = [completeTodo(2), completeTodo(99)]
   return { todos: Todos.list(), messages }
 }

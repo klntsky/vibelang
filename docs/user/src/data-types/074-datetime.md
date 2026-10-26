@@ -56,7 +56,7 @@ function timestamp() {
   const now = DateTime.now()
   return now.formatIso()
 }
-// string!!
+// Effect<string>
 ```
 
 ```output
@@ -197,7 +197,7 @@ Calendar `add` and `subtract` change parts in the value's zone; duration arithme
 function localDate() {
   return DateTime.nowInCurrentZone().formatIsoDate()
 }
-// string!!DateTime.CurrentTimeZone
+// Effect<string, never, DateTime.CurrentTimeZone>
 
 function main() {
   provide DateTime.layerCurrentZoneNamed("Asia/Tokyo") { return localDate() }

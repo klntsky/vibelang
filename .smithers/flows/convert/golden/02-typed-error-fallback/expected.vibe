@@ -1,6 +1,6 @@
 error NotFound { id: string }
 
-function find(id: string): string!NotFound {
+function find(id: string): Effect<string, NotFound, infer R> {
   if (id !== "1") throw new NotFound({ id })
   return "Ada"
 }

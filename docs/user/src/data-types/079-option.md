@@ -153,7 +153,7 @@ true true 0 ""
 function requiredName(name: Option.Option<string>) {
   return Effect.fromOption(name)
 }
-// string!Cause.NoSuchElementError!
+// Effect<string, Cause.NoSuchElementError>
 
 function requiredPair() {
   return all([

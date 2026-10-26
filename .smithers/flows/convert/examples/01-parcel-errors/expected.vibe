@@ -1,6 +1,6 @@
 error MissingParcel { tracking: string }
 
-function destination(tracking: string): string!MissingParcel {
+function destination(tracking: string): Effect<string, MissingParcel, infer R> {
   if (tracking !== "PK-9") throw new MissingParcel({ tracking })
   return "Oslo"
 }

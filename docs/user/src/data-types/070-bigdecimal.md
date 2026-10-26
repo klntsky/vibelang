@@ -53,7 +53,7 @@ function parsePrice(input: string) {
     when Option.None: throw new InvalidPrice({ input });
   }
 }
-// BigDecimal.BigDecimal!InvalidPrice!
+// Effect<BigDecimal.BigDecimal, InvalidPrice>
 
 const fixedRate = BigDecimal.fromNumberUnsafe(1.25)
 ```

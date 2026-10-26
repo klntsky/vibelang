@@ -3,7 +3,7 @@ export schema User { id: string; name: string }
 export error UserNotFound { id: string }
 
 export service Users {
-  find(id: string): User!UserNotFound
+  find(id: string): Effect<User, UserNotFound>
 }
 
 const directory: ReadonlyArray<User> = [

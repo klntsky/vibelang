@@ -29,7 +29,7 @@ function download() {
     return "archive ready"
   }
 }
-// string!Throttled!
+// Effect<string, Throttled>
 // Output: archive ready
 ```
 
@@ -47,7 +47,7 @@ error PollLimit
 
 function waitForArchive() {
   let checks = 0
-  function check(): Status!! {
+  function check(): Effect<Status> {
     checks++
     return checks < 3
       ? { _tag: "Pending", pollAfter: Duration.millis(checks * 300) }
@@ -66,7 +66,7 @@ function waitForArchive() {
   if (result._tag === "Pending") throw new PollLimit()
   return result.path
 }
-// string!PollLimit!
+// Effect<string, PollLimit>
 // Output: /archives/week.csv
 ```
 

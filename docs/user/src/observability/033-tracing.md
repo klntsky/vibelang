@@ -33,7 +33,7 @@ function renderReport(format: string) {
     return `report.${format}`
   }
 }
-// string!!
+// Effect<string>
 ```
 
 ```output

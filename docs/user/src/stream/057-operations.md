@@ -52,7 +52,7 @@ export function countRows(rows: AsyncIterable<string>): Effect.Effect<number, Er
 import { countRows } from "./exporter.js"
 
 service Exporter {
-  write(rows: AsyncIterable<string>): number!Error
+  write(rows: AsyncIterable<string>): Effect<number, Error>
 }
 
 function exportRows(source: Stream.Stream<string>) {

@@ -11,7 +11,7 @@ export schema CreateUser { name: string }
 export error NameTaken { name: string }
 
 export service Users {
-  create(name: string): { id: string; name: string }!NameTaken
+  create(name: string): Effect<{ id: string; name: string }, NameTaken>
 }
 
 export const UsersLive = Layer.effect(Users) {

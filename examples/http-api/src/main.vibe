@@ -6,7 +6,7 @@ export schema CreateUser { name: string }
 export error NameTaken { name: string }
 
 export service Users {
-  create(name: string): { id: string; name: string }!NameTaken
+  create(name: string): Effect<{ id: string; name: string }, NameTaken>
 }
 
 // The layer owns its state; each test builds an isolated directory.

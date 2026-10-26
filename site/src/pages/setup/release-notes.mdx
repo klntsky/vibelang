@@ -9,6 +9,43 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
+## 0.0.8 (unreleased)
+
+### Changes that can break code since 0.0.7
+
+- A contract is written `Effect<A, E, R>`, as in TypeScript. The shorthand
+  `Result!Error!Dependencies` is retired: each use is the error EK1014,
+  whose quick fix writes the Effect type it stood for. Run
+  `vibelang -p tsconfig.json --fix` to rewrite a whole project:
+
+  | 0.0.7 | 0.0.8 |
+  | --- | --- |
+  | `User!NotFound!Db` | `Effect<User, NotFound, Db>` |
+  | `User!NotFound!` | `Effect<User, NotFound>` |
+  | `User!!Db` | `Effect<User, never, Db>` |
+  | `User!!` | `Effect<User>` |
+  | `User!NotFound` on a function with a body | `Effect<User, NotFound, infer R>` |
+  | `User!NotFound` anywhere else | `Effect<User, NotFound>` |
+
+- A type argument left out of an Effect type means what it means in
+  TypeScript: `Effect<A>` is `Effect<A, never, never>` and `Effect<A, E>`
+  is `Effect<A, E, never>`. A return annotation such as `Effect<User>` on a
+  function with a body was EK2003; it now checks that the function cannot
+  fail and needs nothing. A service or control member may write
+  `Effect<User>` or `Effect<User, NotFound>`, which EK2101 rejected.
+- EK4833 reports only `Effect.Effect<A, E, R>`, and its fix writes
+  `Effect<A, E, R>`. Hovers and messages show Effect types as `Effect<…>`.
+
+### Language
+
+- A `data` declaration declares a tagged union with Effect's own
+  `Data.TaggedEnum` type and its `Data.taggedEnum` constructors:
+  `data Delivery { Waiting; Sent { tracking: string } }`.
+  `Delivery.Sent({ tracking })` builds a value, and
+  `when Delivery.Sent { let tracking }:` matches one. A `match` without
+  `default` over a data type must handle every variant (EK4701). See
+  [Data](/data-types/073-data).
+
 ## 0.0.7
 
 ### Changes that can break code since 0.0.6

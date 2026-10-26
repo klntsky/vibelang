@@ -14,7 +14,7 @@ function serverSettings() {
   const port = Port()
   return { host, port }
 }
-// { host: string; port: number }!ConfigError!
+// Effect<{ host: string; port: number }, ConfigError>
 // Output: {"host":"localhost","port":9091}
 ```
 
@@ -44,7 +44,7 @@ function teamName() {
     "TEAM_NAME"
   )()
 }
-// string!ConfigError!
+// Effect<string, ConfigError>
 // Output: search
 // Output: ConfigError
 ```

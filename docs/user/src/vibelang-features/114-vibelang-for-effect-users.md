@@ -81,7 +81,7 @@ Node runs the JavaScript output; importing the `.vibe` source directly with Node
 | `Option.getOrElse(Option.map(maybe, f), () => 0)` | `maybe.map(f).getOrElse(() => 0)` |
 | `pipe(stream, Stream.filter(p), Stream.take(3))` | `stream.filter(p).take(3)` |
 | `work().pipe(Effect.retry(policy), Effect.timeout("1 second"))` | `work() \|> retry(%, policy) \|> timeout(%, "1 second")` |
-| `Context.Service` | `service Users { find(id: string): User!NotFound }`; call `Users.find(id)` |
+| `Context.Service` | `service Users { find(id: string): Effect<User, NotFound> }`; call `Users.find(id)` |
 | `Layer.effect(Users, Effect.gen(function* () { ... }))` | `Layer.effect(Users) { setup; return { find(id) { ... } } }` |
 | `Effect.provide(program, AppLive)` | `provide AppLive { ... }` |
 | `Effect.provideService(program, Random.Random, seeded)` | `provide Random = seeded { ... }` |
@@ -211,6 +211,6 @@ function displayName(id: string) {
 
 Inside an Effect function, `throw` adds an expected failure to the function's error channel, and `catch` receives it. Defects and interruption bypass `catch`; `finally` still runs. `Effect.orDie(() => work())` promotes an expected failure to a defect; to inspect defects, use Effect's cause APIs at a boundary.
 
-Contracts remain `Effect<A, E, R>`, or `A!E!R` for short, and most functions infer them. In the shorthand, `A!E` checks the success and error channels and infers dependencies from the body; an empty slot is `never`. `Effect<A, E, R>` needs all three channels; write `infer E` or `infer R` to infer one.
+Contracts remain `Effect<A, E, R>`, and most functions infer them. A type argument left out is `never`, as in TypeScript: `Effect<A, E>` needs nothing. In a return annotation, write `infer E` or `infer R` to infer a channel from the body: `Effect<A, E, infer R>` checks the success and error channels and infers the dependencies.
 
 For the feature with no direct Effect equivalent, see [Control operations and handlers](111-control-operations-and-handlers.md).

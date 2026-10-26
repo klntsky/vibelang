@@ -27,13 +27,13 @@ function reportConfiguration() {
 ```vibe
 // run: provide Layer.succeed(CredentialsClient, { authenticate: (token) => token === "example-token" }) { Console.log(authenticate(Redacted.make("example-token")), authenticate(Redacted.make("wrong-token"))) }
 service CredentialsClient {
-  authenticate(token: string): boolean!!
+  authenticate(token: string): Effect<boolean>
 }
 
 function authenticate(token: Redacted.Redacted<string>) {
   return CredentialsClient.authenticate(Redacted.value(token))
 }
-// boolean!!CredentialsClient
+// Effect<boolean, never, CredentialsClient>
 ```
 
 ```output

@@ -5,7 +5,7 @@ builds. `src/todos.vibe` declares a `Todo` schema, a `TodoNotFound` error,
 and a `Todos` service. The `TodosLive` layer keeps the list in a `Map` that its
 setup creates once, when the layer builds. `completeTodo` recovers
 `TodoNotFound` with `try`/`catch`, and `loadBoard` declares the contract
-`Board!!Todos`, so the compiler rejects an error that escapes it.
+`Effect<Board, never, Todos>`, so the compiler rejects an error that escapes it.
 `src/App.vue` runs `loadBoard()` with a `ManagedRuntime` built from
 `TodosLive` and renders `Loading…` until the program completes.
 

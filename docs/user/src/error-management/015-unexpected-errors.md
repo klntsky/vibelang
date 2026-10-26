@@ -12,7 +12,7 @@ function decodeOpcode(opcode: number) {
   if (opcode !== 1) die(new Error("unknown internal opcode"))
   return "start"
 }
-// string!!
+// Effect<string>
 ```
 
 ```output
@@ -55,7 +55,7 @@ function requireSetting(name: string) {
 function startup() {
   return Effect.orDie(requireSetting("region"))
 }
-// void!!
+// Effect<void>
 
 function startupWithMessage() {
   return requireSetting("region")

@@ -107,7 +107,7 @@ function report(id: string) {
   }
 }
 
-function getUser(id: string): { name: string }!NotFound {
+function getUser(id: string): Effect<{ name: string }, NotFound> {
   if (id === "") throw new NotFound({ id })
   return { name: "Ada" }
 }

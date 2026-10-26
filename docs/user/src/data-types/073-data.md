@@ -226,7 +226,7 @@ function requireDocument(id: string) {
   if (id === "") throw new DocumentMissing({ id })
   return { id }
 }
-// { id: string }!DocumentMissing!
+// Effect<{ id: string }, DocumentMissing>
 
 function documentOrDraft(id: string) {
   try {
@@ -256,7 +256,7 @@ error DocumentDecodeError {
 function decodeDocument(text: string) {
   return JSON.parse(text) catch (cause) => throw new DocumentDecodeError({ cause })
 }
-// any!DocumentDecodeError!
+// Effect<any, DocumentDecodeError>
 ```
 
 ```output

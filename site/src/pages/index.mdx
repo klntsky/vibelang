@@ -80,14 +80,14 @@ interface User { id: string; name: string }
 error UserNotFound { id: string }
 
 service Users {
-  find(id: string): User!UserNotFound
+  find(id: string): Effect<User, UserNotFound>
 }
 
 function greet(id: string) {
   const name = Users.find(id).name catch "guest"
   return `Hello, ${name}`
 }
-// string!!Users
+// Effect<string, never, Users>
 ```
 
 ```ts [Effect]
@@ -110,7 +110,7 @@ const greet = Effect.fn("greet")(function* (id: string) {
 
 :::
 
-The comment under `greet` is the type your editor shows. `string!!Users` is VibeLang's spelling of `Effect<string, never, Users>`: `greet` returns a `string`, cannot fail, and needs the `Users` service. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type.
+The comment under `greet` is the type your editor shows. It is `Effect<string, never, Users>`: `greet` returns a `string`, cannot fail, and needs the `Users` service. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type.
 
 Calls run in order, `throw` fails with a typed error, `catch` handles it, `service` declares a dependency, and `fork` starts a fiber.
 
@@ -122,7 +122,7 @@ Calls run in order, `throw` fails with a typed error, `catch` handles it, `servi
 error ApiError { status: number }
 
 service Users {
-  name(id: string): string!ApiError
+  name(id: string): Effect<string, ApiError>
 }
 
 function nameOf(id: string) {
@@ -168,7 +168,7 @@ export const names = Effect.fn("names")(function* (ids: ReadonlyArray<string>) {
 
 :::
 
-Both versions compile. The pipe operator `|>` passes `Users.name(id)` to `retry` and `timeout` by name, so they can run it again. `catch "unknown"` removes every failure, including the timeout, so `nameOf` is `string!!Users`. `forEach` with `{ concurrency: 8 }` loads up to eight names at once.
+Both versions compile. The pipe operator `|>` passes `Users.name(id)` to `retry` and `timeout` by name, so they can run it again. `catch "unknown"` removes every failure, including the timeout, so `nameOf` is `Effect<string, never, Users>`. `forEach` with `{ concurrency: 8 }` loads up to eight names at once.
 
 ### Hello, VibeLang
 
@@ -197,7 +197,7 @@ export function greeting(name: string) {
 import { EmptyName, greeting } from "./greeting.vibe"
 
 service Greeter {
-  greet(name: string): string!EmptyName
+  greet(name: string): Effect<string, EmptyName>
 }
 
 const GreeterLive = Layer.succeed(Greeter, {
@@ -245,7 +245,7 @@ function getTodo(id: number) {
     return await response.text()
   }, (cause) => new TodoFailed({ cause }), id)
 }
-// string!TodoFailed!
+// Effect<string, TodoFailed>
 
 function todoOrFallback(id: number) {
   return retry(getTodo(id), Schedule.recurs(2)) catch "Todo unavailable"
@@ -258,7 +258,7 @@ Everything Effect does, VibeLang does, because the output is Effect. The common 
 
 | Effect feature | VibeLang |
 | --- | --- |
-| Effect types | `User!NotFound!Users`: returns `User`, fails with `NotFound`, needs `Users` |
+| Effect types | `Effect<User, NotFound, Users>`: returns `User`, fails with `NotFound`, needs `Users` |
 | Typed errors | `error NotFound { id: string }`, `throw new NotFound({ id })`, `x catch fallback` |
 | Dependency injection | `service Users { ... }`, `provide UsersLive { ... }` |
 | Structured concurrency | `fork`, `join`, `await.all [a(), b()]`, `for concurrent(8) (const id of ids)` |
@@ -275,7 +275,7 @@ Streams, configuration, and Effect's HTTP, SQL, CLI, and AI packages need no syn
 When coding agents write a growing share of your code, the hard part moves from writing code to trusting it.
 
 - **The compiler checks what agents write.** Every function's type lists what it can fail with and what it needs, and code that breaks a declared type does not compile.
-- **People can review what agents write.** VibeLang uses [11.4% fewer tokens across the 46 cheat-sheet pairs](/vibelang-features/117-token-counts), and it reads as plain TypeScript.
+- **People can review what agents write.** VibeLang uses [10.9% fewer tokens across the 46 cheat-sheet pairs](/vibelang-features/117-token-counts), and it reads as plain TypeScript.
 - **Agents write less.** Fewer tokens per program means less to generate and less context to read back.
 
 ## Where to go next

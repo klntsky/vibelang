@@ -6,20 +6,20 @@ Read `node_modules/vibelang/skills/vibelang/SKILL.md` before .vibe edits.
 
 ## Essentials
 
-Functions are Effects; calls run in order, without `yield*`. `A!E` is a result and failures; `A!!` cannot fail. Omitted parts are inferred.
+Functions are Effects; calls run in order, without `yield*`. Contracts are inferred; `Effect<A>` means `Effect<A, never, never>`.
 
 ```vibe
 error NotFound { id: string }
 
 service Users {
-  name(id: string): string!NotFound
+  name(id: string): Effect<string, NotFound>
 }
 
-function nameOf(id: string): string!!Users {
+function nameOf(id: string): Effect<string, never, Users> {
   return Users.name(id)
-    |> timeout(%, "1 second") // each attempt
+    |> timeout(%, "1 second")
     |> retry(%, { times: 3, schedule: Schedule.exponential("100 millis") })
-    catch (e) => "unknown"
+    catch "unknown"
 }
 
 export function names(ids: ReadonlyArray<string>) {
@@ -37,4 +37,4 @@ export function names(ids: ReadonlyArray<string>) {
 - A plain TypeScript call needs `sync((x) => f(x), x)`, or `try((x) => f(x), (error: unknown) => new E(), x)` if it can throw.
 - Tests: `it.effect("name") { assert.strictEqual(a, b) }` from `@effect/vitest` uses a test clock (`sleep` stalls); `it.live` uses real time. Vitest hides `console.log` under agents; assert instead.
 
-<!-- 603 tokens (o200k_base, js-tiktoken 1.0.21). Generated: smithersai/vibelang .smithers/flows/docs/flow.ts -->
+<!-- 594 tokens (o200k_base, js-tiktoken 1.0.21). Generated: smithersai/vibelang .smithers/flows/docs/flow.ts -->

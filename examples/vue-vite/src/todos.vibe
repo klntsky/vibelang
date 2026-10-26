@@ -3,8 +3,8 @@ export schema Todo { id: number; title: string; done: boolean }
 export error TodoNotFound { id: number }
 
 export service Todos {
-  list(): ReadonlyArray<Todo>!!
-  complete(id: number): Todo!TodoNotFound
+  list(): Effect<ReadonlyArray<Todo>>
+  complete(id: number): Effect<Todo, TodoNotFound>
 }
 
 // The setup runs once, when the layer builds, so the list lives as long as
@@ -41,7 +41,7 @@ export interface Board {
   messages: ReadonlyArray<string>
 }
 
-export function loadBoard(): Board!!Todos {
+export function loadBoard(): Effect<Board, never, Todos> {
   const messages = [completeTodo(2), completeTodo(99)]
   return { todos: Todos.list(), messages }
 }
