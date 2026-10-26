@@ -1,0 +1,34 @@
+// Platform work goes through Effect's services, imported by name, with no
+// wrapper module: the replacements that EK4402 suggests compile as written,
+// and a program runs them with the layers that main provides, here Effect's
+// own POSIX Path and a FileSystem test double.
+import { FileSystem, layerNoop } from "effect/FileSystem"
+import { Path, layer as PosixPath } from "effect/Path"
+import { Crypto } from "effect/Crypto"
+import { Stdio } from "effect/Stdio"
+import { HttpClient } from "effect/http"
+import * as ChildProcess from "effect/process/ChildProcess"
+import { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"
+
+function notes(directory: string) {
+  const file = Path.join(directory, "notes.txt")
+  return [file, FileSystem.readFileString(file)]
+}
+
+export const status = () => ChildProcessSpawner.string(ChildProcess.make("git", ["status"]))
+export const token = () => Crypto.randomBytes(16)
+export const id = () => Crypto.randomUUIDv4()
+export const page = (url: string) => HttpClient.get(url)
+export const args = () => Stdio.args()
+export const here = () => Path.resolve()
+export const scratch = () => FileSystem.makeTempDirectory()
+export const sha = (bytes: Uint8Array) => Crypto.digest("SHA-256", bytes)
+
+const Files = layerNoop({ readFileString: (path) => `read ${path}` })
+
+// expect-result: ["/srv/notes.txt","read /srv/notes.txt"]
+export function main() {
+  provide PosixPath, Files {
+    return notes("/srv")
+  }
+}

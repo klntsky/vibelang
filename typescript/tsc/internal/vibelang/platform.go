@@ -1,6 +1,7 @@
 package vibelang
 
 import (
+	"cmp"
 	"strings"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
@@ -8,12 +9,18 @@ import (
 )
 
 // VibeLang's standard library is Effect's (design D6, Chapter 11). A .vibe
-// file may not run a Node.js or browser API, and the error names the Effect
-// module that replaces it (EK4402):
+// file may not run a Node.js or browser API (EK4402). The error names the
+// Effect API that replaces it, the import that brings that API in, and the
+// layer that provides it:
 //
 //	error EK4402: readFile from node:fs/promises is a platform API, which VibeLang code does not call directly.
-//	  Use FileSystem from "effect/FileSystem":   FileSystem.readFileString(path)
-//	  Provide it with NodeServices.layer from @effect/platform-node, or the Bun or browser equivalent.
+//	  Use the FileSystem service:   FileSystem.readFileString(path)
+//	  Import it with   import { FileSystem } from "effect/FileSystem"
+//	  Provide it in main with NodeServices.layer from "@effect/platform-node", or BunServices.layer from "@effect/platform-bun".
+//
+// Where Effect has no API for it yet, as for os.hostname(), the error says so
+// and shows the call in a hatch, the boundary that remains; it never sends
+// the program to a wrapper module of its own.
 //
 // D108 puts the error where the code runs the API: a call, a new, or a
 // tagged template of it, or a read of one of its properties, which can run a
@@ -30,57 +37,93 @@ import (
 // trusted sync call. Both apply everywhere in a .vibe file, a boundary's
 // callback and the module's top level included.
 
-// replacement is the Effect API that replaces a platform API.
-type replacement struct {
-	use     string // what to use, such as "FileSystem"
-	from    string // where it comes from, such as "effect/FileSystem"
-	example string // a call that shows it, or ""
-	layer   bool   // a platform layer such as NodeServices.layer provides it
+// platformService is an Effect API that replaces platform APIs.
+type platformService struct {
+	use      string // what to use, such as "the FileSystem service"
+	example  string // a call that shows it, or ""
+	imports  string // the import that brings it into a .vibe file, or "" for a prelude name
+	provider string // the layers that provide it, or "" when Effect's runtime does
 }
 
-// replacements are the Effect APIs that replace platform APIs (Chapter 11),
-// by the name the tables below use.
-var replacements = map[string]*replacement{
-	"FileSystem":     {"FileSystem", "effect/FileSystem", "FileSystem.readFileString(path)", true},
-	"Path":           {"Path", "effect/Path", "Path.join(directory, name)", true},
-	"HttpClient":     {"HttpClient", "effect/http", "HttpClient.get(url)", true},
-	"ChildProcess":   {"ChildProcessSpawner", "effect/process", "ChildProcessSpawner.string(ChildProcess.make(command, args))", true},
-	"Socket":         {"Socket and SocketServer", "effect/socket", "", true},
-	"DatagramSocket": {"DatagramSocket", "effect/socket", "", true},
-	"Dns":            {"Dns", "effect/net", "", true},
-	"Worker":         {"Worker and WorkerRunner", "effect/workers", "", true},
-	"Terminal":       {"Terminal and Stdio", "effect", "", true},
-	"PubSub":         {"PubSub, or Stream.fromEventListener", "effect", "", false},
-	"Stream":         {"Stream", "effect", "", false},
-	"Schedule":       {"Effect.sleep and Schedule", "effect", `Effect.sleep("1 second")`, false},
-	"Crypto":         {"Crypto", "effect/Crypto", "Crypto.randomBytes(16)", true},
-	"Config":         {"Config", "effect", `Config.String("NAME")()`, false},
-	"Console":        {"Console or Effect.log", "effect", "Console.log(message)", false},
-	"Clock":          {"Clock", "effect", "Clock.currentTimeMillis()", false},
-	"KeyValueStore":  {"KeyValueStore", "effect/persistence", "", true},
-	"SqlClient":      {"SqlClient, with a driver package such as @effect/sql-sqlite-node", "effect/sql", "", true},
-	"UrlParams":      {"UrlParams", "effect/http", "", false},
-	"Command":        {"Command, Flag, and Argument", "effect/cli", "", true},
-	"@effect/vitest": {"it.effect and assert", "@effect/vitest", "", false},
-	"import":         {"an import declaration", "", `import { name } from "./module.ts"`, false},
+// nodeServices provides FileSystem, Path, ChildProcessSpawner, Crypto, Stdio,
+// and Terminal.
+const nodeServices = `NodeServices.layer from "@effect/platform-node", or BunServices.layer from "@effect/platform-bun"`
+
+// platformServices are the Effect APIs that replace platform APIs (Chapter 11), by
+// the names the tables below use. Each import and layer is declared by
+// effect 4.0.5 or its platform packages; TestPlatformServicesTable checks
+// that each example uses what its import brings in.
+var platformServices = map[string]*platformService{
+	"FileSystem": {"the FileSystem service", "FileSystem.readFileString(path)", `import { FileSystem } from "effect/FileSystem"`, nodeServices},
+	"Path":       {"the Path service", "Path.join(directory, name)", `import { Path } from "effect/Path"`, nodeServices},
+	"PathPosix":  {"the Path service", "Path.join(directory, name)", `import { Path } from "effect/Path"`, `Path.layer from "effect/Path", which is POSIX's on every platform`},
+	"PathWin32":  {"the Path service", "Path.join(directory, name)", `import { Path } from "effect/Path"`, `NodePath.layerWin32 from "@effect/platform-node"`},
+	"ChildProcess": {"the ChildProcessSpawner service", "ChildProcessSpawner.string(ChildProcess.make(command, args))",
+		`import { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"   and   import * as ChildProcess from "effect/process/ChildProcess"`, nodeServices},
+	"Crypto": {"the Crypto service", "Crypto.randomBytes(size)", `import { Crypto } from "effect/Crypto"`,
+		`NodeServices.layer from "@effect/platform-node", BunServices.layer from "@effect/platform-bun", or BrowserCrypto.layer from "@effect/platform-browser"`},
+	"Terminal": {"the Terminal service", "Terminal.readLine()", `import { Terminal } from "effect/Terminal"`, nodeServices},
+	"Stdio":    {"the Stdio service", "Stdio.args()", `import { Stdio } from "effect/Stdio"`, nodeServices},
+	"HttpClient": {"HttpClient", "HttpClient.get(url)", `import { HttpClient } from "effect/http"`,
+		`FetchHttpClient.layer from "effect/http", or NodeHttpClient.layerUndici from "@effect/platform-node"`},
+	"HttpServer": {"HttpRouter", "HttpRouter.serve(app)", `import { HttpRouter } from "effect/http"`,
+		`NodeHttpServer.layer(createServer, { port }) from "@effect/platform-node", which runs createServer itself`},
+	"Socket":    {"the Socket service", "", `import { Socket } from "effect/socket/Socket"`, `NodeSocket.layerNet({ host, port }) from "@effect/platform-node"`},
+	"SocketTls": {"the Socket service", "", `import { Socket } from "effect/socket/Socket"`, `NodeSocket.layerTls(options) from "@effect/platform-node"`},
+	"WebSocket": {"the Socket service", "", `import { Socket } from "effect/socket/Socket"`,
+		`NodeSocket.layerWebSocket(url) from "@effect/platform-node", or BrowserSocket.layerWebSocket(url) from "@effect/platform-browser"`},
+	"SocketServer":    {"the SocketServer service", "", `import { SocketServer } from "effect/socket/SocketServer"`, `NodeSocketServer.layer({ port }) from "@effect/platform-node"`},
+	"SocketServerTls": {"the SocketServer service", "", `import { SocketServer } from "effect/socket/SocketServer"`, `NodeSocketServer.layerTls(options) from "@effect/platform-node"`},
+	"DatagramSocket":  {"the DatagramSocket service", "", `import { DatagramSocket } from "effect/socket/DatagramSocket"`, `NodeDatagramSocket.layer(options) from "@effect/platform-node"`},
+	"Dns":             {"the Dns service", "", `import { Dns } from "effect/net/Dns"`, `NodeDns.layer from "@effect/platform-node"`},
+	"NetAddress":      {"NetAddress, which needs no layer", "NetAddress.ipFromString(text)", `import { NetAddress } from "effect/net"`, ""},
+	"Worker": {"Worker and WorkerRunner", "", `import { Worker, WorkerRunner } from "effect/workers"`,
+		`NodeWorker.layer(spawn) from "@effect/platform-node", or BrowserWorker.layer(spawn) from "@effect/platform-browser"`},
+	"KeyValueStore": {"the KeyValueStore service", "", `import { KeyValueStore } from "effect/persistence/KeyValueStore"`,
+		`BrowserKeyValueStore.layerLocalStorage from "@effect/platform-browser", or KeyValueStore.layerFileSystem(directory)`},
+	"SqlClient": {"the SqlClient service", "", `import { SqlClient } from "effect/sql/SqlClient"`,
+		`a driver's layer, such as SqliteClient.layer({ filename }) from "@effect/sql-sqlite-node"`},
+	"UrlParams":      {"UrlParams, which needs no layer", "UrlParams.fromInput(new URLSearchParams(text))", `import { UrlParams } from "effect/http"`, ""},
+	"Bytes":          {"Uint8Array and TextEncoder or TextDecoder, which need no layer, or Base64 and Hex", "new TextEncoder().encode(text)", `import { Base64, Hex } from "effect/encoding"`, ""},
+	"URL":            {"the global URL and URLSearchParams, which VibeLang code may use", "new URL(text)", "", ""},
+	"Inspectable":    {"Inspectable, from the prelude", "Inspectable.toStringUnknown(value)", "", ""},
+	"Schedule":       {"sleep and Schedule, from the prelude", `sleep("1 second")`, "", ""},
+	"Interrupt":      {"a fiber's interruption", "fiber.interrupt()", "", ""},
+	"Yield":          {"yieldNow, from the prelude", "yieldNow()", "", ""},
+	"Clock":          {"Clock, from the prelude", "Clock.currentTimeMillis()", "", ""},
+	"Config":         {"Config, from the prelude", `Config.String("NAME")()`, "", ""},
+	"Console":        {"Console, from the prelude", "Console.log(message)", "", ""},
+	"Stream":         {"Stream, from the prelude", "Stream.fromIterable(values)", "", ""},
+	"PubSub":         {"PubSub, or Stream.fromEventListener for an event target, from the prelude", "", "", ""},
+	"Exit":           {"main's result", "", "", ""},
+	"@effect/vitest": {"it.effect and assert", "", `import { assert, it } from "@effect/vitest"`, ""},
+	"import":         {"an import declaration", `import { name } from "./module.ts"`, "", ""},
+	"export":         {"an export declaration", "export function name() { ... }", "", ""},
 }
 
-// platformModules maps Node.js built-in modules to the replacements' names;
-// "" means Effect has no module for it. Node.js's other modules are platform
+// platformAPI says what replaces a platform API.
+type platformAPI struct {
+	service string // the key in platformServices of what replaces it, or "" when Effect has nothing yet
+	example string // the call that replaces it, when it is not the service's example
+	note    string // what the replacement does differently, or what Effect lacks
+}
+
+// platformModules maps Node.js built-in modules to the platformServices that replace
+// their APIs; "" means Effect has none. Node.js's other modules are platform
 // APIs too when imported with the node: prefix.
 var platformModules = map[string]string{
-	"assert": "@effect/vitest", "assert/strict": "@effect/vitest", "async_hooks": "", "buffer": "",
+	"assert": "@effect/vitest", "assert/strict": "@effect/vitest", "async_hooks": "", "buffer": "Bytes",
 	"child_process": "ChildProcess", "cluster": "Worker", "console": "Console", "constants": "",
 	"crypto": "Crypto", "dgram": "DatagramSocket", "diagnostics_channel": "", "dns": "Dns",
 	"dns/promises": "Dns", "domain": "", "events": "PubSub", "fs": "FileSystem",
 	"fs/promises": "FileSystem", "http": "HttpClient", "http2": "HttpClient", "https": "HttpClient",
 	"inspector": "", "inspector/promises": "", "module": "", "net": "Socket", "os": "",
-	"path": "Path", "path/posix": "Path", "path/win32": "Path", "perf_hooks": "Clock",
+	"path": "Path", "path/posix": "PathPosix", "path/win32": "PathWin32", "perf_hooks": "Clock",
 	"process": "Config", "punycode": "", "querystring": "UrlParams", "readline": "Terminal",
 	"readline/promises": "Terminal", "repl": "", "stream": "Stream", "stream/consumers": "Stream",
-	"stream/promises": "Stream", "stream/web": "Stream", "string_decoder": "", "sys": "",
-	"timers": "Schedule", "timers/promises": "Schedule", "tls": "Socket", "trace_events": "", "tty": "Terminal",
-	"url": "Path", "util": "", "util/types": "", "v8": "", "vm": "", "wasi": "",
+	"stream/promises": "Stream", "stream/web": "Stream", "string_decoder": "Bytes", "sys": "",
+	"timers": "Schedule", "timers/promises": "Schedule", "tls": "SocketTls", "trace_events": "", "tty": "Terminal",
+	"url": "URL", "util": "", "util/types": "", "v8": "", "vm": "", "wasi": "",
 	"worker_threads": "Worker", "zlib": "",
 }
 
@@ -89,29 +132,204 @@ var platformModules = map[string]string{
 var prefixOnlyModules = map[string]string{"sea": "", "sqlite": "SqlClient", "test": "@effect/vitest", "test/reporters": "@effect/vitest"}
 
 // platformGlobals maps the platform globals that .vibe code may not use to the
-// replacements' names. Platform-neutral web standards that touch nothing
-// outside the program, such as URL, TextEncoder, AbortController, and
+// platformServices that replace them. Platform-neutral web standards that touch
+// nothing outside the program, such as URL, TextEncoder, AbortController, and
 // structuredClone, are not in the table.
 var platformGlobals = map[string]string{
-	"fetch": "HttpClient", "XMLHttpRequest": "HttpClient", "EventSource": "HttpClient", "WebSocket": "Socket",
-	"setTimeout": "Schedule", "setInterval": "Schedule", "setImmediate": "Schedule", "clearTimeout": "Schedule",
-	"clearInterval": "Schedule", "clearImmediate": "Schedule", "queueMicrotask": "Schedule",
-	"requestAnimationFrame": "Schedule", "cancelAnimationFrame": "Schedule", "requestIdleCallback": "Schedule",
-	"cancelIdleCallback": "Schedule",
+	"fetch": "HttpClient", "XMLHttpRequest": "HttpClient", "EventSource": "HttpClient", "WebSocket": "WebSocket",
+	"setTimeout": "Schedule", "setInterval": "Schedule", "setImmediate": "Yield", "clearTimeout": "Interrupt",
+	"clearInterval": "Interrupt", "clearImmediate": "Interrupt", "queueMicrotask": "Yield",
+	"requestAnimationFrame": "", "cancelAnimationFrame": "", "requestIdleCallback": "",
+	"cancelIdleCallback": "",
 	"process":            "Config", "console": "Console", "crypto": "Crypto", "performance": "Clock",
 	"localStorage": "KeyValueStore", "sessionStorage": "KeyValueStore", "indexedDB": "KeyValueStore",
 	"Worker": "Worker", "SharedWorker": "Worker", "importScripts": "Worker",
 	"document": "", "window": "", "self": "", "navigator": "", "location": "", "history": "",
 	"alert": "", "confirm": "", "prompt": "",
 	"addEventListener": "PubSub", "removeEventListener": "PubSub", "dispatchEvent": "PubSub",
-	"require": "import", "module": "", "exports": "", "__dirname": "Path", "__filename": "Path",
-	"Buffer": "", "Bun": "", "Deno": "",
+	"require": "import", "module": "export", "exports": "export", "__dirname": "Path", "__filename": "Path",
+	"Buffer": "Bytes", "Bun": "", "Deno": "",
 }
 
-// processMembers gives the replacement for one member of process.
-var processMembers = map[string]string{
-	"env": "Config", "argv": "Command", "stdin": "Terminal", "stdout": "Terminal", "stderr": "Terminal",
-	"hrtime": "Clock", "uptime": "Clock",
+// platformAPIs says what replaces single platform APIs. A name is a module
+// without its node: prefix, or a global, then the imported name and the
+// properties read in turn: "fs/promises.readFile", "path.posix.join",
+// "process.env". "process.*" covers process's other members. An API the table
+// lacks takes its module's or global's service.
+var platformAPIs = map[string]platformAPI{
+	"fs.lstat":                {note: "FileSystem.stat follows symbolic links, so it does not replace lstat."},
+	"fs.constants":            {"FileSystem", `FileSystem.open(path, { flag: "wx" })`, ""},
+	"fs.constants.X_OK":       {note: "FileSystem.access checks only that a path is readable or writable."},
+	"fs.constants.O_NONBLOCK": {note: "FileSystem.open takes a flag, such as \"wx\", but no nonblocking mode."},
+
+	"child_process.spawn":        {"ChildProcess", "ChildProcessSpawner.spawn(ChildProcess.make(command, args))", ""},
+	"child_process.exec":         {"ChildProcess", "", ""},
+	"child_process.execSync":     {"ChildProcess", "", ""},
+	"child_process.execFile":     {"ChildProcess", "", ""},
+	"child_process.execFileSync": {"ChildProcess", "", ""},
+	"child_process.spawnSync":    {"ChildProcess", "", ""},
+
+	"crypto.randomUUID":       {"Crypto", "Crypto.randomUUIDv4()", ""},
+	"crypto.randomBytes":      {"Crypto", "Crypto.randomBytes(size)", ""},
+	"crypto.randomInt":        {"Crypto", "Crypto.randomIntBetween(min, max)", ""},
+	"crypto.getRandomValues":  {"Crypto", "Crypto.randomBytes(size)", "Crypto.randomBytes returns new bytes instead of filling an array."},
+	"crypto.createHash":       {"Crypto", `Crypto.digest("SHA-256", bytes)`, "Crypto.digest hashes all the bytes in one call; it has no incremental update."},
+	"crypto.hash":             {"Crypto", `Crypto.digest("SHA-256", bytes)`, ""},
+	"crypto.subtle.digest":    {"Crypto", `Crypto.digest("SHA-256", bytes)`, ""},
+	"crypto.subtle":           {note: cryptoGap},
+	"crypto.webcrypto":        {note: cryptoGap},
+	"crypto.createHmac":       {note: cryptoGap},
+	"crypto.createSign":       {note: cryptoGap},
+	"crypto.createVerify":     {note: cryptoGap},
+	"crypto.sign":             {note: cryptoGap},
+	"crypto.verify":           {note: cryptoGap},
+	"crypto.createCipheriv":   {note: cryptoGap},
+	"crypto.createDecipheriv": {note: cryptoGap},
+	"crypto.generateKeyPair":  {note: cryptoGap},
+
+	"http.createServer":        {"HttpServer", "", ""},
+	"http.Server":              {"HttpServer", "", ""},
+	"https.createServer":       {"HttpServer", "", ""},
+	"https.Server":             {"HttpServer", "", ""},
+	"http2.createServer":       {"HttpServer", "", ""},
+	"http2.createSecureServer": {"HttpServer", "", ""},
+
+	"net.createServer": {"SocketServer", "", ""},
+	"net.Server":       {"SocketServer", "", ""},
+	"net.isIP":         {"NetAddress", "", ""},
+	"net.isIPv4":       {"NetAddress", "", ""},
+	"net.isIPv6":       {"NetAddress", "", ""},
+	"tls.createServer": {"SocketServerTls", "", ""},
+	"tls.Server":       {"SocketServerTls", "", ""},
+
+	"os.tmpdir": {"FileSystem", "FileSystem.makeTempDirectory()", "FileSystem.makeTempDirectory creates a directory in it; nothing returns its path alone."},
+
+	"url.fileURLToPath": {"Path", "Path.fromFileUrl(url)", ""},
+	"path.sep":          {"Path", "Path().sep", ""},
+	"util.inspect":      {"Inspectable", "", "It writes values as JSON, not as util.inspect does."},
+	"url.pathToFileURL": {"Path", "Path.toFileUrl(path)", ""},
+
+	"__dirname":  {"Path", "Path.dirname(Path.fromFileUrl(new URL(import.meta.url)))", ""},
+	"__filename": {"Path", "Path.fromFileUrl(new URL(import.meta.url))", ""},
+
+	"events.once":            {note: "Effect has no adapter for a Node.js EventEmitter; Stream.fromEventListener reads an event target."},
+	"stream.Readable.from":   {"Stream", "Stream.fromIterable(values)", ""},
+	"require.resolve":        {note: "Effect resolves no modules at run time; a static import resolves one when the program loads."},
+	"navigator.locks":        {note: "Effect has no Web Locks; a Semaphore locks only within one program."},
+	"performance.timeOrigin": {note: "Clock reads the time now; it has no time origin."},
+
+	"setInterval":                  {"Schedule", `repeat(program, Schedule.spaced("1 second"))`, ""},
+	"timers.setInterval":           {"Schedule", `repeat(program, Schedule.spaced("1 second"))`, ""},
+	"timers.setImmediate":          {"Yield", "", "yieldNow lets other fibers run; it does not queue a macrotask."},
+	"timers.clearTimeout":          {"Interrupt", "", ""},
+	"timers.clearInterval":         {"Interrupt", "", ""},
+	"timers.clearImmediate":        {"Interrupt", "", ""},
+	"timers/promises.setInterval":  {"Schedule", `repeat(program, Schedule.spaced("1 second"))`, ""},
+	"timers/promises.setImmediate": {"Yield", "", "yieldNow lets other fibers run; it does not queue a macrotask."},
+	"setImmediate":                 {"Yield", "", "yieldNow lets other fibers run; it does not queue a macrotask."},
+	"queueMicrotask":               {"Yield", "", "yieldNow lets other fibers run; it does not queue a microtask."},
+
+	"process.env":            {"Config", "", ""},
+	"process.argv":           {"Stdio", "Stdio.args()", "Stdio.args() leaves out argv[0] and argv[1], the runtime and the script."},
+	"process.cwd":            {"Path", "Path.resolve()", ""},
+	"process.stdout":         {"Console", "Console.log(text)", `For bytes, Stdio.stdout() is a Sink, after   import { Stdio } from "effect/Stdio"`},
+	"process.stderr":         {"Console", "Console.error(text)", `For bytes, Stdio.stderr() is a Sink, after   import { Stdio } from "effect/Stdio"`},
+	"process.stdin":          {"Terminal", "Terminal.readLine()", "Stdio.stdin streams the bytes."},
+	"process.hrtime":         {"Clock", "Clock.monotonicTimeNanos()", "Clock.monotonicTimeNanos() is a bigint of nanoseconds, as process.hrtime.bigint() is."},
+	"process.nextTick":       {"Yield", "", "yieldNow lets other fibers run; it does not queue a microtask."},
+	"process.exit":           {"Exit", "", processExit},
+	"process.exitCode":       {"Exit", "", processExit},
+	"process.uptime":         {note: "Clock reads the time, not the process's age: keep a Clock.monotonicTimeNanos() reading from the start."},
+	"process.kill":           {note: "A child that ChildProcessSpawner.spawn started stops with its handle's kill()."},
+	"process.on":             {note: processEvents},
+	"process.once":           {note: processEvents},
+	"process.off":            {note: processEvents},
+	"process.removeListener": {note: processEvents},
+	"process.*":              {},
+
+	"console.log":   {"Console", "Console.log(message)", ""},
+	"console.error": {"Console", "Console.error(message)", ""},
+	"console.warn":  {"Console", "Console.warn(message)", ""},
+	"console.info":  {"Console", "Console.info(message)", ""},
+	"console.debug": {"Console", "Console.debug(message)", ""},
+	"console.trace": {"Console", "Console.trace(message)", ""},
+	"console.table": {"Console", "Console.table(rows)", ""},
+}
+
+const (
+	cryptoGap     = "Crypto has random values and digests; it has no keys, HMAC, signatures, or ciphers."
+	processExit   = "Let main return or fail: NodeRuntime.runMain, which runs it, exits with 0 when it succeeds and 1 when it fails."
+	processEvents = "NodeRuntime.runMain handles SIGINT and SIGTERM; Effect has no service for other process events."
+)
+
+// fileSystemAPIs maps the functions of fs, fs/promises, and fs.promises,
+// without the Sync suffix, to the FileSystem calls that replace them.
+var fileSystemAPIs = map[string]platformAPI{
+	"readFile":          {"FileSystem", "FileSystem.readFileString(path)", ""},
+	"writeFile":         {"FileSystem", "FileSystem.writeFileString(path, text)", ""},
+	"appendFile":        {"FileSystem", `FileSystem.writeFileString(path, text, { flag: "a" })`, ""},
+	"mkdir":             {"FileSystem", "FileSystem.makeDirectory(path, { recursive: true })", ""},
+	"mkdtemp":           {"FileSystem", "FileSystem.makeTempDirectory()", ""},
+	"rm":                {"FileSystem", "FileSystem.remove(path, { recursive: true })", ""},
+	"rmdir":             {"FileSystem", "FileSystem.remove(path)", ""},
+	"unlink":            {"FileSystem", "FileSystem.remove(path)", ""},
+	"stat":              {"FileSystem", "FileSystem.stat(path)", ""},
+	"lstat":             {note: "FileSystem.stat follows symbolic links, so it does not replace lstat."},
+	"exists":            {"FileSystem", "FileSystem.exists(path)", ""},
+	"access":            {"FileSystem", "FileSystem.access(path)", "FileSystem.access checks only that a path is readable or writable."},
+	"readdir":           {"FileSystem", "FileSystem.readDirectory(path)", "FileSystem.readDirectory returns names; FileSystem.stat gives each one's type."},
+	"opendir":           {"FileSystem", "FileSystem.readDirectory(path)", ""},
+	"readlink":          {"FileSystem", "FileSystem.readLink(path)", ""},
+	"realpath":          {"FileSystem", "FileSystem.realPath(path)", ""},
+	"rename":            {"FileSystem", "FileSystem.rename(from, to)", ""},
+	"symlink":           {"FileSystem", "FileSystem.symlink(target, path)", ""},
+	"link":              {"FileSystem", "FileSystem.link(from, to)", ""},
+	"chmod":             {"FileSystem", "FileSystem.chmod(path, mode)", ""},
+	"chown":             {"FileSystem", "FileSystem.chown(path, uid, gid)", ""},
+	"copyFile":          {"FileSystem", "FileSystem.copyFile(from, to)", ""},
+	"cp":                {"FileSystem", "FileSystem.copy(from, to)", ""},
+	"truncate":          {"FileSystem", "FileSystem.truncate(path)", ""},
+	"utimes":            {"FileSystem", "FileSystem.utimes(path, atime, mtime)", ""},
+	"open":              {"FileSystem", `FileSystem.open(path, { flag: "r" })`, ""},
+	"watch":             {"FileSystem", "FileSystem.watch(path)", ""},
+	"glob":              {"FileSystem", "FileSystem.glob(pattern)", ""},
+	"createReadStream":  {"FileSystem", "FileSystem.stream(path)", ""},
+	"createWriteStream": {"FileSystem", "FileSystem.sink(path)", ""},
+}
+
+// pathAPIs are the Path members that replace path's functions of the same
+// name, with their arguments.
+var pathAPIs = []string{
+	"basename(path)", "dirname(path)", "extname(path)", "format(parts)", "isAbsolute(path)", "join(directory, name)",
+	"normalize(path)", "parse(path)", "relative(from, to)", "resolve(path)", "toNamespacedPath(path)",
+}
+
+// timerAPIs are the timers, by their global names, that the timers modules
+// also export.
+var timerAPIs = []string{"setTimeout", "setInterval", "setImmediate", "clearTimeout", "clearInterval", "clearImmediate"}
+
+func init() {
+	for name, api := range fileSystemAPIs {
+		platformAPIs["fs/promises."+name] = api
+		platformAPIs["fs.promises."+name] = api
+		platformAPIs["fs."+name] = api
+		platformAPIs["fs."+name+"Sync"] = api
+	}
+	for _, call := range pathAPIs {
+		name := call[:strings.IndexByte(call, '(')]
+		for module, s := range map[string]string{"path": "Path", "path/posix": "PathPosix", "path/win32": "PathWin32", "path.posix": "PathPosix", "path.win32": "PathWin32"} {
+			platformAPIs[module+"."+name] = platformAPI{s, "Path." + call, ""}
+		}
+	}
+	for _, name := range timerAPIs {
+		if _, ok := platformAPIs["timers."+name]; !ok {
+			platformAPIs["timers."+name] = platformAPI{service: platformGlobals[name]}
+		}
+		if _, ok := platformAPIs["timers/promises."+name]; !ok {
+			platformAPIs["timers/promises."+name] = platformAPI{service: platformGlobals[name]}
+		}
+	}
+	fileChecks = append(fileChecks, checkPlatform)
 }
 
 // clockReads lists the clock and randomness reads (EK4403), by the
@@ -132,10 +350,6 @@ var clockReads = map[string]string{
 	"Now.timeZoneId":              "DateTime.CurrentTimeZone()",
 }
 
-func init() {
-	fileChecks = append(fileChecks, checkPlatform)
-}
-
 // platformModule is EK4402's text for a dynamic import of a platform module.
 var platformModule = EK4402.With("{0} is a platform API, which VibeLang code does not call directly.")
 
@@ -150,7 +364,8 @@ func checkPlatform(c *checker.Checker, file *ast.SourceFile) {
 		case ast.IsImportCall(node):
 			if arguments := node.Arguments(); len(arguments) > 0 && ast.IsStringLiteral(arguments[0]) {
 				if r, ok := platformModuleOf(arguments[0].Text()); ok {
-					noteReplacement(report(c, arguments[0], platformModule, arguments[0].Text()), replacements[r])
+					d := report(c, arguments[0], platformModule, arguments[0].Text())
+					notePlatformAPI(d, platformAPI{service: r}, "sync(() => "+nodeText(file, node)+")")
 				}
 			}
 		case hatchOf(node) != "":
@@ -184,8 +399,9 @@ func platformModuleOf(module string) (string, bool) {
 
 // platformRef is what a reference to a platform API refers to.
 type platformRef struct {
-	replacement string // the name of what replaces it in replacements, or ""
+	replacement string // the name of what replaces it in platformServices, or ""
 	module      string // the platform module it is imported from, or "" for a global
+	name        string // the name platformAPIs knows it by: its module and imported name, or the global's name
 	namespace   bool   // a namespace import, whose members are values until code runs them
 	unresolved  bool   // a platform global's name that does not resolve
 }
@@ -204,7 +420,7 @@ func platformReference(c *checker.Checker, id *ast.Node) (platformRef, bool) {
 		for _, decl := range symbol.Declarations() {
 			if module, namespace := importedFrom(decl); module != "" {
 				if r, ok := platformModuleOf(module); ok {
-					return platformRef{replacement: r, module: module, namespace: namespace}, true
+					return platformRef{replacement: r, module: module, name: importedName(module, decl), namespace: namespace}, true
 				}
 			}
 		}
@@ -217,7 +433,24 @@ func platformReference(c *checker.Checker, id *ast.Node) (platformRef, bool) {
 	if symbol != nil && !isGlobalOf(symbol, func(file *ast.SourceFile) bool { return isLibFile(c, file) || isPlatformPackage(packageOf(c, file)) }) {
 		return platformRef{}, false // a local, or a global the program declares
 	}
-	return platformRef{replacement: r, unresolved: symbol == nil}, true
+	return platformRef{replacement: r, name: name, unresolved: symbol == nil}, true
+}
+
+// importedName returns the name platformAPIs knows decl, an import binding's
+// declaration from module, by: the module without its node: prefix, then the
+// name it imports, if it imports one by name.
+func importedName(module string, decl *ast.Node) string {
+	name := strings.TrimPrefix(module, "node:")
+	if decl.Kind == ast.KindImportSpecifier {
+		imported := decl.PropertyName()
+		if imported == nil {
+			imported = decl.Name()
+		}
+		if imported != nil && imported.Text() != "default" {
+			name += "." + imported.Text()
+		}
+	}
+	return name
 }
 
 // globalPlatformName covers D102's bare globals and S6-1's globalThis
@@ -304,21 +537,81 @@ func checkPlatformUse(c *checker.Checker, file *ast.SourceFile, id *ast.Node) {
 	if !runs {
 		return
 	}
-	replacement := ref.replacement
-	if globalPlatformName(c, id) == "process" && ref.module == "" && ast.IsPropertyAccessExpression(use) {
-		if r, ok := processMembers[use.Name().Text()]; ok {
-			replacement = r
-		}
-	}
 	name := nodeText(file, use)
 	if ref.module != "" {
 		name += " from " + ref.module
 	}
+	members, top := accessChain(id)
 	d := report(c, use, EK4402, name)
-	noteReplacement(d, replacements[replacement])
+	notePlatformAPI(d, platformAPIOf(ref, members), hatchExample(file, top))
 	if ref.unresolved {
 		cover(c, id) // EK4402 explains TypeScript's "cannot find name"
 	}
+}
+
+// accessChain returns the properties that code reads from node, a reference
+// to a platform API, one after another, as in process.env.PORT, and the
+// outermost of those reads, or node when it reads none.
+func accessChain(node *ast.Node) (members []string, top *ast.Node) {
+	top = node
+	for {
+		parent := top.Parent
+		switch {
+		case parent != nil && ast.IsPropertyAccessExpression(parent) && parent.Expression() == top:
+			members = append(members, parent.Name().Text())
+		case parent != nil && ast.IsElementAccessExpression(parent) && parent.Expression() == top &&
+			ast.IsStringLiteral(parent.AsElementAccessExpression().ArgumentExpression):
+			members = append(members, parent.AsElementAccessExpression().ArgumentExpression.Text())
+		default:
+			return members, top
+		}
+		top = parent
+	}
+}
+
+// platformAPIOf returns what replaces the platform API that ref names, after
+// the code reads members of it: the longest name in platformAPIs that the
+// two make, then the "*" entry for the module's or global's other members,
+// then the module's or global's service.
+func platformAPIOf(ref platformRef, members []string) platformAPI {
+	root := ref.name // the global, or the module, which is a prefix of the name
+	if ref.module != "" {
+		root = strings.TrimPrefix(ref.module, "node:")
+	}
+	name := ref.name
+	if len(members) > 0 {
+		name += "." + strings.Join(members, ".")
+	}
+	for full := name; ; name = name[:strings.LastIndexByte(name, '.')] {
+		if api, ok := platformAPIs[name]; ok {
+			return api
+		}
+		if len(name) <= len(root) {
+			if full != root {
+				if api, ok := platformAPIs[root+".*"]; ok {
+					return api
+				}
+			}
+			return platformAPI{service: ref.replacement}
+		}
+	}
+}
+
+// hatchExample shows top, the outermost expression in which code reads a
+// platform API, run in a sync hatch, with the call or new it makes.
+func hatchExample(file *ast.SourceFile, top *ast.Node) string {
+	text := nodeText(file, top)
+	if parent := top.Parent; parent != nil && (ast.IsCallExpression(parent) || ast.IsNewExpression(parent)) && parent.Expression() == top {
+		if ast.IsNewExpression(parent) {
+			text = "new " + text
+		}
+		if len(parent.Arguments()) == 0 {
+			text += "()"
+		} else {
+			text += "(...)"
+		}
+	}
+	return "sync(() => " + text + ")"
 }
 
 // platformRun reports whether the code runs value, an expression that
@@ -370,22 +663,37 @@ func isValueUse(id *ast.Node) bool {
 	return true
 }
 
-// noteReplacement adds the lines that say what replaces a platform API.
-func noteReplacement(d *ast.Diagnostic, r *replacement) {
-	if r == nil {
-		note(d, "Effect has no module for it: keep the code in a TypeScript module, and call that module through try or a trusted contract.")
+// notePlatformAPI adds the lines that say what replaces api: the Effect API,
+// the import that brings it in, and the layer that provides it. For an API
+// Effect lacks, they say so and show hatch, the code that runs it in a hatch.
+func notePlatformAPI(d *ast.Diagnostic, api platformAPI, hatch string) {
+	s := platformServices[api.service]
+	if s == nil {
+		note(d, "Effect, VibeLang's standard library, has no service for it yet.")
+		if api.note != "" {
+			note(d, api.note)
+		}
+		note(d, "Run it in a hatch:   {0}, or with try when it can throw.", hatch)
 		return
 	}
-	switch {
-	case r.from == "":
-		note(d, "Use {0}:   {1}", r.use, r.example)
-	case r.example != "":
-		note(d, "Use {0} from \"{1}\":   {2}", r.use, r.from, r.example)
-	default:
-		note(d, "Use {0} from \"{1}\".", r.use, r.from)
+	if example := cmp.Or(api.example, s.example); example != "" {
+		note(d, "Use {0}:   {1}", s.use, example)
+	} else {
+		note(d, "Use {0}.", s.use)
 	}
-	if r.layer {
-		note(d, "Provide it with NodeServices.layer from @effect/platform-node, or the Bun or browser equivalent.")
+	noteService(d, s)
+	if api.note != "" {
+		note(d, api.note)
+	}
+}
+
+// noteService adds the lines that say how to bring s into a .vibe file.
+func noteService(d *ast.Diagnostic, s *platformService) {
+	if s.imports != "" {
+		note(d, "Import it with   {0}", s.imports)
+	}
+	if s.provider != "" {
+		note(d, "Provide it in main with {0}.", s.provider)
 	}
 }
 

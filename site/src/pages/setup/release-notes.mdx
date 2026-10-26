@@ -33,6 +33,12 @@ compiles the same.
 - EK4833 still reports only `Effect.Effect<A, E, R>`; its quick fix and
   `vibelang --fix` write the terse form. Hovers, messages and quick fixes
   show Effect types in the terse form again.
+- EK4402 names the Effect service that replaces a platform API, the import
+  that brings it in, and the layer that provides it: `FileSystem` with
+  `NodeServices.layer`, `HttpClient` with `FetchHttpClient.layer`, `Path`
+  for `process.cwd()`, `FileSystem.makeTempDirectory()` for `os.tmpdir()`.
+  For an API that Effect lacks, such as `os.hostname()`, it shows the call in
+  a `sync` hatch instead of suggesting a wrapper module.
 
 ## 0.0.9
 

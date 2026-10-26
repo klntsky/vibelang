@@ -1,0 +1,15 @@
+Use the Path service:   Path.join(directory, name)
+Import it with   import { Path } from "effect/Path"
+Provide it in main with NodeServices.layer from "@effect/platform-node", or BunServices.layer from "@effect/platform-bun".
+Use the ChildProcessSpawner service:   ChildProcessSpawner.string(ChildProcess.make(command, args))
+Import it with   import { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"   and   import * as ChildProcess from "effect/process/ChildProcess"
+Use HttpClient:   HttpClient.get(url)
+Import it with   import { HttpClient } from "effect/http"
+Provide it in main with FetchHttpClient.layer from "effect/http", or NodeHttpClient.layerUndici from "@effect/platform-node".
+Use the Crypto service:   Crypto.randomBytes(size)
+Import it with   import { Crypto } from "effect/Crypto"
+Use the Path service:   Path.resolve()
+Use the FileSystem service:   FileSystem.makeTempDirectory()
+FileSystem.makeTempDirectory creates a directory in it; nothing returns its path alone.
+Effect, VibeLang's standard library, has no service for it yet.
+Run it in a hatch:   sync(() => hostname()), or with try when it can throw.

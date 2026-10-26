@@ -13,13 +13,14 @@ function loadSettings(path: string) {
 ```
 
 ```text
-error EK4402: node:fs/promises is a platform API, which VibeLang code does not call directly.
+error EK4402: readFile from node:fs/promises is a platform API, which VibeLang code does not call directly.
   settings.vibe:4:21   return JSON.parse(readFile(path, "utf8"))
-  Use FileSystem from "effect/FileSystem":   FileSystem.readFileString(path)
-  Provide it with NodeServices.layer from @effect/platform-node, or the Bun or browser equivalent.
+  Use the FileSystem service:   FileSystem.readFileString(path)
+  Import it with   import { FileSystem } from "effect/FileSystem"
+  Provide it in main with NodeServices.layer from "@effect/platform-node", or BunServices.layer from "@effect/platform-bun".
 ```
 
-VibeLang's standard library is Effect's. Node.js and browser APIs are not callable from `.vibe` files; each error names the Effect module that replaces the API. VibeLang adds no Node.js clones: the replacement is the module Effect already ships, implemented by the platform package your program runs with.
+VibeLang's standard library is Effect's. Node.js and browser APIs are not callable from `.vibe` files; each error names the Effect service that replaces the API, the import that brings it in, and the layer that provides it. VibeLang adds no Node.js clones: the replacement is the module Effect already ships, implemented by the platform package your program runs with. Where Effect has no service for an API yet, such as `os.hostname()`, the error says so and shows the call in a `sync` hatch; it never suggests a wrapper module.
 
 Imports, re-exports, and passing platform values to adapters are allowed (D108): `NodeHttpServer.layer(createServer, { port })` passes a host function without calling it. EK4402 reports execution: calls, construction, tagged templates, and reads of platform properties, including destructuring and spreading. Namespace members used as values, such as `os.EOL`, are allowed. The current check does not follow platform functions through local aliases, parameters, or objects returned by platform calls.
 
@@ -43,7 +44,7 @@ Three reasons:
 | `console.log` | `Effect.log`, `Console` | `effect` |
 | `Date.now()`, `new Date()` | `Clock`, `DateTime` | `effect` |
 | `Math.random()` | `Random` | `effect` |
-| `crypto.randomUUID()`, `crypto.subtle.digest` | `Crypto` | `effect` |
+| `crypto.randomUUID()`, `crypto.subtle.digest` | `Crypto` | `effect/Crypto` |
 | `net`, `dgram`, `WebSocket` | `Socket`, `SocketServer`, `DatagramSocket` | `effect/socket` |
 | `dns` | `Dns` | `effect/net` |
 | `worker_threads`, Web Workers | `Worker`, `WorkerRunner` | `effect/workers` |

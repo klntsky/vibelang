@@ -1,0 +1,19 @@
+// expect: EK4402
+/// <reference path="./node-types/index.d.ts" />
+// D108: each platform API names the Effect service that replaces it, the
+// import that brings the service in, and the layer that provides it. An API
+// that Effect lacks runs in a hatch, never in a wrapper module.
+import * as path from "node:path"
+import { execFileSync } from "node:child_process"
+import { randomBytes } from "node:crypto"
+import { hostname, tmpdir } from "node:os"
+import { mkdtemp } from "node:fs/promises"
+
+export const output = (name: string) => path.join("dist", name)
+export const status = () => execFileSync("git", ["status"])
+export const page = (url: string) => fetch(url)
+export const salt = () => randomBytes(16)
+export const here = () => process.cwd()
+export const scratch = () => tmpdir()
+export const workspace = () => mkdtemp("build-")
+export const machine = () => hostname()
