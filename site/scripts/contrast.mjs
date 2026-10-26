@@ -51,7 +51,7 @@ export async function checkSiteContrast() {
         const response = await context.request.get(origin + url.pathname + url.search)
         await route.fulfill({ response })
       })
-      for (const path of ['/', '/001-onboarding']) {
+      for (const path of ['/', '/001-onboarding', '/vibelang-features/115-cheat-sheet']) {
         const page = await context.newPage()
         const errors = []
         page.on('pageerror', error => errors.push(error.message))
@@ -67,25 +67,76 @@ export async function checkSiteContrast() {
           const violations = []
           for (const node of result.violations.flatMap(rule => rule.nodes)) {
             const data = node.any.find(check => check.id === 'color-contrast')?.data
-            const component = node.target.length === 1 && typeof node.target[0] === 'string'
-              ? await page.locator(node.target[0]).evaluate(el =>
-                el.matches('[data-v-banner-content]') ? 'Vocs banner' :
-                el.matches('[data-v-code-container] code span[style*="--shiki-light:#E36209"]') ? 'Vocs Shiki orange' : null)
-              : null
-            // Narrow upstream exceptions, recorded without excluding any DOM.
-            // A changed color/background or worse ratio must fail for review.
-            const upstream = theme === 'light' && (
-              component === 'Vocs banner' && data?.fgColor === '#0095ff' && data?.bgColor === '#e5f7ff' && data?.contrastRatio >= 2.8 ||
-              component === 'Vocs Shiki orange' && data?.fgColor === '#e36209' && data?.bgColor === '#ffffff' && data?.contrastRatio >= 3.48
-            )
-            const violation = { target: node.target, html: node.html, summary: node.failureSummary, data, upstream: upstream ? component : null }
+            const violation = { target: node.target, html: node.html, summary: node.failureSummary, data }
             violations.push(violation)
-            check(upstream, theme + ' ' + path + ' ' + state + ' axe: ' + JSON.stringify(violation))
+            check(false, theme + ' ' + path + ' ' + state + ' axe: ' + JSON.stringify(violation))
           }
-          observations.push({ theme, path, state, axe: violations, incomplete: result.incomplete })
-          console.log(theme, path, state, 'axe violations=' + violations.length, 'upstream=' + violations.filter(v => v.upstream).length)
+          // Measure all code text, including tokens in inactive tabs or clipped
+          // lines that axe may leave incomplete. Group colors to keep diagnostics small.
+          const colors = state === 'default' ? await page.evaluate(() => {
+            const canvas = document.createElement('canvas')
+            canvas.width = canvas.height = 1
+            const painter = canvas.getContext('2d', { willReadFrequently: true })
+            const rgb = value => {
+              painter.clearRect(0, 0, 1, 1)
+              painter.fillStyle = value
+              painter.fillRect(0, 0, 1, 1)
+              const [r, g, b, a] = painter.getImageData(0, 0, 1, 1).data
+              return [r, g, b, a / 255]
+            }
+            const over = (front, back) => {
+              const alpha = front[3] + back[3] * (1 - front[3])
+              return [...front.slice(0, 3).map((v, i) =>
+                alpha ? (v * front[3] + back[i] * back[3] * (1 - front[3])) / alpha : 0), alpha]
+            }
+            const rendered = (node, foreground = [0, 0, 0, 0]) => {
+              for (; node; node = node.parentElement) {
+                const css = getComputedStyle(node)
+                foreground = over(foreground, rgb(css.backgroundColor))
+                foreground[3] *= Number(css.opacity)
+              }
+              return over(foreground, [255, 255, 255, 1])
+            }
+            const luminance = color => color.slice(0, 3).map(v => {
+              v /= 255
+              return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+            }).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0)
+            const groups = new Map()
+            const banner = document.querySelector('[data-v-banner-content]')
+            if (!banner) throw new Error('Expected alpha banner')
+            const tokens = [...document.querySelectorAll('[data-v-code-container] code, [data-v-code-container] code *')]
+              .filter(el => [...el.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim()))
+            if (!tokens.length) throw new Error('Expected highlighted code text')
+            for (const el of [banner, ...tokens]) {
+              const kind = el === banner ? 'banner' : 'code'
+              const color = getComputedStyle(el).color
+              const foreground = rendered(el, rgb(color)), background = rendered(el)
+              const x = luminance(foreground), y = luminance(background)
+              const contrast = (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
+              const key = JSON.stringify([kind, foreground, background])
+              if (groups.has(key)) groups.get(key).count++
+              else groups.set(key, { kind, color, foreground, background, contrast, count: 1, sample: el.textContent.trim().slice(0, 100) })
+            }
+            return [...groups.values()]
+          }) : []
+          for (const sample of colors) check(sample.contrast >= 4.5,
+            theme + ' ' + path + ' ' + sample.kind + ' contrast ' + sample.contrast.toFixed(2) + ' < 4.5: ' + JSON.stringify(sample))
+          observations.push({ theme, path, state, axe: violations, incomplete: result.incomplete, colors })
+          console.log(theme, path, state, 'axe violations=' + violations.length,
+            ...(colors.length ? ['banner=' + colors.find(c => c.kind === 'banner').contrast.toFixed(2),
+              'code-min=' + Math.min(...colors.filter(c => c.kind === 'code').map(c => c.contrast)).toFixed(2),
+              'code-colors=' + colors.filter(c => c.kind === 'code').length] : []))
         }
         await audit('default')
+        if (path === '/vibelang-features/115-cheat-sheet') {
+          const firstCode = page.locator('[data-v-code-container]').first()
+          await firstCode.scrollIntoViewIfNeeded()
+          await page.getByRole('button', { name: 'Return to top', exact: true }).waitFor({ state: 'visible' })
+          if (artifacts) await firstCode.screenshot({
+            path: resolve(artifacts, 'cheat-sheet-first-code-1366-' + theme + '.png'),
+          })
+          await audit('scrolled')
+        }
         if (path === '/') {
           const button = page.locator('.vibelang-copy-prompt')
           for (const status of ['idle', 'copied', 'error']) {

@@ -49,9 +49,9 @@ npm run build
 npm run test:contrast
 ```
 
-The check serves `dist/public` on a temporary loopback port and routes Vocs' public base URL to that build. It loads the home page and Welcome in light and dark themes, runs axe's color-contrast rule, and measures the copy button's text, icon, keyboard focus, clipboard success/error feedback, and interaction states. It also measures the site's hero text and gradient. `docs/tools` tests build the site and run this check during release validation; Chromium is required, and a missing browser fails with Playwright's install instructions.
+The check serves `dist/public` on a temporary loopback port and routes Vocs' public base URL to that build. It loads the home page, Welcome and the cheat sheet in light and dark themes, requires zero axe color-contrast violations with no exceptions, and measures the copy button's text, icon, keyboard focus, clipboard success/error feedback, and interaction states. It also measures the site's hero text and gradient, the alpha banner, and every code text color against its rendered background, including inactive tabs. Banner and code text require at least 4.5:1 in both themes. The cheat sheet is also audited after scrolling to its first code block, when the outline's Return to top control appears. `docs/tools` tests build the site and run this check during release validation; Chromium is required, and a missing browser fails with Playwright's install instructions.
 
-Set `CONTRAST_ARTIFACTS` to save 1366px home screenshots and `contrast.json` with all measured colors, failures and axe findings. `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` selects an existing Chromium. Two narrowly matched upstream Vocs 2.8.5 failures remain visible in the output: the light banner and Shiki's orange tokens. Their selectors, exact color pairs and minimum current ratios are checked in `scripts/contrast.mjs`; any other violation fails.
+Set `CONTRAST_ARTIFACTS` to save 1366px home and first-code-block cheat sheet screenshots in each theme, plus `contrast.json` with all measured colors, failures and axe findings. `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` selects an existing Chromium.
 
 ### Temporary Vocs search accessibility patch
 

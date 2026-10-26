@@ -33,6 +33,27 @@
   --vibe-heading-gradient: linear-gradient(120deg, #41d1ff 8%, #747bff 48%, #bd34fe 88%);
 }
 
+/* Keep the alpha notice recognisably informational with AA text contrast. */
+[data-v-banner][data-v-context="info"] {
+  background-color: light-dark(#e5f7ff, #102c40);
+  color: light-dark(#005a9c, #8dccff);
+}
+
+/* The outline's scrolled "Return to top" label uses translucent secondary text. */
+[data-v-outline-mobile] button {
+  color: var(--vocs-text-color-primary);
+}
+
+[data-v-outline-mobile] button:hover {
+  color: var(--vocs-text-color-heading);
+}
+
+/* Shiki emits an inline light-dark() color, so this override needs !important.
+   Preserve the dark token color; only the light orange fails on white. */
+[data-v-code-container] code span[style*="--shiki-light:#E36209"] {
+  color: light-dark(#a34408, var(--shiki-dark)) !important;
+}
+
 :root:has(.vibe-home) {
   --vocs-spacing-content: 1120px;
 }

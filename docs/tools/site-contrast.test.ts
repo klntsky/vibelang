@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test"
 import { resolve } from "node:path"
 
-test("built site passes browser contrast checks", async () => {
+test("built home, onboarding and cheat sheet have zero contrast violations in both themes", async () => {
   const site = resolve(import.meta.dir, "../../site")
   // Exercise the production build in the release validator's docs/tools step.
   // Install Chromium once with: cd site && bunx playwright install chromium
