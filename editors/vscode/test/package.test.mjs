@@ -6,15 +6,18 @@ import { join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
 import { build } from "esbuild"
+import { assertLanguageIcons } from "./icon-assertions.mjs"
 
 const root = fileURLToPath(new URL("../", import.meta.url))
-const packed = (path) => execFileSync("unzip", ["-p", join(root, "vibelang.vsix"), "extension/" + path])
+// Point at node_modules/vibelang/editor/vibelang.vsix to check the npm distribution too.
+const archive = process.env.VIBELANG_VSIX ?? join(root, "vibelang.vsix")
+const packed = (path) => execFileSync("unzip", ["-p", archive, "extension/" + path.replace(/^\.\//, "")])
 const notices = packed("ThirdPartyNotices.txt").toString()
 
 test("the VSIX ships the complete VibeLang MIT license", () => {
   // vsce normalizes a source LICENSE without an extension to LICENSE.txt.
   const license = packed("LICENSE.txt").toString()
-  const manifest = execFileSync("unzip", ["-p", join(root, "vibelang.vsix"), "extension.vsixmanifest"], { encoding: "utf8" })
+  const manifest = execFileSync("unzip", ["-p", archive, "extension.vsixmanifest"], { encoding: "utf8" })
   assert.match(manifest, /<License>extension\/LICENSE\.txt<\/License>/)
   assert.equal(license.split("\n")[0], "MIT License")
   const source = readFileSync(join(root, "../../LICENSE"), "utf8")
@@ -65,4 +68,15 @@ test("the VSIX preserves license and notice files for every dependency in its ac
     assert.ok(names.includes(name), name + ": review reproduction must remain covered")
   }
   assert.ok(!notices.includes("esbuild@"), "build tools must not be listed as bundled dependencies")
+})
+
+test("the VSIX ships the declared VibeLang icons without stale branding", () => {
+  const manifest = JSON.parse(packed("package.json").toString())
+  assertLanguageIcons(manifest, (file) => packed(file).toString())
+  const source = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
+  const icons = (pkg) => pkg.contributes.languages.find((language) => language.id === "vibe").icon
+  assert.deepEqual(icons(manifest), icons(source), "packaged language icon declarations match the source")
+  for (const file of new Set(Object.values(icons(manifest)))) {
+    assert.deepEqual(packed(file), readFileSync(join(root, file)), file + ": the packaged icon matches the source")
+  }
 })
