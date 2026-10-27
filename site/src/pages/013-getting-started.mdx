@@ -10,13 +10,22 @@ These guides teach VibeLang one topic at a time and serve as a reference while y
 ## Create and run your first project
 
 ```sh
+npm create vibelang@latest my-app
+cd my-app
+npm run start
+npm run test
+```
+
+With Bun (optional):
+
+```sh
 bun create vibelang@latest my-app
 cd my-app
 bun run start
 bun run test
 ```
 
-With npm, run `npm create vibelang@latest my-app`. The starter prints:
+The starter prints:
 
 ```text
 Hello, VibeLang!
@@ -25,7 +34,7 @@ Recovered from EmptyName
 
 `src/greeting.vibe` defines a greeting function and an `EmptyName` tagged error. `src/main.vibe` declares the `Greeter` service, supplies its `Layer.succeed` layer, recovers a typed failure with `try`/`catch`, and exports `main`, which `node dist/main.js` runs with `NodeRuntime.runMain`. `src/greeting.test.vibe` tests success and recovery with `it.effect`. Vitest compiles `src/**/*.test.vibe` through `vibelang-vite`, so tests need no prior build.
 
-`bun run dev` compiles on changes and restarts Node when output changes; Ctrl+C stops both watchers. For diagnostics and hovers in VS Code or Cursor, install the extension that ships in `vibelang`, then open the project:
+`npm run dev` (or `bun run dev`) compiles on changes and restarts Node when output changes; Ctrl+C stops both watchers. For diagnostics and hovers in VS Code or Cursor, install the extension that ships in `vibelang`, then open the project:
 
 ```sh
 code --install-extension node_modules/vibelang/editor/vibelang.vsix

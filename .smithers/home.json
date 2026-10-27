@@ -106,6 +106,12 @@
         },
         {
           "type": "code",
+          "title": "Bun alternative",
+          "language": "sh",
+          "code": "bun create vibelang@latest my-app\ncd my-app\nbun run start"
+        },
+        {
+          "type": "code",
           "file": "users.vibe",
           "language": "vibe",
           "code": "error UserNotFound { id: string }\nservice Users {\n  find(id: string): string!UserNotFound\n}\n\nconst UsersLive = Layer.succeed(Users, {\n  find(id: string) {\n    if (id !== \"42\") throw new UserNotFound({ id })\n    return \"Ada\"\n  }\n})\n\nexport function main() {\n  provide UsersLive {\n    const [name, fallback] = await.all [\n      Users.find(\"42\"),\n      Users.find(\"7\") catch \"Guest\"\n    ]\n    Console.log(name, fallback)\n  }\n}"

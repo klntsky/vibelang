@@ -1,6 +1,14 @@
 # Installation
 
 ```sh
+npm create vibelang@latest my-app
+cd my-app
+npm run start
+```
+
+With Bun (optional):
+
+```sh
 bun create vibelang@latest my-app
 cd my-app
 bun run start
@@ -34,15 +42,15 @@ Keep optional dependencies enabled: if an install skips them, as `npm install --
 ## Create a project
 
 ```sh
-bun create vibelang@latest my-app
+npm create vibelang@latest my-app
 cd my-app
-bun run start
-bun run test
+npm run start
+npm run test
 ```
 
-With npm, run `npm create vibelang@latest my-app`. Either command copies the starter into `my-app`, pins the VibeLang packages to the version that created it, and installs dependencies. `--no-install` skips installation; then run `bun install` in the project before building.
+With Bun, use `bun create vibelang@latest my-app`, `bun run start` and `bun run test`. Either create command copies the starter into `my-app`, pins the VibeLang packages to the version that created it, and installs dependencies. `--no-install` skips installation; then run `npm install` (or `bun install`) in the project before building.
 
-`bun run start` builds the project and prints:
+`npm run start` builds the project and prints:
 
 ```out
 Hello, VibeLang!

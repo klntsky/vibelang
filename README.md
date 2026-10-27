@@ -108,20 +108,29 @@ The compiler checks `.vibe` and `.ts` files together and emits JavaScript. Set `
 ## Start here
 
 ```sh
+npm create vibelang@latest my-app
+cd my-app
+npm run start
+npm run test
+```
+
+With Bun (optional):
+
+```sh
 bun create vibelang@latest my-app
 cd my-app
 bun run start
 bun run test
 ```
 
-With npm, run `npm create vibelang@latest my-app`. You need Node 26 or later. If you use Bun, use Bun 1.4 or later. Bun is optional. `bun run start` prints:
+You need Node 26 or later. If you use Bun, use Bun 1.4 or later. Bun is optional. `npm run start` prints:
 
 ```text
 Hello, VibeLang!
 Recovered from EmptyName
 ```
 
-Replace `src/main.vibe` with this program and run `bun run start` again:
+Replace `src/main.vibe` with this program and run `npm run start` again:
 
 ```vibe
 error EmptyName {}
@@ -169,4 +178,4 @@ Report a bug with a minimal reproduction, or propose an idea, in [Issues](https:
 
 [MIT](LICENSE), except the TypeScript fork in [`typescript/`](typescript/) and the compiler packages built from it, `vibelang` and `vibelang-<platform>`, which use the [Apache License 2.0](typescript/LICENSE.txt) and keep its [notices](typescript/NOTICE.txt).
 
-<sub>1,976 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
+<sub>1,993 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>

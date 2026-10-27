@@ -4,26 +4,26 @@ Create a project from the VibeLang starter. It builds with the `vibelang` CLI an
 
 ## 1. Create the project
 
-Choose a new directory name or an empty directory. With Bun, run:
-
-```sh
-bun create vibelang@latest my-app
-```
-
-With npm, run:
+Choose a new directory name or an empty directory. With npm, run:
 
 ```sh
 npm create vibelang@latest my-app
+```
+
+With Bun (optional), run:
+
+```sh
+bun create vibelang@latest my-app
 ```
 
 The starter prints:
 
 ```out
 Created my-app with VibeLang 0.0.10.
-Installing dependencies with bun...
+Installing dependencies with npm...
 ```
 
-With npm, the second line names `npm`. The command copies the starter into `my-app`, pins `vibelang`, `vibelang-runtime`, and `vibelang-vite` to its own version, and installs dependencies with the package manager that ran it. It refuses a non-empty directory and never runs `git init`. `--no-install` skips installation; npm needs `--` before starter options:
+With Bun, the second line names `bun`. The command copies the starter into `my-app`, pins `vibelang`, `vibelang-runtime`, and `vibelang-vite` to its own version, and installs dependencies with the package manager that ran it. It refuses a non-empty directory and never runs `git init`. `--no-install` skips installation; npm needs `--` before starter options:
 
 ```sh
 bun create vibelang my-app --no-install
