@@ -43,3 +43,16 @@ test("Contribute gives short actions while retaining every process fact", () => 
     assert.ok(copy.toLowerCase().includes(fact.toLowerCase()), "lost process fact: " + fact)
   }
 })
+
+test("benchmark content provides runnable instructions without implying results", () => {
+  const benchmark = blocks().find(block => block.title === "Run benchmarks")
+  assert.ok(benchmark, "label the section as instructions")
+  assert.equal(benchmark.type, "code")
+  assert.equal(benchmark.language, "sh")
+  for (const command of ["sh scripts/setup.sh", "sh scripts/bench/compiler.sh",
+    'VIBELANG="$PWD/packages/compiler/native/vibelang"', "--runs 5 --out .cache/bench",
+    "node scripts/bench/lsp.mjs packages/compiler/native/vibelang .cache/bench/synth/vibelang"]) {
+    assert.ok(benchmark.code.includes(command), "missing benchmark setup or command: " + command)
+  }
+  assert.ok(!blocks().some(block => block.title === "Benchmarks"), "remove the unmeasured results section")
+})

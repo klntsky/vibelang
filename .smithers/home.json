@@ -164,22 +164,10 @@
           ]
         },
         {
-          "type": "cards",
-          "title": "Benchmarks",
-          "cards": [
-            {
-              "label": "scripts/bench/compiler.sh",
-              "title": "Compiler",
-              "text": "Check and emit time and memory against tsgo on the same Effect program; results land with their run.",
-              "url": "https://github.com/smithersai/vibelang/blob/main/scripts/bench/compiler.sh"
-            },
-            {
-              "label": "scripts/bench/lsp.mjs",
-              "title": "Language server",
-              "text": "Hover and diagnostics latency; the method first, numbers with their run.",
-              "url": "https://github.com/smithersai/vibelang/blob/main/scripts/bench/lsp.mjs"
-            }
-          ]
+          "type": "code",
+          "title": "Run benchmarks",
+          "language": "sh",
+          "code": "# From the repository root:\nsh scripts/setup.sh\n(cd experiments && bun install --frozen-lockfile)\n(cd docs/tools && bun install --frozen-lockfile)\nVIBELANG=\"$PWD/packages/compiler/native/vibelang\" sh scripts/bench/compiler.sh --runs 5 --out .cache/bench\nnode scripts/bench/lsp.mjs packages/compiler/native/vibelang .cache/bench/synth/vibelang"
         },
         {
           "type": "cards",
