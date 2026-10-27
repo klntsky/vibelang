@@ -25,9 +25,20 @@ assert.equal(lib.defaultCount(), 1, "constructing the public Effect must stay la
 assert.equal(Effect.runSync(lazy), 3)
 assert.equal(lib.defaultCount(), 2)
 assert.deepEqual(Effect.runSync(m.mapped()), [0, 0])
+// A synchronous Array.map callback keeps JavaScript's native stack limit.
+// Check shallow success and deep overflow, cold and warm, without assuming
+// a V8-dependent depth near the native stack edge (spec Chapter 15).
+function assertCallbackRecursion() {
+  for (const depth of [0, 1, 2, 3, 10, 11, 100]) {
+    assert.equal(Effect.runSync(m.nested(depth)), 1, `callback recursion at depth ${depth}`)
+  }
+  assert.throws(() => Effect.runSync(m.nested(100000)), RangeError,
+    "synchronous callback recursion retains JavaScript's stack limit")
+  assert.equal($eager.depth, 0, "callback overflow must release the budget")
+}
+assertCallbackRecursion()
 for (let i = 0; i < 1000; i++) assert.equal(Effect.runSync(m.nested(100)), 1)
-// Same call boundary and depth as the original edge probe.
-assert.equal(Effect.runSync(m.nested(4375)), 1)
+assertCallbackRecursion()
 for (const depth of [1, 100000]) {
   assert.throws(() => lib.boom$direct(depth), TypeError)
   assert.equal($eager.depth, 0, "defects must release the budget")
