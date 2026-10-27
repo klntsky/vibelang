@@ -4,13 +4,18 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
-## 0.0.10 (unreleased)
+## 0.0.10
 
-This release has no breaking changes. Everything that compiles on 0.0.9
-compiles the same.
+Update `vibelang`, `vibelang-runtime` and the bundler plugin together. This
+release restores the terse contract syntax and fixes resource cleanup,
+recursion and matching. It also adds diagnostics: see the migration details
+under Diagnostics before updating code that compiled on 0.0.9.
 
-- The terse contract syntax is back as an alias of `Effect<A, E, R>`, and
-  the guides, the skill and the starter use it again:
+### Syntax
+
+- The terse contract syntax is back as an alias of `Effect<A, E, R>`.
+  Both spellings work in the same file; guides, the skill and the starter use
+  the terse form again:
 
   | Terse | Means |
   | --- | --- |
@@ -20,30 +25,140 @@ compiles the same.
   | `User!!` | `Effect<User>`: cannot fail and needs nothing |
   | `User!NotFound` on a function with a body | `Effect<User, NotFound, infer R>` |
 
-  Both spellings are valid and can be mixed in one file. `Effect<User>`
-  keeps the meaning it has had since 0.0.8, `Effect<User, never, never>`.
-- Code written for 0.0.6 with the shorthand compiles again without changes.
-  The error EK1014 is retired, and `vibelang --fix` no longer rewrites the
-  shorthand.
-- EK4833 still reports only `Effect.Effect<A, E, R>`; its quick fix and
-  `vibelang --fix` write the terse form. Hovers, messages and quick fixes
-  show Effect types in the terse form again.
-- EK4402 names the Effect service that replaces a platform API, the import
-  that brings it in, and the layer that provides it: `FileSystem` with
-  `NodeServices.layer`, `HttpClient` with `FetchHttpClient.layer`, `Path`
-  for `process.cwd()`, `FileSystem.makeTempDirectory()` for `os.tmpdir()`.
-  For an API that Effect lacks, such as `os.hostname()`, it shows the call in
-  a `sync` hatch instead of suggesting a wrapper module.
-- EK4403 keeps units and test advice exact. `performance.now()` maps to
-  `Number(Clock.monotonicTimeNanos()) / 1e6`, since `monotonicTimeNanos` is a
-  bigint of nanoseconds, and `new Date()` to `DateTime.nowAsDate()`.
-  `crypto.randomUUID()` maps to `Crypto.randomUUIDv4()` with its import and
-  layer; a test controls it with `TestCrypto.layer(seed)`, not a seeded
-  `Random`.
-- EK4403 says to lower it in the top-level `vibelang.diagnostics` of
-  `tsconfig.json`. Its old advice, `compilerOptions.vibelang.diagnostics`, had
-  no effect where a top-level `vibelang` object follows `compilerOptions`, as
-  in the starter: the later object replaces the earlier one.
+- `Effect<User>` keeps its 0.0.8 and 0.0.9 meaning,
+  `Effect<User, never, never>`. Code using the 0.0.6 shorthand compiles
+  again; EK1014 is retired. Hovers and fixes show the terse form.
+  EK4833 still warns only on `Effect.Effect<…>`; its fix writes the terse
+  form, including `Effect.Effect<A>` and `Effect.Effect<A, E>` on a body.
+  `--fix` leaves existing `Effect<…>` annotations alone.
+
+### Resource safety
+
+- A C-style loop head such as `for (using h = acquire(); …; …)` releases
+  its resources on every exit: normal completion, jumps, return, typed failure,
+  defect and interruption. Multiple head values release in reverse order.
+  Effect acquisitions in the head now compile, and labeled loops preserve
+  their `break` and `continue` targets.
+- `for (using x of values)` disposes each element when its iteration ends,
+  then closes an iterator, producer or Stream on early exit, including failure
+  and interruption. Producers and Streams now run in this form; generator
+  `finally` blocks that were skipped now run.
+- For a JavaScript Disposable acquired with an explicit release, use the
+  documented plain holder pattern: acquire `{ value: disposable }` and
+  release `holder.value`. Binding the Disposable itself also invokes
+  `Symbol.dispose` and can release it twice. The pending-interruption window
+  between a synchronous JavaScript acquisition and registering disposal still
+  exists; see [Scope](../resource-management/030-scope.md).
+
+### Correctness
+
+- Plain recursive call cycles start with fast JavaScript calls and continue
+  on heap frames at the eager depth limit, avoiding stack overflow for deep
+  recursion. Calls through synchronous callbacks and functions with a plain
+  return annotation still have JavaScript's stack limit.
+- `match` and `is` read their subject once, including property getters,
+  optional chains and patterns that perform several tests. An arm's binding
+  no longer shadows the subject before it is read. Exhaustive matches over
+  discriminant properties and optional-chain subjects retain their narrowing.
+- Callable Disposables are disposed in blocks and loops. Await operations
+  also accept callable iterables instead of treating them as records.
+  Thanks to [Vladimir Kalnitsky](https://github.com/klntsky) for contributing
+  the callable resource fix.
+- Checking large `data` matches and `is` chains caches tag narrowing and
+  matcher resolution, avoiding cubic work. A per-body budget of 3,145,728
+  uncached union members bounds pathological cases with TS2563; split an
+  oversized match into smaller functions if it reaches that limit.
+
+### Diagnostics
+
+Changes to previously accepted code:
+
+- A typed catch expression, `load() catch (e: NotFound) => fallback`, now
+  reports EK2112, a fixed-severity **warning**. It still compiles; the
+  annotation never filtered failures. Write an untyped `catch (e)` and
+  test `e` with `match` or `is`, rethrowing unhandled failures.
+  The editor and `vibelang --fix` can make that rewrite.
+- An unused, unexported zero-argument `main` now warns with EK1016.
+  Write `export function main()` to run it when the module starts.
+- EK4409 now also warns when a primitive-success contract returns a call
+  through `any` whose local initializer proves it returns a cold program.
+  Give the callee an Effect-returning type so its call runs the program.
+  With EK4409 configured as an error, previously accepted code in this case
+  stops compiling until fixed. EK1016 can also be configured as an error
+  in 0.0.10. Ordinary dynamic value calls keep their existing behavior.
+- The data-pattern work budget above can stop a formerly accepted, oversized
+  body with TS2563. Split it into smaller functions.
+
+New explanations for code that already failed, and improved messages:
+
+- `fork do { … }`, `uninterruptible do { … }`,
+  `interruptible do { … }` and `restore do { … }` now report EK1003,
+  an **error**. Remove `do`: write `fork { … }`, and likewise for the
+  other direct blocks.
+- EK1015 explains `yield* call()` outside a generator: remove `yield*`,
+  since a VibeLang call already runs.
+- EK4502 explains `call().pipe(…)` when the success value has no `pipe`
+  member: use `call() |> retry(%, policy)` or `retry(call(), policy)`.
+  A result with its own `pipe` member still works.
+- EK4503 explains implementation member reads such as `Users.region`:
+  use `Users().region` inside an Effect function. Direct
+  `Users.find(id)` calls and static key members stay valid.
+- TS2540 explains implicit readonly members and shows `mutable`.
+  EK1001 explains a misused inferred Effect default parameter: make the
+  parameter optional and compute its default in the body.
+- EK4701 names a missing nested data pattern, including its field path.
+  An unresolved `TestClock` name suggests
+  `import { TestClock } from "effect/testing"`.
+- EK4402 names each platform API's Effect replacement, named import and
+  providing layer: `FileSystem` with `NodeServices.layer`,
+  `HttpClient` with `FetchHttpClient.layer`, `Path.resolve()` for
+  `process.cwd()`, and `FileSystem.makeTempDirectory()` for
+  `os.tmpdir()`. Where Effect lacks an API, such as `os.hostname()`,
+  it shows a `sync` hatch.
+- EK4403 preserves units and test advice:
+  `performance.now()` becomes
+  `Number(Clock.monotonicTimeNanos()) / 1e6`, and `new Date()` becomes
+  `DateTime.nowAsDate()`. Crypto replacements name their import and layer,
+  and `TestCrypto.layer(seed)` for tests. The diagnostic configuration
+  belongs in the top-level `vibelang.diagnostics` object of
+  `tsconfig.json`.
+
+### Tooling
+
+- Completion hides compiler-written match bindings and the synthetic service
+  brand. `noUnusedLocals` no longer reports compiler-written bindings.
+- Watch summaries count warnings separately from errors.
+- The formatter normalizes spaces after declaration keywords and preserves
+  either contract spelling. The starter's documented dprint configuration
+  formats its generated app.
+- Typed catch fixes preserve comments, and catch rewrites omit unreachable
+  default rethrow arms when the handlers cover every failure.
+- `vibelang/project` resolves relative project paths from the caller's
+  working directory, including compiler discovery.
+- `--help` lists VibeLang's flags. The starter test command discovers its
+  tests; the compiler's Go smoke suite has an explicit 20-minute timeout.
+- Compiler package attribution points to the unified TypeScript upstream.
+
+### Editor
+
+- The VS Code and Cursor extension uses the VibeLang mark for `.vibe`
+  files; packaging tests verify the icons in the VSIX.
+
+### Docs
+
+- Platform guidance starts with Effect's services, their imports and layers.
+  Hatches illustrate APIs Effect does not cover, and complete Effect
+  comparison tabs are checked as programs.
+- Setup documents exact Effect pins, mixed TypeScript adoption and editing
+  costs, local TypeScript and npm boundaries, supported dprint versions,
+  cache startup, and current compiler limitations with executable evidence.
+- Debugging guidance explains tracing, runner stacks and runtime costs.
+  Token comparisons lead with measured corpus savings and identify longer
+  VibeLang examples; they are not runtime performance promises.
+- The shipped agent skill is self-contained. Public documentation clients
+  can read the site without browser integrity checks. Repository paths,
+  language names and editor setup guidance are current; retired hosted
+  converter code and review scratch probes have been cleaned up.
 
 ## 0.0.9
 

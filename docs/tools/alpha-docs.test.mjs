@@ -40,7 +40,11 @@ test("3: prerequisites, output and starter descriptions agree", () => {
   assert.doesNotMatch(homepage, /Everything Effect does, VibeLang does|compiles to TypeScript/)
   assert.match(homepage, /Everything Effect does is reachable from VibeLang/)
   const install = read("docs/user/src/getting-started/004-installation.md")
-  assert.match(install, /macOS on Apple silicon[^\n]*\| Yes \|/)
+  assert.match(install, /macOS on Apple silicon[^\n]*\| No \|/)
+  assert.match(install, /Linux on x64[^\n]*\| Yes \|/)
+  assert.match(install, /Linux on arm64[^\n]*\| No \|/)
+  assert.match(install, /npm and Bun on Linux x64/)
+  assert.doesNotMatch(install, /tests a starter on macOS arm64 and Linux x64/)
   assert.match(install, /macOS on Intel[^\n]*\| No \|/)
   for (const path of ["README.md", "docs/user/src/getting-started/004-installation.md"]) {
     assert.match(read(path), /Bun is optional/)

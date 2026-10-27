@@ -34,15 +34,15 @@ This keeps the platform package from selecting a newer patch with a different Ef
 With Bun, run:
 
 ```sh
-bun add --exact vibelang-runtime@0.0.9 effect@4.0.5 @effect/platform-node@4.0.5
-bun add -d --exact vibelang@0.0.9 vibelang-vite@0.0.9 vitest@5.0.5 @effect/vitest@4.0.5
+bun add --exact vibelang-runtime@0.0.10 effect@4.0.5 @effect/platform-node@4.0.5
+bun add -d --exact vibelang@0.0.10 vibelang-vite@0.0.10 vitest@5.0.5 @effect/vitest@4.0.5
 ```
 
 With npm, run:
 
 ```sh
-npm install --save-exact vibelang-runtime@0.0.9 effect@4.0.5 @effect/platform-node@4.0.5
-npm install --save-dev --save-exact vibelang@0.0.9 vibelang-vite@0.0.9 vitest@5.0.5 @effect/vitest@4.0.5
+npm install --save-exact vibelang-runtime@0.0.10 effect@4.0.5 @effect/platform-node@4.0.5
+npm install --save-dev --save-exact vibelang@0.0.10 vibelang-vite@0.0.10 vitest@5.0.5 @effect/vitest@4.0.5
 ```
 
 | Package | Install as | Purpose |
@@ -68,7 +68,7 @@ npx vibelang --version
 The output is:
 
 ```out
-VibeLang 0.0.9 (TypeScript 7.1.0-dev)
+VibeLang 0.0.10 (TypeScript 7.1.0-dev)
 ```
 
 ## Next

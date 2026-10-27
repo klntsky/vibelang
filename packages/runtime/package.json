@@ -1,6 +1,6 @@
 {
   "name": "vibelang-runtime",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "The VibeLang continuation kernel and generated-code runtime helpers.",
   "keywords": [
     "vibelang",
