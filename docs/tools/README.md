@@ -163,7 +163,9 @@ It preserves code, rewrites page links to their copies on https://vibelang.sh,
 moves bare specification fragments to their owning chapter, and removes
 targets for repository files that are not pages. index.md and spec/index.md
 repeat the first pages. llms.txt starts with docs/user/llms-essentials.md,
-then lists every page in one section per sidebar view.
+then lists every page in one section per sidebar view. The docs/tools test suite
+generates fresh Markdown in a temporary directory and runs the site's llms
+tests, including the 2,000-byte essentials-prefix limit.
 
 From the repository root, sh scripts/deploy-docs.sh --dry-run runs the release
 starter and snippet checks (including declared output), hover generation,
