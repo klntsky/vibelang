@@ -34,24 +34,20 @@
           "title": "How a change lands",
           "cards": [
             {
-              "title": "A bug comes with a minimal reproduction",
-              "text": "A report whose reproduction doesn't show the bug gets needs-repro."
+              "title": "Report a reproducible bug",
+              "text": "Include a minimal reproduction; otherwise: needs-repro."
             },
             {
-              "title": "Accepted for discussion",
-              "text": "A maintainer adds accepted."
+              "title": "Wait for accepted",
+              "text": "A maintainer opens discussion. Check timeline (weeks/months/unscheduled) and commitment (committed/open/undecided)."
             },
             {
-              "title": "A timeline and a commitment",
-              "text": "timeline: weeks, months or unscheduled; commitment: committed, open or undecided."
+              "title": "Try the proof of concept",
+              "text": "Check out and run the maintainer's linked draft PR: poc: #123 for issue 123."
             },
             {
-              "title": "A proof of concept",
-              "text": "A maintainer links a draft pull request, such as poc: #123 for issue 123, that you can check out and run."
-            },
-            {
-              "title": "A pull request; a person merges",
-              "text": "One accepted issue, one focused change. Agents never approve or merge."
+              "title": "Open one focused PR per accepted issue",
+              "text": "A person merges. Agents never approve or merge."
             }
           ]
         },

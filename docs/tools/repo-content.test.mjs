@@ -29,3 +29,17 @@ test("first-run entry points lead with npm and show Bun beside it", () => {
   assert.ok(blocks().some(block => block.type === "code" && block.title === "Bun alternative" &&
     block.code.startsWith("bun create vibelang@latest my-app")), "repo hero: adjacent Bun alternative")
 })
+
+test("Contribute gives short actions while retaining every process fact", () => {
+  const section = home().sections.find(section => section.title === "Contribute")
+  const cards = section.blocks.find(block => block.type === "cards").cards
+  const copy = cards.map(card => card.title + " " + card.text).join(" ")
+  assert.ok(copy.split(/\s+/).length <= 80, "keep the contributor actions within 80 words")
+  for (const fact of ["minimal reproduction", "needs-repro", "accepted", "discussion",
+    "maintainer", "timeline", "weeks", "months", "unscheduled", "commitment",
+    "committed", "open", "undecided", "proof of concept", "draft", "poc: #123",
+    "issue 123", "Check out and run", "focused", "accepted issue", "person",
+    "Agents never approve or merge"]) {
+    assert.ok(copy.toLowerCase().includes(fact.toLowerCase()), "lost process fact: " + fact)
+  }
+})
