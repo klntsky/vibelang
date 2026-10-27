@@ -56,3 +56,16 @@ test("benchmark content provides runnable instructions without implying results"
   }
   assert.ok(!blocks().some(block => block.title === "Benchmarks"), "remove the unmeasured results section")
 })
+
+test("both homes and site metadata use the README's tagline verbatim", () => {
+  const tagline = read("README.md").match(/^Write .+$/m)?.[0]
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+  assert.ok(tagline, "README introductory sentence")
+  assert.equal(blocks().find(block => block.type === "hero").tagline, tagline)
+  const index = read("site/src/pages/index.mdx")
+  const hero = index.match(/<div className="vibe-home__tagline">([\s\S]*?)<\/div>/)?.[1]
+    .replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim()
+  assert.equal(hero, tagline)
+  assert.equal(index.match(/^description: (.+)$/m)?.[1], tagline)
+  assert.ok(read("site/vocs.config.ts").includes("'" + tagline + "'"), "site description")
+})

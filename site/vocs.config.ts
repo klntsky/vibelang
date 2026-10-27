@@ -39,7 +39,7 @@ export default defineConfig({
   },
   colorScheme: 'light dark',
   description:
-    'VibeLang gives Effect a simple, readable syntax that compiles to TypeScript, with a typed boundary to TypeScript and npm.',
+    'Write Effect programs in TypeScript syntax, with typed errors and services the compiler checks.',
   ogImageUrl: 'https://vibelang.sh/social-card.png',
   head: {
     meta: {
