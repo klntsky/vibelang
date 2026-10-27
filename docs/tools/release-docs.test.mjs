@@ -138,8 +138,8 @@ test("the current release owns the pinned Effect migration and upgrade instructi
   const effect = JSON.parse(readFileSync(join(root, "packages/runtime/package.json"), "utf8")).peerDependencies.effect
   const notes = readFileSync(join(root, "docs/user/src/setup/release-notes.md"), "utf8")
   const releases = notes.split(/^## /m).slice(1)
-  assert.equal(releases[0].split("\n")[0], version)
-  const current = releases[0]
+  const current = releases.find((release) => release.split("\n")[0] === version)
+  assert.ok(current, "release notes have a section for " + version)
   for (const text of [
     "### Effect " + effect + " and failures",
     "effect@" + effect,

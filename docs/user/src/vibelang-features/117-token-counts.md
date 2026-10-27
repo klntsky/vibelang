@@ -17,12 +17,12 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 
 | Load | Tokens |
 | --- | ---: |
-| The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,831 |
-| The skill and the [cheat sheet](115-cheat-sheet.md) | 14,182 |
-| The skill and the user guide (131 pages) | 213,022 |
-| The user guide alone | 208,191 |
-| The specification (33 chapters) | 106,304 |
-| The decision log, `docs/design/DECISIONS.md` | 62,435 |
+| The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,873 |
+| The skill and the [cheat sheet](115-cheat-sheet.md) | 14,247 |
+| The skill and the user guide (131 pages) | 213,695 |
+| The user guide alone | 208,822 |
+| The specification (33 chapters) | 106,671 |
+| The decision log, `docs/design/DECISIONS.md` | 63,329 |
 
 ## Effect TypeScript beside VibeLang
 
@@ -89,19 +89,19 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | **Start Here** | **2,241** |
 | [Welcome](../001-onboarding.md) | 1,641 |
 | [Why VibeLang?](../getting-started/002-why-effect.md) | 600 |
-| **Learning Path** | **9,018** |
+| **Learning Path** | **9,046** |
 | [The Effect Type](../getting-started/003-the-effect-type.md) | 1,783 |
 | [Installation](../getting-started/004-installation.md) | 2,224 |
-| [Creating Effects](../getting-started/005-creating-effects.md) | 2,922 |
+| [Creating Effects](../getting-started/005-creating-effects.md) | 2,950 |
 | [Two Types of Errors](../error-management/006-two-error-types.md) | 648 |
 | [Basic Concurrency](../concurrency/007-basic-concurrency.md) | 1,441 |
-| **Core Concepts** | **14,148** |
+| **Core Concepts** | **14,204** |
 | [Effect's Modules](../getting-started/008-importing-effect.md) | 1,087 |
-| [Running Effects](../getting-started/009-running-effects.md) | 1,511 |
+| [Running Effects](../getting-started/009-running-effects.md) | 1,567 |
 | [Sequencing Effects](../getting-started/010-using-generators.md) | 1,184 |
 | [Building Pipelines](../getting-started/011-building-pipelines.md) | 1,807 |
 | [Devtools](../getting-started/012-devtools.md) | 8,559 |
-| **All 12 pages** | **25,407** |
+| **All 12 pages** | **25,491** |
 
 ### Setup
 
@@ -126,9 +126,9 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Neovim](../setup/neovim.md) | 999 |
 | [Zed](../setup/zed.md) | 431 |
 | [Other editors](../setup/other-editors.md) | 327 |
-| **Upgrade** | **9,327** |
-| [Release notes](../setup/release-notes.md) | 9,327 |
-| **All 15 pages** | **25,794** |
+| **Upgrade** | **9,507** |
+| [Release notes](../setup/release-notes.md) | 9,507 |
+| **All 15 pages** | **25,974** |
 
 ### Guides
 
@@ -242,33 +242,33 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Equivalence](../schema/102-equivalence.md) | 770 |
 | [Formatter](../schema/103-formatter.md) | 541 |
 | [Schema Compilers](../schema/104-compilers.md) | 2,122 |
-| **Platform** | **7,452** |
-| [Introduction](../platform/105-introduction.md) | 1,791 |
-| [FileSystem](../platform/106-file-system.md) | 1,215 |
-| [Path](../platform/107-path.md) | 940 |
+| **Platform** | **7,754** |
+| [Introduction](../platform/105-introduction.md) | 2,053 |
+| [FileSystem](../platform/106-file-system.md) | 1,232 |
+| [Path](../platform/107-path.md) | 963 |
 | [PlatformLogger](../platform/108-platformlogger.md) | 758 |
 | [Runtime](../platform/109-runtime.md) | 1,219 |
 | [Terminal](../platform/110-terminal.md) | 1,529 |
-| **All 98 pages** | **134,789** |
+| **All 98 pages** | **135,091** |
 
 ### VibeLang features
 
 | Page | Tokens |
 | --- | ---: |
 | [Control operations and handlers](111-control-operations-and-handlers.md) | 1,923 |
-| [Producers](112-producers.md) | 1,291 |
+| [Producers](112-producers.md) | 1,307 |
 | [Building an HTTP API](113-building-an-http-api.md) | 1,392 |
-| [VibeLang for Effect users](114-vibelang-for-effect-users.md) | 4,491 |
-| [Cheat sheet](115-cheat-sheet.md) | 9,351 |
+| [VibeLang for Effect users](114-vibelang-for-effect-users.md) | 4,517 |
+| [Cheat sheet](115-cheat-sheet.md) | 9,374 |
 | [Pattern matching with match and is](116-match-and-is.md) | 3,753 |
-| **All 6 pages** | **22,201** |
+| **All 6 pages** | **22,266** |
 
 ### Specification
 
 | Page | Tokens |
 | --- | ---: |
 | [Introduction](../../../design/src/000-intro.md) | 1,600 |
-| **Part I. The language by example** | **30,163** |
+| **Part I. The language by example** | **30,377** |
 | [1. A first look](../../../design/src/101-part1-ch01-first-look.md) | 1,681 |
 | [2. Functions and calls](../../../design/src/102-part1-ch02-functions.md) | 1,481 |
 | [3. Errors: the E channel](../../../design/src/103-part1-ch03-errors.md) | 2,660 |
@@ -279,7 +279,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [8. Producers: streams of values](../../../design/src/108-part1-ch08-producers.md) | 979 |
 | [9. Handlers: defining your own effects](../../../design/src/109-part1-ch09-handlers.md) | 2,534 |
 | [10. Working with TypeScript](../../../design/src/110-part1-ch10-typescript.md) | 3,355 |
-| [11. The standard library](../../../design/src/111-part1-ch11-stdlib.md) | 2,887 |
+| [11. The standard library](../../../design/src/111-part1-ch11-stdlib.md) | 3,101 |
 | [12. Questions Effect users ask](../../../design/src/112-part1-ch12-faq.md) | 3,285 |
 | **Part II. The rules** | **13,202** |
 | [13. What a call means](../../../design/src/213-part2-ch13-calls.md) | 4,669 |
@@ -297,15 +297,15 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [24. What Effect provides and what the kernel adds](../../../design/src/324-part3-ch24-effect.md) | 3,903 |
 | [25. Implementation strategies and costs](../../../design/src/325-part3-ch25-strategies.md) | 1,926 |
 | [26. What compiled code must guarantee](../../../design/src/326-part3-ch26-compiled.md) | 3,057 |
-| **Part IV. The compiler** | **12,360** |
+| **Part IV. The compiler** | **12,383** |
 | [27. Compiler architecture](../../../design/src/427-part4-ch27-compiler.md) | 1,662 |
-| [28. Tooling](../../../design/src/428-part4-ch28-tooling.md) | 10,698 |
-| **Part V. Decisions** | **14,747** |
-| [29. Decisions](../../../design/src/529-part5-ch29-decisions.md) | 12,121 |
+| [28. Tooling](../../../design/src/428-part4-ch28-tooling.md) | 10,721 |
+| **Part V. Decisions** | **14,877** |
+| [29. Decisions](../../../design/src/529-part5-ch29-decisions.md) | 12,251 |
 | [30. Risks and experiments](../../../design/src/530-part5-ch30-risks.md) | 2,626 |
 | **Appendices** | **13,056** |
 | [A. Evidence index and B. Prior art](../../../design/src/900-appendices.md) | 4,826 |
 | [C. Every Effect feature in VibeLang](../../../design/src/901-appendix-c-coverage.md) | 8,230 |
-| **All 33 pages** | **106,304** |
+| **All 33 pages** | **106,671** |
 
 <!-- token-counts: end -->

@@ -1,0 +1,10 @@
+// D312: the import names Bun, so the entry provides BunServices.layer even
+// though @effect/platform-node is installed too; NodeRuntime still runs main
+// (D135).
+import "vibelang/platform/bun"
+import { FileSystem } from "effect/FileSystem"
+import { Path } from "effect/Path"
+
+export function main() {
+  Console.log(FileSystem.readFileString(Path.join("data", "config.json")))
+}

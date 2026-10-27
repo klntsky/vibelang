@@ -33,6 +33,7 @@ func init() {
 	checker.RegisterAnnotatedReturnInferenceHook(annotatedReturnInference)
 	checker.RegisterSourceFileCheckHook(checkSourceFile)
 	checker.RegisterDiagnosticsFilterHook(filterCoveredDiagnostics)
+	checker.RegisterDiagnosticsFilterHook(filterPlatformImports)
 	checker.RegisterClassBaseHook(classBases)
 	checker.RegisterMemberReceiverHook(memberReceiver)
 	checker.RegisterCallSignaturesHook(effectValueCall)

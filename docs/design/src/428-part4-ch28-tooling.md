@@ -286,7 +286,7 @@ coverage. Repairs are suggestions, not shipped code actions:
 | EK3202 | Two providers for one service | Remove one | 4 |
 | EK3203 | Providers form a cycle | None | 4 |
 | EK3204 | A `wire` argument whose type does not name its outputs | Compose it with `Layer.provide` | 4 |
-| EK3205 | An entry module's `main` needs a service that nothing provides when the host starts the module; a warning, adjustable, and not reported when another module imports `main` | Provide it inside `main` with `provide` | 4 |
+| EK3205 | An entry module's `main` needs a service that nothing provides when the host starts the module, the layer of the file's platform import included (D312), and names the platform import that would provide it; a warning, adjustable, and not reported when another module imports `main` | Provide it inside `main` with `provide` | 4 |
 | EK4201 | A control operation inside a combinator that runs it on another fiber | Handle the operation inside the branch | 9, 16 |
 | EK4202 | A TypeScript function whose R holds a control operation | None in v0 | 9 |
 | EK4301 | A callback that can pause or fail where a plain function is expected | Rewrite as `Effect.forEach` or `for...of`; a visitor returning a program uses `() => () => call()` when its result is used | 10, 16 |

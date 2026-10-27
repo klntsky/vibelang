@@ -137,8 +137,9 @@ func implicitRuntimeImport(file *ast.SourceFile) []string {
 		modules = append(modules, effectRootModule)
 	}
 	if entry {
-		// An entry module runs main with NodeRuntime when the package resolves (entry.go).
-		modules = append(modules, platformNodeModule)
+		// An entry module runs main with NodeRuntime when the package resolves,
+		// and provides main the bundles of the platform it names (entry.go).
+		modules = append(modules, entryModules(file)...)
 	}
 	return modules
 }

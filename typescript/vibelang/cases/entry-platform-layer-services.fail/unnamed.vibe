@@ -1,0 +1,8 @@
+// A file that names no platform gets no platform layer: EK3205 names the
+// services, and says which platform import provides them.
+import { FileSystem } from "effect/FileSystem"
+import { Path } from "effect/Path"
+
+export function main() {
+  Console.log(FileSystem.readFileString(Path.join("data", "config.json")))
+}

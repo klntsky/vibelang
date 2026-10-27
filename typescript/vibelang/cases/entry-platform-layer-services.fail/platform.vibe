@@ -1,0 +1,8 @@
+// A main that needs only platform services; the test imports it.
+import "vibelang/platform/node"
+import { FileSystem } from "effect/FileSystem"
+import { Path } from "effect/Path"
+
+export function main() {
+  Console.log(FileSystem.readFileString(Path.join("data", "config.json")))
+}

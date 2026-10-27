@@ -37,7 +37,10 @@
 // and separate stdout/stderr tails. Reruns preserve earlier logs.
 //
 // Each case gets node_modules/effect from $EFFECT_NODE_MODULES and
-// node_modules/vibelang-runtime from $VIBELANG_RUNTIME.
+// node_modules/vibelang-runtime from $VIBELANG_RUNTIME. A directory under the
+// case's stubs/ with a package.json stands in for the package it names: the
+// case's node_modules links it under that name, so the compiler and Node
+// resolve the package there, as they would an installed one.
 import { CaseCommands } from "./harness-command.mjs"
 import fs from "node:fs"
 import os from "node:os"
@@ -108,6 +111,14 @@ function linkNodeModules(dir) {
   fs.mkdirSync(modules, { recursive: true })
   link(path.join(effectModules, "effect"), path.join(modules, "effect"))
   link(runtimeDir, path.join(modules, "vibelang-runtime"))
+  const stubs = path.join(dir, "stubs")
+  for (const stub of fs.existsSync(stubs) ? fs.readdirSync(stubs) : []) {
+    const manifest = path.join(stubs, stub, "package.json")
+    if (!fs.existsSync(manifest)) continue
+    const at = path.join(modules, JSON.parse(fs.readFileSync(manifest, "utf8")).name)
+    fs.mkdirSync(path.dirname(at), { recursive: true })
+    link(path.join(stubs, stub), at)
+  }
 }
 
 // readHeaders finds the expected codes and the expected result in a case's sources.

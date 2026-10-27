@@ -1,0 +1,6 @@
+// A service that no platform bundle provides.
+export service Users {
+  find(id: string): string!!
+}
+
+export const UsersLive = Layer.succeed(Users, { find: (id) => `user ${id}` })

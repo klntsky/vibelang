@@ -330,10 +330,12 @@ const (
 // service that a wire call in the program leaves unprovided: the dependency
 // path names the provider that needs it. An entry module's main is checked
 // as a root runner's program, since its entry statement runs it with
-// NodeRuntime.runMain or the runtime's copy of it (D135, D122): EK3205, a
+// NodeRuntime.runMain or the runtime's copy of it (D135, D122), with the
+// services of the platform layer the entry provides it (D312): EK3205, a
 // warning, since a module that exports main may also be a library whose
 // importer, maybe in another program, provides its services. A main that
 // another module of the program imports is not checked (mainImported).
+// EK3205 also says which platform import would provide what it names.
 func checkRunners(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
@@ -349,7 +351,12 @@ func checkRunners(c *checker.Checker, file *ast.SourceFile) {
 	}
 	file.AsNode().ForEachChild(visit)
 	if main := entryMain(file); main != nil && runnerRequirements(c, c.GetTypeAtLocation(main.Name())) != nil && !mainImported(c, file) {
-		checkProgram(c, main.Name(), nil /*accepted*/, runnerEntry)
+		_, provided := entryBundles(c, file, main)
+		if d := checkProgram(c, main.Name(), provided, runnerEntry); d != nil {
+			if platform := platformNote(c, file, neededServices(c, main)); platform != "" {
+				note(d, platform)
+			}
+		}
 	}
 }
 
@@ -437,11 +444,11 @@ func checkTest(c *checker.Checker, call *ast.Node) {
 // so accepted is nil. TypeScript would report that the program's type does
 // not fit the parameter; EK3201 names the services instead, and the wire
 // arguments that need them. For an entry module, program is main's name,
-// and the code is EK3205.
-func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type, site runnerSite) {
+// and the code is EK3205. It returns the diagnostic it reports, or nil.
+func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type, site runnerSite) *ast.Diagnostic {
 	needed := runnerRequirements(c, c.GetTypeAtLocation(program))
 	if needed == nil {
-		return
+		return nil
 	}
 	if needed.Flags()&checker.TypeFlagsAny != 0 {
 		m := anyProgram
@@ -453,7 +460,7 @@ func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type,
 		if site != runnerEntry {
 			coverArgument(c, program)
 		}
-		return
+		return d
 	}
 	var names, paths []string
 	for _, service := range unionMembers(needed) {
@@ -469,7 +476,7 @@ func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type,
 		}
 	}
 	if len(names) == 0 {
-		return
+		return nil
 	}
 	code := EK3201
 	if site == runnerEntry {
@@ -492,6 +499,7 @@ func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type,
 	if site != runnerEntry {
 		coverArgument(c, program)
 	}
+	return d
 }
 
 // runnerRequirements returns R of t, an Effect or a function that returns one,

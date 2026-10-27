@@ -1,31 +1,29 @@
 # Introduction to Effect Platform
 
-VibeLang reaches files, paths, processes, HTTP, randomness, and terminals through Effect's platform services. Write the application against those services; `main` provides the Node.js, Bun, or browser implementations. A `.vibe` file never runs a `node:*` API or a browser global itself (EK4402), and it needs no wrapper of its own around one.
+VibeLang reaches files, paths, processes, HTTP, randomness, and terminals through Effect's platform services. Write the application against those services; the file that exports `main` names its platform once, and the entry provides that platform's implementations to `main`. A `.vibe` file never runs a `node:*` API or a browser global itself (EK4402), and it needs no wrapper of its own around one.
 
 ## Using platform services
 
 ```vibe
 // main.vibe
-import { NodeServices } from "@effect/platform-node"
+import "vibelang/platform/node"
 import { FileSystem } from "effect/FileSystem"
 import { Path } from "effect/Path"
 import * as ChildProcess from "effect/process/ChildProcess"
 import { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"
 
 export function main() {
-  provide NodeServices.layer {
-    using directory = FileSystem.makeTempDirectoryScoped()
-    const file = Path.join(directory, "greeting.txt")
-    FileSystem.writeFileString(file, "Hello, VibeLang!")
-    Console.log(FileSystem.readFileString(file))
-    Console.log(ChildProcessSpawner.string(ChildProcess.make("echo", ["from a child process"])).trim())
-  }
+  using directory = FileSystem.makeTempDirectoryScoped()
+  const file = Path.join(directory, "greeting.txt")
+  FileSystem.writeFileString(file, "Hello, VibeLang!")
+  Console.log(FileSystem.readFileString(file))
+  Console.log(ChildProcessSpawner.string(ChildProcess.make("echo", ["from a child process"])).trim())
 }
 // Output: Hello, VibeLang!
 // Output: from a child process
 ```
 
-Import a service by name from its module, as in `import { FileSystem } from "effect/FileSystem"`, and call its methods: `FileSystem.readFileString(file)` runs and returns the text, and its `PlatformError` joins E. The prelude's `FileSystem`, without an import, is the module, whose service is `FileSystem.FileSystem`. `provide NodeServices.layer { ... }` supplies the Node implementations once, in `main`; the functions that call the services only require them, so a test provides others.
+Import a service by name from its module, as in `import { FileSystem } from "effect/FileSystem"`, and call its methods: `FileSystem.readFileString(file)` runs and returns the text, and its `PlatformError` joins E. The prelude's `FileSystem`, without an import, is the module, whose service is `FileSystem.FileSystem`. `import "vibelang/platform/node"` names the platform, so `main` writes no `provide`: when Node starts the module, it runs `main` with `NodeServices.layer` from `@effect/platform-node`, which supplies the services `main` needs (D312). The import loads nothing; the compiler removes it. The functions that call the services only require them, so a test provides others.
 
 ## Replacing Node.js and web calls
 
@@ -50,7 +48,7 @@ Each Node.js or web call has an Effect replacement. EK4402 and EK4403 name it, i
 | `performance.now` | `Number(Clock.monotonicTimeNanos()) / 1e6` | the prelude | none |
 | `Math.random` | `Random.next()` | the prelude | none |
 
-Import a service from the module the table names, by its own name: `import { Crypto } from "effect/Crypto"`. `ChildProcess.make` needs `import * as ChildProcess from "effect/process/ChildProcess"` too, and `HttpClient`, `HttpRouter`, and `FetchHttpClient` are named imports of `effect/http`. `NodeServices.layer` provides `FileSystem`, `Path`, `Crypto`, `Stdio`, `Terminal`, and `ChildProcessSpawner`; `BunServices.layer` from `@effect/platform-bun` is Bun's. Effect's runtime provides the prelude's services itself.
+Import a service from the module the table names, by its own name: `import { Crypto } from "effect/Crypto"`. `ChildProcess.make` needs `import * as ChildProcess from "effect/process/ChildProcess"` too, and `HttpClient`, `HttpRouter`, and `FetchHttpClient` are named imports of `effect/http`. `NodeServices.layer` provides `FileSystem`, `Path`, `Crypto`, `Stdio`, `Terminal`, and `ChildProcessSpawner`; `BunServices.layer` from `@effect/platform-bun` is Bun's. The platform import provides the platform's bundle to `main`; provide every other layer inside `main`. Effect's runtime provides the prelude's services itself.
 
 Where Effect has no service yet, as for `os.hostname()`, `fs.lstat`, or `process.pid`, EK4402 says so: run the call in a hatch where you need it, `sync(hostname())`, or `try` when it can throw ([Creating Effects](../getting-started/005-creating-effects.md)).
 
@@ -88,46 +86,44 @@ export function greet() {
 // Output: Hello, VibeLang!
 ```
 
-`greet` requires `FileSystem` and nothing else, so it runs on any platform that provides it, and a test provides a layer of its own, here `layerNoop` from the same module. Keep the runtime package import in the entry file.
+`greet` requires `FileSystem` and nothing else, so it runs on any platform that provides it, and a test provides a layer of its own, here `layerNoop` from the same module. Shared modules name no platform; the entry file does.
 
 ## Supplying Node or Deno implementations
 
 ```vibe
 // main-node.vibe
-import { NodeServices } from "@effect/platform-node"
+import "vibelang/platform/node"
 import { FileSystem } from "effect/FileSystem"
 import { greet } from "./greeting.vibe"
 
 export function main() {
-  provide NodeServices.layer {
-    FileSystem.writeFileString("./greeting.txt", "Hello, VibeLang!")
-    greet()
-  }
+  FileSystem.writeFileString("./greeting.txt", "Hello, VibeLang!")
+  greet()
 }
 // Output: Hello, VibeLang!
 ```
 
-`NodeServices.layer` supplies the Node platform service bundle. The same package works in Deno's Node compatibility environment, subject to Deno permissions. Run the generated entry module with Node or Deno, granting only the permissions the application needs.
+`import "vibelang/platform/node"` names Node and `main` needs `FileSystem`, so the compiled module runs `main` as Effect's canonical entry does, `NodeRuntime.runMain(Effect.provide(main(), NodeServices.layer))`, with the Node platform service bundle. `"vibelang/platform/bun"` names Bun's bundle and `"vibelang/platform/browser"` the browser's; the services each bundle supplies come from its installed declarations. The same package works in Deno's Node compatibility environment, subject to Deno permissions. Run the generated entry module with Node or Deno, granting only the permissions the application needs.
+
+A `provide` inside `main` wins for the code inside it, so `provide NodeFileSystem.layer { ... }` replaces one service. Tests never run the entry: they import `main` and provide their own layers. EK3205 names any other service `main` needs; provide it inside `main`. Without a platform import the entry provides no platform, and EK3205 names the import that would.
 
 ## Supplying Bun implementations
 
 ```vibe
 // main-bun.vibe
-import { BunServices } from "@effect/platform-bun"
+import "vibelang/platform/bun"
 import { FileSystem } from "effect/FileSystem"
 import { greet } from "./greeting.vibe"
 
 export function main() {
-  provide BunServices.layer {
-    FileSystem.writeFileString("./greeting.txt", "Hello, VibeLang!")
-    greet()
-  }
+  FileSystem.writeFileString("./greeting.txt", "Hello, VibeLang!")
+  greet()
 }
 // Output: Hello, VibeLang!
 ```
 
-Only the entry point changes; the same `greet` uses Bun's implementations. A target-specific package can supply a narrower layer than the whole bundle, such as `NodeFileSystem.layer`. The FileSystem, Path, PlatformLogger, Runtime, and Terminal pages cover each integration.
+The entry provides `BunServices.layer` from `@effect/platform-bun`. Only the platform import changes; the same `greet` uses Bun's implementations. A target-specific package can supply a narrower layer than the whole bundle, such as `NodeFileSystem.layer`. The FileSystem, Path, PlatformLogger, Runtime, and Terminal pages cover each integration.
 
 ## Coming from Effect
 
-A service imported by name is its key: `FileSystem.readFileString(path)` is `yield* FileSystem.FileSystem` followed by the method call, and `provide NodeServices.layer { ... }` is `Effect.provide(program, NodeServices.layer)`. Functions run on call, platform methods return success values directly, and no generator wraps the application.
+A service imported by name is its key: `FileSystem.readFileString(path)` is `yield* FileSystem.FileSystem` followed by the method call. An exported `main` in a file that imports `"vibelang/platform/node"` compiles to `NodeRuntime.runMain(main.pipe(Effect.provide(NodeServices.layer)))`, and `provide layer { ... }` is `Effect.provide(program, layer)`. Functions run on call, platform methods return success values directly, and no generator wraps the application.

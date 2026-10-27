@@ -371,6 +371,27 @@ func coverArgument(c *checker.Checker, argument *ast.Node) {
 
 // filterCoveredDiagnostics drops TypeScript diagnostics inside covered nodes,
 // and the type errors of covered arguments.
+// filterPlatformImports drops TypeScript's TS2882 at a platform import
+// (D312): the specifier names the entry's platform, not a module, and the
+// lowering removes the import.
+func filterPlatformImports(c *checker.Checker, file *ast.SourceFile, diagnostics []*ast.Diagnostic) []*ast.Diagnostic {
+	if !isVibeLangFile(file) || namedPlatform(file) == nil {
+		return diagnostics
+	}
+	isPlatformImport := func(d *ast.Diagnostic) bool {
+		if d.Source() != "" || d.Code() != 2882 {
+			return false
+		}
+		return slices.ContainsFunc(file.Statements.Nodes, func(statement *ast.Node) bool {
+			return platformImport(statement) != nil && statement.AsImportDeclaration().ModuleSpecifier.Pos() <= d.Pos() && d.End() <= statement.End()
+		})
+	}
+	if !slices.ContainsFunc(diagnostics, isPlatformImport) {
+		return diagnostics
+	}
+	return slices.DeleteFunc(slices.Clone(diagnostics), isPlatformImport)
+}
+
 func filterCoveredDiagnostics(c *checker.Checker, file *ast.SourceFile, diagnostics []*ast.Diagnostic) []*ast.Diagnostic {
 	if !isVibeLangFile(file) {
 		return diagnostics

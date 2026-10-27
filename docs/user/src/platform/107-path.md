@@ -73,18 +73,16 @@ URL conversions return Effects, run when called, and report `BadArgument` on inv
 
 ```vibe
 // main.vibe
-import { NodeServices } from "@effect/platform-node"
+import "vibelang/platform/node"
 import { Path } from "effect/Path"
 
 export function main() {
-  provide NodeServices.layer {
-    Console.log(Path.join("reports", "weekly.txt"))
-  }
+  Console.log(Path.join("reports", "weekly.txt"))
 }
 // Output: reports/weekly.txt
 ```
 
-The Node service bundle supplies host path behavior. `layer` from `effect/Path`, the prelude's `Path.layer`, supplies the built-in POSIX implementation, for programs that use POSIX paths on purpose, deterministic tests included. Use Bun's service bundle, `BunServices.layer`, when the rest of the application runs on Bun platform services.
+`import "vibelang/platform/node"` makes the entry provide the Node service bundle, which supplies host path behavior, to `main` (D312); `"vibelang/platform/bun"` provides Bun's, `BunServices.layer`. `layer` from `effect/Path`, the prelude's `Path.layer`, supplies the built-in POSIX implementation, for programs that use POSIX paths on purpose, deterministic tests included: `provide Path.layer { ... }` inside `main` wins over the bundle.
 
 ## Coming from Effect
 

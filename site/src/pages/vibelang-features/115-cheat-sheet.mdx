@@ -505,7 +505,7 @@ function auto(version: string) {
 
 :::
 
-**Entry point**. An exported `main` runs when Node starts its module, not when a test imports it.
+**Entry point**. An exported `main` runs when Node starts its module, not when a test imports it; `import "vibelang/platform/node"` in its file gives it the platform layer it needs.
 
 :::code-group
 

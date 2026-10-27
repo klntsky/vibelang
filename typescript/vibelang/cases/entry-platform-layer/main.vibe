@@ -1,0 +1,10 @@
+// D312: the file names its platform, and main needs FileSystem and Path,
+// which @effect/platform-node's NodeServices.layer provides, so the entry
+// statement provides that layer around main: main writes no provide.
+import "vibelang/platform/node"
+import { FileSystem } from "effect/FileSystem"
+import { Path } from "effect/Path"
+
+export function main() {
+  Console.log(FileSystem.readFileString(Path.join("data", "config.json")))
+}

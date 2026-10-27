@@ -4,6 +4,21 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
+## 0.0.11 (unreleased)
+
+### Platform
+
+- The file that exports `main` names its platform once with
+  `import "vibelang/platform/node"` (or `"vibelang/platform/bun"`,
+  `"vibelang/platform/browser"`). When `main` needs services of that
+  platform's bundle, such as `FileSystem` and `Path`, the compiled module
+  runs it with the bundle's layer, so `main` no longer writes
+  `provide NodeServices.layer`. The import loads nothing; the compiler removes
+  it. A `provide` inside `main` still wins, tests provide their own layers,
+  and EK3205 names only the services the layer does not provide. Without the
+  import, nothing changes, and EK3205 names the import that would provide
+  the platform's services.
+
 ## 0.0.10
 
 Update `vibelang`, `vibelang-runtime` and the bundler plugin together. This

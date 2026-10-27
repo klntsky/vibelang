@@ -1,0 +1,11 @@
+// main provides Users itself, and the entry provides FileSystem: nothing is
+// reported.
+import "vibelang/platform/node"
+import { FileSystem } from "effect/FileSystem"
+import { Users, UsersLive } from "./services.vibe"
+
+export function main() {
+  provide UsersLive {
+    Console.log(`${Users.find("1")}: ${FileSystem.readFileString("users.json")}`)
+  }
+}

@@ -436,7 +436,7 @@ function auto(version: string) {
 // Output: released v1
 ```
 
-**Entry point** (D135). An exported `main` runs when Node starts its module, not when a test imports it.
+**Entry point** (D135, D312). An exported `main` runs when Node starts its module, not when a test imports it; `import "vibelang/platform/node"` in its file gives it the platform layer it needs.
 
 ```ts effect
 // fragment

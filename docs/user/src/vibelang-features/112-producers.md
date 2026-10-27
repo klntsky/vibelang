@@ -61,7 +61,7 @@ function firstLargeFile(directory: string) {
 // Output: true
 ```
 
-Service calls run as in an ordinary function, and the producer's failures and requirements join the consuming function's contract. Provide `NodeServices.layer` at the application boundary to supply `FileSystem` and `Path`, as in `examples/file-tree`.
+Service calls run as in an ordinary function, and the producer's failures and requirements join the consuming function's contract. At the application boundary, `import "vibelang/platform/node"` makes the entry supply `FileSystem` and `Path` to `main` from `NodeServices.layer`, as in `examples/file-tree`.
 
 Resources a producer acquires with `using` stay open between yields and close when consumption finishes or stops early. This example reads one whole file at a time; stopping skips the remaining files.
 

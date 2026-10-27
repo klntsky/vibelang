@@ -98,3 +98,24 @@ test("command evidence records deadline kills, spawn errors, and bounded tails",
   assert.match(commands.records[2].stdoutTail, /stdout end\n$/)
   assert.match(commands.records[2].stderrTail, /stderr end\n$/)
 })
+
+test("a case's stubs resolve as the packages they name", (t) => {
+  const { root, harness, compiler } = fixture(t)
+  fs.writeFileSync(compiler, `#!/usr/bin/env node
+import fs from "node:fs"
+fs.mkdirSync("out", { recursive: true })
+fs.writeFileSync("out/main.js", 'import { name } from "@scope/platform"; console.log(name)')
+`, { mode: 0o755 })
+  const at = path.join(root, "vibelang", "cases", "stubbed")
+  fs.mkdirSync(path.join(at, "expected"), { recursive: true })
+  fs.mkdirSync(path.join(at, "stubs", "platform"), { recursive: true })
+  fs.writeFileSync(path.join(at, "tsconfig.json"), "{}")
+  fs.writeFileSync(path.join(at, "expected/stdout.txt"), "the stub\n")
+  fs.writeFileSync(path.join(at, "stubs/platform/package.json"), '{ "name": "@scope/platform", "type": "module", "main": "./index.js" }')
+  fs.writeFileSync(path.join(at, "stubs/platform/index.js"), 'export const name = "the stub"\n')
+  const env = { ...process.env, EFFECT_NODE_MODULES: path.join(root, "modules"), VIBELANG_RUNTIME: path.join(root, "runtime") }
+  const result = spawnSync(process.execPath, [harness, "stubbed"], { env, encoding: "utf8", timeout: 10_000 })
+  assert.equal(result.status, 0, result.stdout + result.stderr)
+  assert.match(result.stdout, /^ok {6}stubbed$/m)
+  assert.equal(fs.realpathSync(path.join(at, "node_modules/@scope/platform")), fs.realpathSync(path.join(at, "stubs/platform")))
+})

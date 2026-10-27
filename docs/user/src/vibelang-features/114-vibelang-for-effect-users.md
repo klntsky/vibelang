@@ -184,26 +184,24 @@ function reportTime() {
 // Output: 123
 ```
 
-`console.log`, `fetch`, timers, `Date.now()`, and `node:*` calls are errors in `.vibe` (EK4402, EK4403). Effect has a service for each, and the error names it, its import, and the layer that provides it. Use the prelude's `Console`, `Clock`, `sleep`, and `Config`. Import a platform service by name and provide its platform layer once, in `main`:
+`console.log`, `fetch`, timers, `Date.now()`, and `node:*` calls are errors in `.vibe` (EK4402, EK4403). Effect has a service for each, and the error names it, its import, and the layer that provides it. Use the prelude's `Console`, `Clock`, `sleep`, and `Config`. Import a platform service by name and call it. The file that exports `main` names its platform once, and the entry provides that platform's layer to `main` (D312):
 
 ```vibe
 // notes.vibe
-import { NodeServices } from "@effect/platform-node"
+import "vibelang/platform/node"
 import { FileSystem } from "effect/FileSystem"
 import { Path } from "effect/Path"
 
 export function main() {
-  provide NodeServices.layer {
-    using directory = FileSystem.makeTempDirectoryScoped()
-    const file = Path.join(directory, "note.txt")
-    FileSystem.writeFileString(file, "saved")
-    Console.log(FileSystem.readFileString(file))
-  }
+  using directory = FileSystem.makeTempDirectoryScoped()
+  const file = Path.join(directory, "note.txt")
+  FileSystem.writeFileString(file, "saved")
+  Console.log(FileSystem.readFileString(file))
 }
 // Output: saved
 ```
 
-`NodeServices.layer` provides `FileSystem`, `Path`, `Crypto`, `Stdio`, `Terminal`, and `ChildProcessSpawner`; on Bun, `BunServices.layer` does. `HttpClient` comes from `effect/http`, provided by `FetchHttpClient.layer`. [The platform introduction](../platform/105-introduction.md) lists the service for each common Node.js and web call. Don't wrap a platform API that Effect covers in a hatch, a `module`, or a `.ts` adapter. You can import a Node function or pass it as a value; running it directly is a platform API error. [Building an HTTP API](113-building-an-http-api.md) passes `createServer` to a server layer.
+`"vibelang/platform/node"` provides `NodeServices.layer`, which holds `FileSystem`, `Path`, `Crypto`, `Stdio`, `Terminal`, and `ChildProcessSpawner`; `"vibelang/platform/bun"` provides `BunServices.layer`. `HttpClient` comes from `effect/http`; provide `FetchHttpClient.layer` inside `main`. [The platform introduction](../platform/105-introduction.md) lists the service for each common Node.js and web call. Don't wrap a platform API that Effect covers in a hatch, a `module`, or a `.ts` adapter. You can import a Node function or pass it as a value; running it directly is a platform API error. [Building an HTTP API](113-building-an-http-api.md) passes `createServer` to a server layer.
 
 Inside an Effect function, a plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)`, or `sync(hostname())` for a platform API that Effect lacks, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a `.vibe` value, such as `text`, only as an input: an argument after the function, bound to its first parameter. To trust workspace or other TypeScript packages, set `"vibelang": { "trustedPackages": ["@acme/*"] }` at the top level of `tsconfig.json` (D261, D275). Exceptions from a matching package's synchronous plain calls are defects, its Effects run, and EK4401 does not fire. `trusted(impl, [Errors])` declares a function's expected failures. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
 

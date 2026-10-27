@@ -237,6 +237,7 @@ These rows record implementation decisions. The decision log separates implement
 | D307 | `data Name { Variant; Variant { field: Type } }` declares Effect's `Data.TaggedEnum` type and its `Data.taggedEnum` constructors; `when Name.Variant { let field }` tests the tag and binds fields; EK2122-EK2127, EK4706, EK4707 | Effect's own tagged union, without writing the type and the constructors apart | 3, 11 |
 | D308 | (Superseded by D309.) A contract was written `Effect<A, E, R>`, a type argument left out was `never`, as in TypeScript, and the `!` form was retired as EK1014 (superseded D127) | Uses Effect's ordinary type argument defaults | 2, 14, 28 |
 | D309 | The `!` form is restored as an alias of `Effect<A, E, R>` and is the documented form; `Effect<…>` keeps D308's meaning; EK1014 is retired; EK4833 reports only `Effect.Effect<…>` and its fix writes the `!` form (supersedes D308, restores D127) | Fewer tokens in every contract | 2, 14, 28 |
+| D312 | (Provisional.) The file that exports `main` names its platform once, `import "vibelang/platform/node"` (or `bun`, `browser`), and its entry statement provides that platform's bundle, `NodeServices.layer`, to a `main` that needs its services, plus the experimental bundle when `main` needs a D313 service; a provide inside `main` wins; the import loads nothing | Effect's canonical entry without a `provide NodeServices.layer` in every program, while the platform stays named in the program; EK3205 names only what the layer does not provide | 11 |
 
 #### Rules of the runtime and compiler
 

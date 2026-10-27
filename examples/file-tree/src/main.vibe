@@ -1,7 +1,7 @@
+import "vibelang/platform/node"
 import { FileSystem } from "effect/FileSystem"
 import { Path } from "effect/Path"
 import { PlatformError } from "effect/PlatformError"
-import { NodeServices } from "@effect/platform-node"
 
 // collectFiles is recursive, so its contract is written out.
 function collectFiles(directory: string, found: string[], visited: Set<string>): void!PlatformError!FileSystem | Path {
@@ -34,5 +34,5 @@ function summarize(root: string) {
 }
 
 export function main() {
-  provide NodeServices.layer { summarize("fixtures") }
+  summarize("fixtures")
 }

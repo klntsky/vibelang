@@ -1,0 +1,9 @@
+// EK3205 names only the services that NodeServices.layer does not provide:
+// the entry provides FileSystem.
+import "vibelang/platform/node"
+import { FileSystem } from "effect/FileSystem"
+import { Users } from "./services.vibe"
+
+export function main() {
+  Console.log(`${Users.find("1")}: ${FileSystem.readFileString("users.json")}`)
+}

@@ -239,15 +239,15 @@ function currentBranch() {
 
 ```ts es
 // main.vibe
-import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { FetchHttpClient } from "effect/http"
+import "vibelang/platform/node"
 
-function main() {
-  const branch = Effect.provide(() => currentBranch(), wire(NodeServices.layer, FetchHttpClient.layer))
-  log(`on ${branch}`)
+export function main() {
+  log(`on ${currentBranch()}`)
 }
-
-NodeRuntime.runMain(() => main())
+// runtime.$entry(import.meta.main, import.meta.url, main,
+//   () => NodeRuntime.runMain(Effect.provide(main(), NodeServices.layer)))
 ```
+
+The file that exports `main` names its platform once (D312). `import "vibelang/platform/node"` loads nothing; it names `@effect/platform-node`'s bundle, `NodeServices.layer`, and `main` needs `ChildProcessSpawner`, which that layer provides, so the module's entry statement runs `main` with it: Effect's canonical entry, written by the compiler. `"vibelang/platform/bun"` names `BunServices.layer` and `"vibelang/platform/browser"` the browser's bundle. A bundle's services are the `Out` of its layer's declared type, and a `main` that needs one of VibeLang's experimental services (D313) also gets the platform's experimental bundle, inside Effect's. `main` provides every other service itself, `provide FetchHttpClient.layer { … }`, and a provide inside `main` wins over the bundle for the code inside it. EK3205 names what neither provides, and, in a file without a platform import, the import that would. Tests import `main` and never run the entry statement.
 
 Tests provide fakes instead: a `Layer.succeed(FileSystem, { … })` with the methods a test needs, or an in-memory implementation where Effect ships one, such as `KeyValueStore.layerMemory`.

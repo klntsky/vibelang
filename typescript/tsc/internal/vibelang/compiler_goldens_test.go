@@ -1,6 +1,7 @@
 package vibelang
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -186,6 +187,28 @@ func copyCompilerFixture(t *testing.T, fixture, root string) string {
 	// a second copy through vibelang-runtime/node_modules/effect.
 	for pkg, target := range map[string]string{"effect": "packages/runtime/node_modules/effect", "vibelang-runtime": "packages/runtime"} {
 		if err := os.Symlink(filepath.Join(root, filepath.FromSlash(target)), filepath.Join(dir, "node_modules", pkg)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A directory under the fixture's stubs/ with a package.json stands in
+	// for the package it names, as the smoke harness links it.
+	stubs, _ := os.ReadDir(filepath.Join(dir, "stubs"))
+	for _, stub := range stubs {
+		manifest, err := os.ReadFile(filepath.Join(dir, "stubs", stub.Name(), "package.json"))
+		if err != nil {
+			continue
+		}
+		var pkg struct {
+			Name string `json:"name"`
+		}
+		if err := json.Unmarshal(manifest, &pkg); err != nil || pkg.Name == "" {
+			t.Fatalf("stubs/%s/package.json names no package: %v", stub.Name(), err)
+		}
+		at := filepath.Join(dir, "node_modules", filepath.FromSlash(pkg.Name))
+		if err := os.MkdirAll(filepath.Dir(at), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(filepath.Join(dir, "stubs", stub.Name()), at); err != nil {
 			t.Fatal(err)
 		}
 	}

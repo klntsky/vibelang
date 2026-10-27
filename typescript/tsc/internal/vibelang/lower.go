@@ -172,6 +172,10 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitExportWithDirectVariants(node)
 	case node.Kind == ast.KindExportAssignment && tx.plan.directDefaults[node] != nil:
 		return tx.visitExportDefaultWithDirectVariant(node)
+	case platformImport(node) != nil:
+		// A platform import names the entry's platform and loads nothing (D312,
+		// entry.go), so it is elided as an import type is.
+		return tx.EmitContext().NewNotEmittedStatement(node)
 	case node.Kind == ast.KindImportDeclaration || node.Kind == ast.KindExportDeclaration:
 		return tx.visitImportOrExport(node)
 	case isPipe(node):

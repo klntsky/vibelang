@@ -302,6 +302,9 @@ func (tx *specifierRewriter) visit(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	switch node.Kind {
 	case ast.KindImportDeclaration:
+		if platformImport(node) != nil {
+			return nil // a platform import loads nothing (D312, entry.go)
+		}
 		d := node.AsImportDeclaration()
 		if specifier, changed := outputSpecifier(f, d.ModuleSpecifier); changed {
 			return f.UpdateImportDeclaration(d, d.Modifiers(), d.ImportClause, specifier, d.Attributes)

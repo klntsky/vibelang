@@ -1,0 +1,8 @@
+// A platform whose package is not installed provides nothing, and EK3205
+// says so.
+import "vibelang/platform/bun"
+import { FileSystem } from "effect/FileSystem"
+
+export function main() {
+  Console.log(FileSystem.readFileString("config.json"))
+}

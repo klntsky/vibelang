@@ -1,0 +1,9 @@
+// expect: EK3201
+// A test never runs the entry statement, so it gets no platform layer: it
+// provides its own, and EK3201 names what it leaves out.
+import { it } from "@effect/vitest"
+import { main } from "./platform.vibe"
+
+it.effect("reads the config") {
+  main()
+}
