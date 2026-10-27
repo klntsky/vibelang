@@ -67,6 +67,18 @@ Remove the patch and lifecycle hooks when an [upstream Vocs Search](https://gith
 
 ## Deploy
 
+Before planning or deploying, check the real Alchemy CLI imports, construct the
+stack without credentials, and type-check it:
+
+```sh
+npm run test:infrastructure
+npm run typecheck
+```
+
+These checks run during docs validation and the deployment dry run. The import
+check does not evaluate the stack or contact Cloudflare.
+
+
 From the repository root, build and run every publication check:
 
 ```sh

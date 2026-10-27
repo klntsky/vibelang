@@ -18,7 +18,7 @@
     "test:llms": "node --test scripts/llms.test.mjs",
     "social-card": "node scripts/render-social-card.mjs",
     "test:contrast": "node --test scripts/contrast.test.mjs",
-    "test:infrastructure": "node --test scripts/cloudflare-stack.test.mjs",
+    "test:infrastructure": "node --test scripts/cloudflare-stack.test.mjs scripts/deploy-load.test.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
@@ -36,11 +36,12 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^6.1.0",
-    "alchemy": "^2.0.0-beta.72",
+    "alchemy": "2.0.0-beta.84",
     "effect": "4.0.6",
     "playwright": "1.64.1",
     "typescript": "^6.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "@alchemy.run/cloudflare": "2.0.0-beta.84"
   },
   "overrides": {
     "@effect/platform-node-shared": "4.0.6",

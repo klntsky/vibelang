@@ -46,7 +46,7 @@ test("the stack resolves the public domain in its Cloudflare account and disable
     exports: module.exports, module, URL,
     require(name) {
       if (name === "alchemy") return alchemy
-      if (name === "alchemy/Cloudflare") return cloudflare
+      if (name === "@alchemy.run/cloudflare") return cloudflare
       if (name === "effect/Effect") return { gen: fn => fn(), orDie: effect => effect }
       if (name === "alchemy/Cloudflare/Zone/lookup") return lookup
       if (name === "alchemy/Cloudflare/CloudflareEnvironment") return environment

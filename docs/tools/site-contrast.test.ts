@@ -7,6 +7,8 @@ test("built home, onboarding and cheat sheet have zero contrast violations in bo
   // Install Chromium once with: cd site && bunx playwright install chromium
   for (const command of [
     ["npm", "ci", "--no-audit", "--no-fund"],
+    ["npm", "run", "test:infrastructure"],
+    ["npm", "run", "typecheck"],
     ["bun", "run", "build"],
     ["bun", "run", "test:contrast"],
   ]) {

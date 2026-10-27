@@ -89,7 +89,7 @@ bun "$root/docs/tools/token-counts.ts" --check
 
 echo "deploy-docs: checking the brand gate"
 node "$root/scripts/brand-gate.mjs" --root "$root"
-(cd "$root/site" && npm ci && npm run build && npm run test:llms)
+(cd "$root/site" && npm ci && npm run test:infrastructure && npm run typecheck && npm run build && npm run test:llms)
 bun "$root/docs/tools/prepare-site.ts" "$site"
 
 if $dry_run; then
