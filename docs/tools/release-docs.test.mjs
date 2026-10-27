@@ -131,3 +131,20 @@ test("compatibility boxes and package install pins follow the runtime manifest",
   }
   assert.equal(renderReleasePage("packages/compiler/README.md", "effect@4.0.5", "9.8.7", "4.9.1"), "effect@4.9.1")
 })
+
+test("the current release owns the pinned Effect migration and upgrade instructions", () => {
+  const root = fileURLToPath(new URL("../../", import.meta.url))
+  const version = JSON.parse(readFileSync(join(root, "packages/compiler/package.json"), "utf8")).version
+  const effect = JSON.parse(readFileSync(join(root, "packages/runtime/package.json"), "utf8")).peerDependencies.effect
+  const notes = readFileSync(join(root, "docs/user/src/setup/release-notes.md"), "utf8")
+  const releases = notes.split(/^## /m).slice(1)
+  assert.equal(releases[0].split("\n")[0], version)
+  const current = releases[0]
+  for (const text of [
+    "### Effect " + effect + " and failures",
+    "effect@" + effect,
+    "Die(Busy)", "Interrupt + Fail(CleanupFailed)", 'returns \x60"recovered"\x60',
+    "npm install --save-exact", "bun add --exact",
+    "@effect/platform-node-shared", "npm test", "bun run test"
+  ]) assert.ok(current.includes(text), text + " belongs in " + version)
+})

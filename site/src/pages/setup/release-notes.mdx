@@ -9,7 +9,12 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
-## 0.0.11 (unreleased)
+## 0.0.10
+
+Update `vibelang`, `vibelang-runtime` and the bundler plugin together. This
+release restores the terse contract syntax and fixes resource cleanup,
+recursion and matching. It also adds diagnostics: see the migration details
+under Diagnostics before updating code that compiled on 0.0.9.
 
 ### Effect 4.0.6 and failures
 
@@ -72,12 +77,43 @@ containing a defect. `Effect.mapError` maps every expected failure in place and
 preserves the other reasons. Code that inspects causes or depended on an
 Effect recovery operator dropping a cleanup defect should be updated.
 
-## 0.0.10
+### Upgrade an existing project
 
-Update `vibelang`, `vibelang-runtime` and the bundler plugin together. This
-release restores the terse contract syntax and fixes resource cleanup,
-recursion and matching. It also adds diagnostics: see the migration details
-under Diagnostics before updating code that compiled on 0.0.9.
+Keep VibeLang packages at 0.0.10. Update Effect and its platform and test
+packages together, and set the transitive peer override in `package.json`:
+
+```json
+{
+  "overrides": {
+    "@effect/platform-node-shared": "4.0.6"
+  }
+}
+```
+
+With npm:
+
+```sh
+npm install --save-exact vibelang-runtime@0.0.10 effect@4.0.6 @effect/platform-node@4.0.6
+npm install --save-dev --save-exact vibelang@0.0.10 vibelang-vite@0.0.10 @effect/vitest@4.0.6
+npm run build
+npm test
+```
+
+With Bun:
+
+```sh
+bun add --exact vibelang-runtime@0.0.10 effect@4.0.6 @effect/platform-node@4.0.6
+bun add -d --exact vibelang@0.0.10 vibelang-vite@0.0.10 @effect/vitest@4.0.6
+bun run build
+bun run test
+```
+
+Update only the platform and test packages your project uses; a Bun platform
+project uses `@effect/platform-bun@4.0.6` instead of the Node platform.
+Commit the updated lockfile. Review tests that inspect causes, recover a
+failure beside interruption, or expect a cleanup defect to be dropped, using
+the before/after examples above. See [Existing project](/setup/existing-project)
+for mixed TypeScript and editor setup.
 
 ### Syntax
 
